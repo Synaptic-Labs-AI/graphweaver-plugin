@@ -50,7 +50,7 @@ export class OntologyGenerator extends BaseGenerator {
 
             For each suggested tag in the ontology, provide:
             {
-                "TagName": {
+                "Name": {
                     "description": "a brief but robust instruction on what this tag represents"
                 }
             }
