@@ -11,7 +11,10 @@ export class AdvancedAccordion extends BaseAccordion {
     }
 
     public render(): void {
-        const contentEl = this.createAccordion("⚙️ Advanced Settings");
+        const contentEl = this.createAccordion(
+            "⚙️ Advanced",
+            "Configuration options for the plugin."
+        );
         this.createWikilinksToggle(contentEl);
         this.createAIParameterOverrides(contentEl);
     }

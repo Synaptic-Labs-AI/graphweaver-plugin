@@ -2,6 +2,7 @@ import { BaseGenerator } from './BaseGenerator';
 import { AIAdapter } from '../adapters/AIAdapter';
 import { SettingsService } from '../services/SettingsService';
 import { TFile, TFolder } from 'obsidian';
+import { AIProvider } from '../models/AIModels';
 
 export interface OntologyResult {
     suggestedTags: {
@@ -10,10 +11,12 @@ export interface OntologyResult {
     }[];
 }
 
-interface OntologyInput {
+export interface OntologyInput {
     files: TFile[];
     folders: TFolder[];
     tags: string[];
+    provider: AIProvider;
+    modelApiName: string;
 }
 
 export class OntologyGenerator extends BaseGenerator {
@@ -28,7 +31,7 @@ export class OntologyGenerator extends BaseGenerator {
 
         try {
             const prompt = this.preparePrompt(input);
-            const aiResponse = await this.aiAdapter.generateResponse(prompt, this.getCurrentModel());
+            const aiResponse = await this.aiAdapter.generateResponse(prompt, input.modelApiName);
             return this.formatOutput(aiResponse.data);
         } catch (error) {
             this.handleError(error);

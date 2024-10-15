@@ -19,7 +19,10 @@ export class TagManagerAccordion extends BaseAccordion {
     }
 
     public render(): void {
-        const contentEl = this.createAccordion("🏷️ Tag Management");
+        const contentEl = this.createAccordion(
+            "🏷️ Tag Management",
+            "Create and manage custom tags for your notes."
+        );
         this.createTagEditor(contentEl);
         this.createButtonRow(contentEl);
     }

@@ -1,7 +1,5 @@
-// src/services/AIService.ts
-
 import { App, TFolder, TFile } from "obsidian";
-import { AIProvider, AIResponse, AIAdapter } from "../models/AIModels";
+import { AIProvider, AIResponse, AIAdapter, AIModel, AIModelMap } from "../models/AIModels";
 import { OpenAIAdapter } from "../adapters/OpenAIAdapter";
 import { AnthropicAdapter } from "../adapters/AnthropicAdapter";
 import { GeminiAdapter } from "../adapters/GeminiAdapter";
@@ -16,6 +14,7 @@ import { BatchProcessor, BatchProcessorResult } from "../generators/BatchProcess
 import { JsonSchemaGenerator } from "../generators/JsonSchemaGenerator";
 import { PluginSettings } from "../models/Settings";
 import { Tag } from "../models/PropertyTag";
+import { OntologyInput } from "../models/OntologyTypes";
 
 export class AIService {
     public adapters: Map<AIProvider, AIAdapter>;
@@ -34,17 +33,11 @@ export class AIService {
         this.initializeGenerators();
     }
 
-    /**
-     * Reinitializes adapters and generators, typically after settings change.
-     */
     public reinitialize(): void {
         this.initializeAdapters();
         this.initializeGenerators();
     }
 
-    /**
-     * Initializes all AI adapters based on available providers.
-     */
     public initializeAdapters(): void {
         this.adapters = new Map<AIProvider, AIAdapter>([
             [AIProvider.OpenAI, new OpenAIAdapter(this.settingsService)],
@@ -56,9 +49,6 @@ export class AIService {
         ]);
     }
 
-    /**
-     * Initializes all generators using the current AI adapter.
-     */
     public initializeGenerators(): void {
         const currentProvider = this.getCurrentProvider();
         const currentAdapter = this.getAdapterForProvider(currentProvider);
@@ -68,11 +58,6 @@ export class AIService {
         this.batchProcessor = new BatchProcessor(currentAdapter, this.settingsService, this.frontMatterGenerator, this.wikilinkGenerator, this.app);
     }
 
-    /**
-     * Generates a response from the current AI provider.
-     * @param prompt The input prompt.
-     * @returns An AIResponse containing the API's response or an error message.
-     */
     public async generateResponse(prompt: string): Promise<AIResponse> {
         const provider = this.getCurrentProvider();
         const modelApiName = this.getCurrentModel(provider);
@@ -85,10 +70,6 @@ export class AIService {
         }
     }
 
-    /**
-     * Retrieves a list of providers that have API keys set.
-     * @returns An array of AIProvider enums.
-     */
     public getProvidersWithApiKeys(): AIProvider[] {
         const aiProviderSettings = this.settingsService.getAIProviderSettings();
         return Object.entries(aiProviderSettings.apiKeys)
@@ -96,11 +77,6 @@ export class AIService {
             .map(([provider, _]) => provider as AIProvider);
     }
     
-    /**
-     * Generates front matter for the given content.
-     * @param content The content to generate front matter for.
-     * @returns The content with generated front matter.
-     */
     public async generateFrontMatter(content: string): Promise<string> {
         try {
             return await this.frontMatterGenerator.generate(content);
@@ -110,11 +86,6 @@ export class AIService {
         }
     }
 
-    /**
-     * Generates wikilinks for the given content.
-     * @param content The content to generate wikilinks for.
-     * @returns The content with generated wikilinks.
-     */
     public async generateWikilinks(content: string): Promise<string> {
         const existingPages = this.getExistingPages();
         try {
@@ -125,14 +96,11 @@ export class AIService {
         }
     }
 
-    /**
-     * Generates ontology based on the provided input.
-     * @param input The input data for ontology generation.
-     * @returns An OntologyResult object.
-     */
-    public async generateOntology(input: { files: TFile[], folders: TFolder[], tags: string[] }): Promise<OntologyResult> {
+    public async generateOntology(input: OntologyInput): Promise<OntologyResult> {
         try {
-            return await this.ontologyGenerator.generate(input);
+            const adapter = this.getAdapterForProvider(input.provider);
+            const generator = new OntologyGenerator(adapter, this.settingsService);
+            return await generator.generate(input);
         } catch (error) {
             console.error("Error generating ontology:", error);
             throw new Error(`Failed to generate ontology: ${(error as Error).message}`);
@@ -156,12 +124,6 @@ export class AIService {
         }
     }
     
-    /**
-     * Processes a batch of files with specified options.
-     * @param files The files to process.
-     * @param options The processing options.
-     * @returns A BatchProcessorResult object.
-     */
     public async batchProcess(files: TFile[], options: { generateFrontMatter: boolean, generateWikilinks: boolean }): Promise<BatchProcessorResult> {
         try {
             return await this.batchProcessor.generate({ files, ...options });
@@ -171,20 +133,10 @@ export class AIService {
         }
     }
 
-    /**
-     * Retrieves the currently selected AI provider.
-     * @returns The selected AIProvider enum.
-     */
     public getCurrentProvider(): AIProvider {
-        return this.settingsService.getAIProviderSettings().selected;
         return this.settingsService.getAIProviderSettings().selected;
     }
 
-    /**
-     * Retrieves the currently selected model's API name for a given provider.
-     * @param provider The AIProvider enum.
-     * @returns The selected model's API name.
-     */
     public getCurrentModel(provider: AIProvider): string {
         const aiProviderSettings = this.settingsService.getAIProviderSettings();
         const modelApiName = aiProviderSettings.selectedModels[provider];
@@ -194,19 +146,11 @@ export class AIService {
         return modelApiName;
     }
 
-    /**
-     * Retrieves the default model's API name.
-     * @returns The default model's API name.
-     */
     public getDefaultModel(): string {
         const provider = this.getCurrentProvider();
         return this.getCurrentModel(provider);
     }
 
-    /**
-     * Sets the default model's API name for the current provider.
-     * @param modelApiName The model's API name to set as default.
-     */
     public async setDefaultModel(modelApiName: string): Promise<void> {
         const provider = this.getCurrentProvider();
         const aiProviderSettings = this.settingsService.getAIProviderSettings();
@@ -214,29 +158,15 @@ export class AIService {
         await this.settingsService.updateAIProviderSettings(provider, { selectedModels: aiProviderSettings.selectedModels });
     }
 
-    /**
-     * Retrieves available models' API names for a given provider.
-     * @param provider The AIProvider enum.
-     * @returns An array of available model API names.
-     */
     public getAvailableModels(provider: AIProvider): string[] {
         const adapter = this.getAdapterForProvider(provider);
         return adapter.getAvailableModels();
     }
 
-    /**
-     * Retrieves a list of all supported AI providers.
-     * @returns An array of AIProvider enums.
-     */
     public getSupportedProviders(): AIProvider[] {
         return Array.from(this.adapters.keys());
     }
 
-    /**
-     * Retrieves the adapter for a specific AI provider.
-     * @param provider The AIProvider enum.
-     * @returns The corresponding AIAdapter.
-     */
     public getAdapterForProvider(provider: AIProvider): AIAdapter {
         const adapter = this.adapters.get(provider);
         if (!adapter) {
@@ -245,11 +175,6 @@ export class AIService {
         return adapter;
     }
 
-    /**
-     * Validates the API key for a specific provider.
-     * @param provider The AIProvider enum.
-     * @returns A boolean indicating whether the API key is valid.
-     */
     public async validateApiKey(provider: AIProvider): Promise<boolean> {
         const adapter = this.getAdapterForProvider(provider);
         try {
@@ -260,37 +185,19 @@ export class AIService {
         }
     }
 
-    /**
-     * Updates the plugin settings and reinitializes adapters and generators.
-     * @param newSettings The new settings to apply.
-     */
     public async updateSettings(newSettings: Partial<PluginSettings>): Promise<void> {
         await this.settingsService.updateSettings(newSettings);
         this.reinitialize();
-        this.reinitialize();
     }
 
-    /**
-     * Retrieves the root folder of the vault.
-     * @returns The root TFolder.
-     */
     public getVaultRoot(): TFolder {
         return this.app.vault.getRoot();
     }
 
-    /**
-     * Retrieves a list of existing page names in the vault.
-     * @returns An array of page names.
-     */
     public getExistingPages(): string[] {
         return this.app.vault.getMarkdownFiles().map(file => file.basename);
     }
 
-    /**
-     * Tests the connection to a specific AI provider by validating the API key and making a test prompt.
-     * @param provider The AIProvider enum.
-     * @returns A boolean indicating whether the connection is successful.
-     */
     public async testConnection(provider: AIProvider): Promise<boolean> {
         try {
             const adapter = this.getAdapterForProvider(provider);
@@ -312,5 +219,38 @@ export class AIService {
             console.error(`Error testing connection to ${provider}:`, error);
             return false;
         }
+    }
+
+    public getAllAvailableModels(): { provider: AIProvider; model: AIModel }[] {
+        const availableModels: { provider: AIProvider; model: AIModel }[] = [];
+
+        for (const provider of Object.values(AIProvider)) {
+            const adapter = this.getAdapterForProvider(provider);
+            if (adapter.isReady()) {
+                const models = this.getAvailableModels(provider);
+                models.forEach(modelName => {
+                    const model = this.getModelDetails(provider, modelName);
+                    if (model) {
+                        availableModels.push({ provider, model });
+                    }
+                });
+            }
+        }
+
+        // Include local model if set up
+        const localLMStudioSettings = this.settingsService.getLocalLMStudioSettings();
+        if (localLMStudioSettings.enabled && localLMStudioSettings.modelName) {
+            availableModels.push({
+                provider: AIProvider.LMStudio,
+                model: { name: localLMStudioSettings.modelName, apiName: 'custom' }
+            });
+        }
+
+        return availableModels;
+    }
+
+    private getModelDetails(provider: AIProvider, modelName: string): AIModel | undefined {
+        const models = AIModelMap[provider];
+        return models.find(model => model.apiName === modelName);
     }
 }

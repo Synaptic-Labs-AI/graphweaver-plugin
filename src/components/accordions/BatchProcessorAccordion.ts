@@ -15,7 +15,10 @@ export class BatchProcessorAccordion extends BaseAccordion {
     }
 
     public render(): void {
-        const contentEl = this.createAccordion("🔄 Batch Processor");
+        const contentEl = this.createAccordion(
+            "🔄 Batch Processor",
+            "Process multiple files to generate front matter and wikilinks."
+        );
         this.createAutoGenerateToggle(contentEl);
         this.createRunBatchProcessorButton(contentEl);
     }

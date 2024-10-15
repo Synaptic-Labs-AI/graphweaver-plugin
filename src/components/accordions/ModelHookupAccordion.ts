@@ -20,7 +20,10 @@ export class ModelHookupAccordion extends BaseAccordion {
     }
 
     public render(): void {
-        const contentEl = this.createAccordion("🔌 Model Hookup");
+        const contentEl = this.createAccordion(
+            "🔌 Model Hookup",
+            "Configure AI providers and models."
+        );
         this.createProviderDropdown(contentEl);
         this.settingsContainer = contentEl.createDiv({ cls: "provider-settings" });
         this.renderProviderSettings();

@@ -20,7 +20,10 @@ export class PropertyManagerAccordion extends BaseAccordion {
     }
 
     public render(): void {
-        const contentEl = this.createAccordion("📊 Property Management");
+        const contentEl = this.createAccordion(
+            "📊 Property Management",
+            "Create and manage custom properties for your notes."
+        );
         this.createPropertyEditor(contentEl);
         this.createButtonRow(contentEl);
     }

@@ -20,7 +20,10 @@ export class OntologyGenerationAccordion extends BaseAccordion {
     }
 
     public render(): void {
-        const contentEl = this.createAccordion("🧠 Ontology Generator");
+        const contentEl = this.createAccordion(
+            "🕸 Ontology Generator",
+            "Generate ontology tags for your knowledge base."
+        );
         this.createDescription(contentEl);
         this.createGenerateButton(contentEl);
     }
