@@ -1,0 +1,14 @@
+{
+    "id": "obsidian-graphweaver",
+    "name": "GraphWeaver",
+    "version": "1.0.0",
+    "minAppVersion": "0.15.0",
+    "description": "An Obsidian plugin for generating and managing front matter using AI",
+    "author": "Your Name",
+    "authorUrl": "https://github.com/yourusername",
+    "isDesktopOnly": false,
+    "fundingUrl": {
+      "Buy Me a Coffee": "https://www.buymeacoffee.com/yourusername",
+      "GitHub Sponsor": "https://github.com/sponsors/yourusername"
+    }
+  }
