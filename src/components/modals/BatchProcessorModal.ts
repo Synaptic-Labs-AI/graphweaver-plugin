@@ -197,8 +197,7 @@ export class BatchProcessorModal extends Modal {
         let updatedCount = 0;
         let errorCount = 0;
 
-        const progressModal = new ProcessingProgressModal(this.app, totalFiles);
-        progressModal.open();
+        const progressNotice = new Notice(`Processing 0/${totalFiles} files...`, 0);
 
         for (const path of selectedPaths) {
             try {
@@ -206,22 +205,21 @@ export class BatchProcessorModal extends Modal {
                 if (file instanceof TFile) {
                     await this.updateFile(file);
                     updatedCount++;
+                    progressNotice.setMessage(`Processing ${updatedCount}/${totalFiles} files...`);
                 }
             } catch (error) {
                 console.error(`Error updating file ${path}:`, error);
                 errorCount++;
             }
-
-            progressModal.updateProgress(updatedCount);
         }
 
-        progressModal.close();
+        progressNotice.hide();
 
         let message = `Updated ${updatedCount} file${updatedCount !== 1 ? 's' : ''} successfully.`;
         if (errorCount > 0) {
             message += ` Encountered errors in ${errorCount} file${errorCount !== 1 ? 's' : ''}.`;
         }
-        new Notice(message);
+        new Notice(message, 5000);
     }
 
     public async updateFile(file: TFile): Promise<void> {

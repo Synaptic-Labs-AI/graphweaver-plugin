@@ -118,7 +118,7 @@ export class OntologyGenerator extends BaseGenerator {
         return { suggestedTags };
     }
 
-    private fixIncompleteJson(json: string): string {
+    public fixIncompleteJson(json: string): string {
         // Attempt to fix common JSON issues
         let fixedJson = json.trim();
         

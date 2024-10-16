@@ -1,99 +1,148 @@
-// src/adapters/LMStudioAdapter.ts
-
 import { Notice, requestUrl } from 'obsidian';
 import { SettingsService } from '../services/SettingsService';
+import { JsonValidationService } from '../services/JsonValidationService';
 import { AIProvider, AIResponse, AIAdapter } from '../models/AIModels';
 
 export class LMStudioAdapter implements AIAdapter {
-  public model: string;
-  public port: string;
+    public model: string;
+    public port: string;
 
-  constructor(public settingsService: SettingsService) {
-    this.updateSettings();
-  }
-
-  public async generateResponse(prompt: string, model: string = 'default'): Promise<AIResponse> {
-    try {
-      if (!this.isReady()) {
-        throw new Error('LM Studio settings are not properly configured');
-      }
-
-      const response = await requestUrl({
-        url: `http://localhost:${this.port}/api/v1/complete`,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: this.model,
-          prompt: prompt
-        })
-      });
-
-      if (response.status !== 200) {
-        throw new Error(`API request failed with status ${response.status}`);
-      }
-
-      return {
-        success: true,
-        data: response.json
-      };
-    } catch (error) {
-      console.error('Error in LM Studio API call:', error);
-      new Notice(`LM Studio API Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
-      };
+    constructor(
+        public settingsService: SettingsService,
+        public jsonValidationService: JsonValidationService
+    ) {
+        this.updateSettings();
     }
-  }
 
-  public async validateApiKey(): Promise<boolean> {
-    // LM Studio doesn't require an API key, so we'll just check if the settings are valid
-    return this.isReady();
-  }
+    public async generateResponse(prompt: string, model: string = 'default'): Promise<AIResponse> {
+        try {
+            if (!this.isReady()) {
+                throw new Error('LM Studio settings are not properly configured');
+            }
 
-  public getAvailableModels(): string[] {
-    // LM Studio uses a single local model, so we'll return an array with just that model
-    return [this.model];
-  }
+            const jsonSchema = this.createJsonSchema();
+            const response = await requestUrl({
+                url: `http://localhost:${this.port}/v1/chat/completions`,
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: this.model,
+                    messages: [
+                        {
+                            role: "system",
+                            content: "You are a helpful assistant that responds in JSON format."
+                        },
+                        {
+                            role: "user",
+                            content: prompt
+                        }
+                    ],
+                    response_format: {
+                        type: "json_schema",
+                        json_schema: jsonSchema
+                    },
+                    temperature: 0.7,
+                    max_tokens: 1000,
+                    stream: false
+                })
+            });
 
-  public getProviderType(): AIProvider {
-    return AIProvider.LMStudio;
-  }
+            if (response.status !== 200) {
+                throw new Error(`API request failed with status ${response.status}`);
+            }
 
-  public setApiKey(apiKey: string): void {
-    // LM Studio doesn't use an API key, so this method is a no-op
-  }
-
-  public getApiKey(): string {
-    // LM Studio doesn't use an API key, so we return an empty string
-    return '';
-  }
-
-  public configure(config: any): void {
-    if (config.model) {
-      this.model = config.model;
+            const content = response.json.choices[0].message.content;
+            const validatedContent = await this.jsonValidationService.validateAndCleanJson(content);
+            return {
+                success: true,
+                data: validatedContent
+            };
+        } catch (error) {
+            console.error('Error in LM Studio API call:', error);
+            new Notice(`LM Studio API Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error occurred'
+            };
+        }
     }
-    if (config.port) {
-      this.port = config.port.toString();
+
+    private createJsonSchema() {
+        return {
+            name: "assistant_response",
+            strict: "true",
+            schema: {
+                type: "object",
+                properties: {
+                    response: {
+                        type: "string"
+                    }
+                },
+                required: ["response"]
+            }
+        };
     }
-    this.settingsService.updateNestedSetting('localLMStudio', 'modelName', this.model);
-    this.settingsService.updateNestedSetting('localLMStudio', 'port', parseInt(this.port, 10));
-  }
 
-  public isReady(): boolean {
-    return !!this.model && !!this.port;
-  }
+    public async testConnection(prompt: string, model: string = 'default'): Promise<boolean> {
+        try {
+            if (!this.isReady()) {
+                return false;
+            }
 
-  public getApiModelName(modelName: string): string | undefined {
-    // For LM Studio, the model name is the same as the API model name
-    return modelName;
-  }
+            const response = await this.generateResponse("Return the word 'OK'.", model);
+            return response.success && response.data && typeof response.data === 'object' && 
+                   'response' in response.data && typeof response.data.response === 'string' && 
+                   response.data.response.toLowerCase().includes('ok');
+        } catch (error) {
+            console.error('Error in LM Studio test connection:', error);
+            return false;
+        }
+    }
 
-  public updateSettings(): void {
-    const localLMStudioSettings = this.settingsService.getSetting('localLMStudio');
-    this.model = localLMStudioSettings.modelName;
-    this.port = localLMStudioSettings.port.toString();
-  }
+    public async validateApiKey(): Promise<boolean> {
+        return this.isReady();
+    }
+
+    public getAvailableModels(): string[] {
+        return [this.model];
+    }
+
+    public getProviderType(): AIProvider {
+        return AIProvider.LMStudio;
+    }
+
+    public setApiKey(apiKey: string): void {
+        // LM Studio doesn't use an API key, so this method is a no-op
+    }
+
+    public getApiKey(): string {
+        return '';
+    }
+
+    public configure(config: any): void {
+        if (config.model) {
+            this.model = config.model;
+        }
+        if (config.port) {
+            this.port = config.port.toString();
+        }
+        this.settingsService.updateNestedSetting('localLMStudio', 'modelName', this.model);
+        this.settingsService.updateNestedSetting('localLMStudio', 'port', parseInt(this.port, 10));
+    }
+
+    public isReady(): boolean {
+        return !!this.model && !!this.port;
+    }
+
+    public getApiModelName(modelName: string): string | undefined {
+        return modelName;
+    }
+
+    public updateSettings(): void {
+        const localLMStudioSettings = this.settingsService.getSetting('localLMStudio');
+        this.model = localLMStudioSettings.modelName;
+        this.port = localLMStudioSettings.port.toString();
+    }
 }

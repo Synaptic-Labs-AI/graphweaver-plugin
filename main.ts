@@ -1,4 +1,4 @@
-import { Plugin, PluginSettingTab, App, Notice, Menu, TFile, WorkspaceLeaf } from 'obsidian';
+import { Plugin, PluginSettingTab, App, Notice, Menu, TFile } from 'obsidian';
 import { PluginSettings, DEFAULT_SETTINGS } from './src/models/Settings';
 import { AIService } from './src/services/AIService';
 import { SettingsService } from './src/services/SettingsService';
@@ -10,6 +10,7 @@ import { TagManagerAccordion } from './src/components/accordions/TagManagerAccor
 import { OntologyGenerationAccordion } from './src/components/accordions/OntologyGenerationAccordion';
 import { BatchProcessorAccordion } from './src/components/accordions/BatchProcessorAccordion';
 import { AdvancedAccordion } from './src/components/accordions/AdvancedAccordion';
+import { JsonValidationService } from './src/services/JsonValidationService';
 
 export default class GraphWeaverPlugin extends Plugin {
     public settings: PluginSettings;
@@ -17,41 +18,46 @@ export default class GraphWeaverPlugin extends Plugin {
     public aiService: AIService;
     public databaseService: DatabaseService;
     public autoGenerateService: AutoGenerateService;
+    public jsonValidationService: JsonValidationService;
 
     async onload() {
+        await this.initializeServices();
+        this.addPluginFunctionality();
+    }
+
+    public async initializeServices() {
         await this.loadSettings();
         this.settingsService = new SettingsService(this, this.settings);
         this.databaseService = new DatabaseService();
         await this.databaseService.load(this.loadData.bind(this));
-        this.aiService = new AIService(this.app, this.settingsService);
+        this.jsonValidationService = new JsonValidationService();
+        this.aiService = new AIService(this.app, this.settingsService, this.jsonValidationService);
         this.autoGenerateService = new AutoGenerateService(
             this.app.vault,
             this.aiService,
             this.settingsService,
             this.databaseService
         );
+    }
 
+    public addPluginFunctionality() {
         this.addSettingTab(new GraphWeaverSettingTab(this.app, this));
+        this.addRibbonIcon('brain-circuit', 'GraphWeaver', this.showPluginMenu.bind(this));
+        this.addCommands();
+        this.registerEvent(this.app.workspace.on('layout-change', this.onLayoutChange.bind(this)));
+    }
 
-        this.addRibbonIcon('brain-circuit', 'GraphWeaver', (evt: MouseEvent) => {
-            this.showPluginMenu(evt);
-        });
-
+    public addCommands() {
         this.addCommand({
             id: 'generate-frontmatter',
             name: 'Generate Frontmatter',
-            callback: () => this.generateFrontmatter(),
+            callback: this.generateFrontmatter.bind(this),
         });
-
         this.addCommand({
             id: 'generate-wikilinks',
             name: 'Generate Wikilinks',
-            callback: () => this.generateWikilinks(),
+            callback: this.generateWikilinks.bind(this),
         });
-
-        this.registerEvent(
-            this.app.workspace.on('layout-change', this.onLayoutChange.bind(this))
-        );
     }
 
     async onunload() {
@@ -82,21 +88,8 @@ export default class GraphWeaverPlugin extends Plugin {
 
     public showPluginMenu(evt: MouseEvent) {
         const menu = new Menu();
-
-        menu.addItem((item) =>
-            item
-                .setTitle('Generate Frontmatter')
-                .setIcon('file-plus')
-                .onClick(() => this.generateFrontmatter())
-        );
-
-        menu.addItem((item) =>
-            item
-                .setTitle('Generate Wikilinks')
-                .setIcon('link')
-                .onClick(() => this.generateWikilinks())
-        );
-
+        menu.addItem((item) => item.setTitle('Generate Frontmatter').setIcon('file-plus').onClick(this.generateFrontmatter.bind(this)));
+        menu.addItem((item) => item.setTitle('Generate Wikilinks').setIcon('link').onClick(this.generateWikilinks.bind(this)));
         menu.showAtMouseEvent(evt);
     }
 
@@ -145,29 +138,22 @@ export default class GraphWeaverPlugin extends Plugin {
         const match = content.match(frontMatterRegex);
 
         if (match) {
-            // Update existing front matter
             return content.replace(frontMatterRegex, newFrontMatter);
         } else {
-            // Add new front matter at the beginning of the file
             return `${newFrontMatter}\n\n${content}`;
         }
     }
 }
 
 class GraphWeaverSettingTab extends PluginSettingTab {
-    plugin: GraphWeaverPlugin;
-
-    constructor(app: App, plugin: GraphWeaverPlugin) {
+    constructor(app: App, public plugin: GraphWeaverPlugin) {
         super(app, plugin);
-        this.plugin = plugin;
     }
 
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
-
         containerEl.createEl('h2', { text: 'GraphWeaver Settings' });
-
         this.renderAccordions(containerEl);
     }
 

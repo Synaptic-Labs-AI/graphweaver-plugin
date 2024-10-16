@@ -72,17 +72,6 @@ export class ModelHookupAccordion extends BaseAccordion {
         this.createModelNameInput(this.settingsContainer);
     }
 
-    public createProviderLink(containerEl: HTMLElement, provider: AIProvider): void {
-        const websiteUrl = this.getProviderWebsite(provider);
-        const formattedName = this.getFormattedProviderName(provider);
-        const linkEl = containerEl.createEl('a', { 
-            text: formattedName, 
-            href: websiteUrl,
-            cls: "provider-link"
-        });
-        linkEl.setAttribute('target', '_blank');
-    }
-
     public createApiKeyInput(containerEl: HTMLElement, provider: AIProvider): void {
         const settings = this.settingsService.getSettings();
         new Setting(containerEl)
@@ -163,7 +152,11 @@ export class ModelHookupAccordion extends BaseAccordion {
                 button
                     .setButtonText("Test Connection")
                     .onClick(async () => {
+                        button.setDisabled(true);
+                        button.setButtonText("Testing...");
                         const result = await this.aiService.testConnection(provider);
+                        button.setDisabled(false);
+                        button.setButtonText("Test Connection");
                         if (result) {
                             new Notice(`Successfully connected to ${this.getFormattedProviderName(provider)}`);
                         } else {
@@ -173,14 +166,32 @@ export class ModelHookupAccordion extends BaseAccordion {
             });
     }
 
+    public createProviderLink(containerEl: HTMLElement, provider: AIProvider): void {
+        const websiteUrl = this.getProviderWebsite(provider);
+        const linkText = provider === AIProvider.LMStudio ? "LM Studio Documentation" : "Get API Key";
+        
+        const linkEl = containerEl.createEl('a', { 
+            text: linkText, 
+            href: websiteUrl,
+            cls: "provider-link"
+        });
+        linkEl.setAttribute('target', '_blank');
+
+        // Add a label to show which provider the link is for
+        const providerLabel = containerEl.createEl('span', {
+            text: ` for ${this.getFormattedProviderName(provider)}`,
+            cls: "provider-label"
+        });
+    }
+
     public getProviderWebsite(provider: AIProvider): string {
         const websiteMap: Record<AIProvider, string> = {
-            [AIProvider.OpenAI]: "https://openai.com",
-            [AIProvider.Anthropic]: "https://www.anthropic.com",
-            [AIProvider.Google]: "https://cloud.google.com/vertex-ai",
-            [AIProvider.Groq]: "https://groq.com",
-            [AIProvider.OpenRouter]: "https://openrouter.ai",
-            [AIProvider.LMStudio]: "https://lmstudio.ai"
+            [AIProvider.OpenAI]: "https://platform.openai.com/api-keys",
+            [AIProvider.Anthropic]: "https://console.anthropic.com/settings/keys",
+            [AIProvider.Google]: "https://aistudio.google.com/apikey",
+            [AIProvider.Groq]: "https://console.groq.com/keys",
+            [AIProvider.OpenRouter]: "https://openrouter.ai/settings/keys",
+            [AIProvider.LMStudio]: "https://lmstudio.ai/docs/basics/server"
         };
         return websiteMap[provider] || "#";
     }

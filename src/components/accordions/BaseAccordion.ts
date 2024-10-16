@@ -43,7 +43,7 @@ export abstract class BaseAccordion {
         this.accordionEl.classList.toggle("gw-accordion-open", this.isOpen);
     }
 
-    private updateToggleIcon(): void {
+    public updateToggleIcon(): void {
         // Clear existing content
         this.toggleIcon.empty();
         

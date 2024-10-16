@@ -5,17 +5,17 @@ import { AIProvider, AIModel } from "../../models/AIModels";
 import { OntologyInput } from "../../models/OntologyTypes";
 
 export class OntologyGeneratorModal extends Modal {
-    private modelSelect: DropdownComponent;
-    private generateButton: ButtonComponent;
-    private loadingEl: HTMLElement;
-    private vaultStats: { files: TFile[], folders: TFolder[], tags: string[] };
-    private availableModels: { provider: AIProvider; model: AIModel }[];
-    private userContextInput: TextAreaComponent;
+    public modelSelect: DropdownComponent;
+    public generateButton: ButtonComponent;
+    public loadingEl: HTMLElement;
+    public vaultStats: { files: TFile[], folders: TFolder[], tags: string[] };
+    public availableModels: { provider: AIProvider; model: AIModel }[];
+    public userContextInput: TextAreaComponent;
 
     constructor(
         app: App,
-        private aiService: AIService,
-        private onGenerate: (ontology: OntologyResult) => void
+        public aiService: AIService,
+        public onGenerate: (ontology: OntologyResult) => void
     ) {
         super(app);
         this.vaultStats = { files: [], folders: [], tags: [] };
@@ -39,13 +39,13 @@ export class OntologyGeneratorModal extends Modal {
         }
     }
 
-    private async loadVaultStats() {
+    public async loadVaultStats() {
         this.vaultStats.files = this.app.vault.getMarkdownFiles();
         this.vaultStats.folders = this.app.vault.getAllLoadedFiles().filter(file => file instanceof TFolder) as TFolder[];
         this.vaultStats.tags = await this.getAllTags(this.vaultStats.files);
     }
 
-    private async getAllTags(files: TFile[]): Promise<string[]> {
+    public async getAllTags(files: TFile[]): Promise<string[]> {
         const tagSet = new Set<string>();
         for (const file of files) {
             const content = await this.app.vault.read(file);
@@ -57,7 +57,7 @@ export class OntologyGeneratorModal extends Modal {
         return Array.from(tagSet);
     }
 
-    private renderContent() {
+    public renderContent() {
         this.loadingEl.hide();
         this.contentEl.empty();
 
@@ -69,7 +69,7 @@ export class OntologyGeneratorModal extends Modal {
         this.renderButtons();
     }
 
-    private renderVaultStats() {
+    public renderVaultStats() {
         const statsEl = this.contentEl.createDiv("vault-stats");
         statsEl.createEl("h3", { text: "Vault Statistics" });
         const listEl = statsEl.createEl("ul");
@@ -78,7 +78,7 @@ export class OntologyGeneratorModal extends Modal {
         listEl.createEl("li", { text: `Tags: ${this.vaultStats.tags.length}` });
     }
 
-    private renderModelSelection() {
+    public renderModelSelection() {
         const modelSetting = new Setting(this.contentEl)
             .setName("AI Model")
             .setDesc("Select the AI model to use for ontology generation");
@@ -101,7 +101,7 @@ export class OntologyGeneratorModal extends Modal {
         });
     }
 
-    private renderUserContextInput() {
+    public renderUserContextInput() {
         const contextSetting = new Setting(this.contentEl)
             .setName("Additional Context")
             .setDesc("Provide any additional context or information about your knowledge base that might help in generating a more accurate ontology.")
@@ -113,7 +113,7 @@ export class OntologyGeneratorModal extends Modal {
             });
     }
 
-    private renderGuidedQuestions() {
+    public renderGuidedQuestions() {
         const questionsEl = this.contentEl.createDiv("guided-questions");
         questionsEl.createEl("h4", { text: "Guided Questions" });
         questionsEl.createEl("p", { text: "Consider the following questions when providing additional context:" });
@@ -127,7 +127,7 @@ export class OntologyGeneratorModal extends Modal {
         });
     }
 
-    private renderButtons() {
+    public renderButtons() {
         const buttonContainer = this.contentEl.createDiv("button-container");
         
         this.generateButton = new ButtonComponent(buttonContainer)
@@ -141,7 +141,7 @@ export class OntologyGeneratorModal extends Modal {
             .onClick(() => this.close());
     }
 
-    private async generateOntology() {
+    public async generateOntology() {
         const modelValue = this.modelSelect.getValue();
         if (!modelValue) {
             new Notice("Please select an AI model first.");
@@ -174,7 +174,7 @@ export class OntologyGeneratorModal extends Modal {
         }
     }
 
-    private showError(message: string) {
+    public showError(message: string) {
         this.loadingEl.hide();
         this.contentEl.empty();
         this.contentEl.createEl("p", { text: message, cls: "error-message" });

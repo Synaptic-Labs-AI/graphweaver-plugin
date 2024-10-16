@@ -1,5 +1,13 @@
-import { App, TFolder, TFile } from "obsidian";
-import { AIProvider, AIResponse, AIAdapter, AIModel, AIModelMap } from "../models/AIModels";
+// src/services/AIService.ts
+
+import { App, TFile, TFolder } from "obsidian";
+import { 
+    AIProvider, 
+    AIAdapter, 
+    AIResponse, 
+    AIModel, 
+    AIModelMap 
+} from '../models/AIModels';
 import { OpenAIAdapter } from "../adapters/OpenAIAdapter";
 import { AnthropicAdapter } from "../adapters/AnthropicAdapter";
 import { GeminiAdapter } from "../adapters/GeminiAdapter";
@@ -7,57 +15,206 @@ import { GroqAdapter } from "../adapters/GroqAdapter";
 import { OpenRouterAdapter } from "../adapters/OpenRouterAdapter";
 import { LMStudioAdapter } from "../adapters/LMStudioAdapter";
 import { SettingsService } from "./SettingsService";
-import { FrontMatterGenerator } from "../generators/FrontMatterGenerator";
-import { WikilinkGenerator } from "../generators/WikilinkGenerator";
-import { OntologyGenerator, OntologyResult } from "../generators/OntologyGenerator";
-import { BatchProcessor, BatchProcessorResult } from "../generators/BatchProcessor";
-import { JsonSchemaGenerator } from "../generators/JsonSchemaGenerator";
-import { PluginSettings } from "../models/Settings";
-import { Tag } from "../models/PropertyTag";
-import { OntologyInput } from "../models/OntologyTypes";
+import { JsonValidationService } from "./JsonValidationService";
+
+// Import Generators
+import { FrontMatterGenerator } from '../generators/FrontMatterGenerator';
+import { WikilinkGenerator } from '../generators/WikilinkGenerator';
+import { OntologyGenerator, OntologyInput, OntologyResult } from '../generators/OntologyGenerator';
+import { BatchProcessor, BatchProcessorResult } from '../generators/BatchProcessor';
+import { JsonSchemaGenerator } from '../generators/JsonSchemaGenerator';
+
+// Import Models
+import { Tag } from '../models/PropertyTag';
+import { PluginSettings } from '../models/Settings';
 
 export class AIService {
     public adapters: Map<AIProvider, AIAdapter>;
-    public jsonSchemaGenerator: JsonSchemaGenerator;
+
+    // Declare missing properties
     public frontMatterGenerator: FrontMatterGenerator;
     public wikilinkGenerator: WikilinkGenerator;
     public ontologyGenerator: OntologyGenerator;
     public batchProcessor: BatchProcessor;
+    public jsonSchemaGenerator: JsonSchemaGenerator;
 
     constructor(
         public app: App,
-        public settingsService: SettingsService
+        public settingsService: SettingsService,
+        public jsonValidationService: JsonValidationService
     ) {
-        this.jsonSchemaGenerator = new JsonSchemaGenerator(settingsService);
-        this.initializeAdapters();
-        this.initializeGenerators();
-    }
-
-    public reinitialize(): void {
         this.initializeAdapters();
         this.initializeGenerators();
     }
 
     public initializeAdapters(): void {
         this.adapters = new Map<AIProvider, AIAdapter>([
-            [AIProvider.OpenAI, new OpenAIAdapter(this.settingsService)],
-            [AIProvider.Anthropic, new AnthropicAdapter(this.settingsService)],
-            [AIProvider.Google, new GeminiAdapter(this.settingsService)],
-            [AIProvider.Groq, new GroqAdapter(this.settingsService)],
-            [AIProvider.OpenRouter, new OpenRouterAdapter(this.settingsService)],
-            [AIProvider.LMStudio, new LMStudioAdapter(this.settingsService)]
+            [AIProvider.OpenAI, new OpenAIAdapter(this.settingsService, this.jsonValidationService)],
+            [AIProvider.Anthropic, new AnthropicAdapter(this.settingsService, this.jsonValidationService)],
+            [AIProvider.Google, new GeminiAdapter(this.settingsService, this.jsonValidationService)],
+            [AIProvider.Groq, new GroqAdapter(this.settingsService, this.jsonValidationService)],
+            [AIProvider.OpenRouter, new OpenRouterAdapter(this.settingsService, this.jsonValidationService)],
+            [AIProvider.LMStudio, new LMStudioAdapter(this.settingsService, this.jsonValidationService)]
         ]);
     }
 
+    /**
+     * Initializes all generators required for AI operations.
+     */
     public initializeGenerators(): void {
         const currentProvider = this.getCurrentProvider();
         const currentAdapter = this.getAdapterForProvider(currentProvider);
+
+        // Initialize JSON Schema Generator
+        this.jsonSchemaGenerator = new JsonSchemaGenerator(this.settingsService);
+
+        // Initialize other generators
         this.frontMatterGenerator = new FrontMatterGenerator(currentAdapter, this.settingsService, this.jsonSchemaGenerator);
         this.wikilinkGenerator = new WikilinkGenerator(currentAdapter, this.settingsService);
         this.ontologyGenerator = new OntologyGenerator(currentAdapter, this.settingsService);
-        this.batchProcessor = new BatchProcessor(currentAdapter, this.settingsService, this.frontMatterGenerator, this.wikilinkGenerator, this.app);
+        this.batchProcessor = new BatchProcessor(
+            currentAdapter, 
+            this.settingsService, 
+            this.frontMatterGenerator, 
+            this.wikilinkGenerator, 
+            this.app
+        );
     }
 
+    /**
+     * Reinitializes adapters and generators. Useful after updating settings.
+     */
+    public reinitialize(): void {
+        this.initializeAdapters();
+        this.initializeGenerators();
+    }
+
+    /**
+     * Retrieves the current AI provider selected in settings.
+     */
+    public getCurrentProvider(): AIProvider {
+        return this.settingsService.getAIProviderSettings().selected;
+    }
+
+    /**
+     * Retrieves the current model API name for a given provider.
+     * @param provider - The AI provider.
+     */
+    public getCurrentModel(provider: AIProvider): string {
+        const aiProviderSettings = this.settingsService.getAIProviderSettings();
+        const modelApiName = aiProviderSettings.selectedModels[provider];
+        if (!modelApiName) {
+            throw new Error(`No model selected for provider: ${provider}`);
+        }
+        return modelApiName;
+    }
+
+    /**
+     * Retrieves the default model API name based on the current provider.
+     */
+    public getDefaultModel(): string {
+        const provider = this.getCurrentProvider();
+        return this.getCurrentModel(provider);
+    }
+
+    /**
+     * Sets the default model API name for the current provider.
+     * @param modelApiName - The model API name to set as default.
+     */
+    public async setDefaultModel(modelApiName: string): Promise<void> {
+        const provider = this.getCurrentProvider();
+        const aiProviderSettings = this.settingsService.getAIProviderSettings();
+        aiProviderSettings.selectedModels[provider] = modelApiName;
+        await this.settingsService.updateAIProviderSettings(provider, { selectedModels: aiProviderSettings.selectedModels });
+        this.reinitialize();
+    }
+
+    /**
+     * Retrieves all available models for a given provider.
+     * @param provider - The AI provider.
+     */
+    public getAvailableModels(provider: AIProvider): string[] {
+        const adapter = this.getAdapterForProvider(provider);
+        return adapter.getAvailableModels();
+    }
+
+    /**
+     * Retrieves all supported AI providers.
+     */
+    public getSupportedProviders(): AIProvider[] {
+        return Array.from(this.adapters.keys());
+    }
+
+    /**
+     * Retrieves the adapter corresponding to a given provider.
+     * @param provider - The AI provider.
+     */
+    public getAdapterForProvider(provider: AIProvider): AIAdapter {
+        const adapter = this.adapters.get(provider);
+        if (!adapter) {
+            throw new Error(`No adapter found for provider: ${provider}`);
+        }
+        return adapter;
+    }
+
+    /**
+     * Validates the API key for a given provider.
+     * @param provider - The AI provider.
+     */
+    public async validateApiKey(provider: AIProvider): Promise<boolean> {
+        const adapter = this.getAdapterForProvider(provider);
+        try {
+            return await adapter.validateApiKey();
+        } catch (error) {
+            console.error(`Error validating API key for ${provider}:`, error);
+            return false;
+        }
+    }
+
+    /**
+     * Updates plugin settings and reinitializes services.
+     * @param newSettings - Partial plugin settings to update.
+     */
+    public async updateSettings(newSettings: Partial<PluginSettings>): Promise<void> {
+        await this.settingsService.updateSettings(newSettings);
+        this.reinitialize();
+    }
+
+    /**
+     * Retrieves the root folder of the vault.
+     */
+    public getVaultRoot(): TFolder {
+        return this.app.vault.getRoot();
+    }
+
+    /**
+     * Retrieves a list of existing markdown pages in the vault.
+     */
+    public getExistingPages(): string[] {
+        return this.app.vault.getMarkdownFiles().map(file => file.basename);
+    }
+
+    /**
+     * Tests the connection to a given AI provider by validating the API key and making a test request.
+     * @param provider - The AI provider to test.
+     */
+    public async testConnection(provider: AIProvider): Promise<boolean> {
+        try {
+            const adapter = this.getAdapterForProvider(provider);
+            const modelApiName = this.getCurrentModel(provider);
+            const testPrompt = "This is a test prompt. Please respond with the word 'OK'.";
+            
+            return await adapter.testConnection(testPrompt, modelApiName);
+        } catch (error) {
+            console.error(`Error testing connection to ${provider}:`, error);
+            return false;
+        }
+    }
+
+    /**
+     * Generates a response from the AI based on the provided prompt.
+     * @param prompt - The input prompt for the AI.
+     */
     public async generateResponse(prompt: string): Promise<AIResponse> {
         const provider = this.getCurrentProvider();
         const modelApiName = this.getCurrentModel(provider);
@@ -70,13 +227,20 @@ export class AIService {
         }
     }
 
+    /**
+     * Retrieves a list of AI providers that have valid API keys set.
+     */
     public getProvidersWithApiKeys(): AIProvider[] {
         const aiProviderSettings = this.settingsService.getAIProviderSettings();
         return Object.entries(aiProviderSettings.apiKeys)
             .filter(([_, apiKey]) => apiKey && apiKey.trim() !== '')
             .map(([provider, _]) => provider as AIProvider);
     }
-    
+
+    /**
+     * Generates front matter for the given content.
+     * @param content - The content for which to generate front matter.
+     */
     public async generateFrontMatter(content: string): Promise<string> {
         try {
             return await this.frontMatterGenerator.generate(content);
@@ -86,6 +250,10 @@ export class AIService {
         }
     }
 
+    /**
+     * Generates wikilinks for the given content.
+     * @param content - The content for which to generate wikilinks.
+     */
     public async generateWikilinks(content: string): Promise<string> {
         const existingPages = this.getExistingPages();
         try {
@@ -96,6 +264,10 @@ export class AIService {
         }
     }
 
+    /**
+     * Generates an ontology based on the provided input.
+     * @param input - The input parameters for ontology generation.
+     */
     public async generateOntology(input: OntologyInput): Promise<OntologyResult> {
         try {
             const adapter = this.getAdapterForProvider(input.provider);
@@ -107,6 +279,10 @@ export class AIService {
         }
     }
 
+    /**
+     * Updates tags based on suggested tags.
+     * @param suggestedTags - An array of suggested tags with name and description.
+     */
     public async updateTags(suggestedTags: { name: string; description: string }[]): Promise<void> {
         try {
             const newTags: Tag[] = suggestedTags.map(tag => ({
@@ -124,7 +300,15 @@ export class AIService {
         }
     }
     
-    public async batchProcess(files: TFile[], options: { generateFrontMatter: boolean, generateWikilinks: boolean }): Promise<BatchProcessorResult> {
+    /**
+     * Processes a batch of files based on the provided options.
+     * @param files - An array of files to process.
+     * @param options - Options specifying which generators to run.
+     */
+    public async batchProcess(
+        files: TFile[], 
+        options: { generateFrontMatter: boolean, generateWikilinks: boolean }
+    ): Promise<BatchProcessorResult> {
         try {
             return await this.batchProcessor.generate({ files, ...options });
         } catch (error) {
@@ -133,94 +317,9 @@ export class AIService {
         }
     }
 
-    public getCurrentProvider(): AIProvider {
-        return this.settingsService.getAIProviderSettings().selected;
-    }
-
-    public getCurrentModel(provider: AIProvider): string {
-        const aiProviderSettings = this.settingsService.getAIProviderSettings();
-        const modelApiName = aiProviderSettings.selectedModels[provider];
-        if (!modelApiName) {
-            throw new Error(`No model selected for provider: ${provider}`);
-        }
-        return modelApiName;
-    }
-
-    public getDefaultModel(): string {
-        const provider = this.getCurrentProvider();
-        return this.getCurrentModel(provider);
-    }
-
-    public async setDefaultModel(modelApiName: string): Promise<void> {
-        const provider = this.getCurrentProvider();
-        const aiProviderSettings = this.settingsService.getAIProviderSettings();
-        aiProviderSettings.selectedModels[provider] = modelApiName;
-        await this.settingsService.updateAIProviderSettings(provider, { selectedModels: aiProviderSettings.selectedModels });
-    }
-
-    public getAvailableModels(provider: AIProvider): string[] {
-        const adapter = this.getAdapterForProvider(provider);
-        return adapter.getAvailableModels();
-    }
-
-    public getSupportedProviders(): AIProvider[] {
-        return Array.from(this.adapters.keys());
-    }
-
-    public getAdapterForProvider(provider: AIProvider): AIAdapter {
-        const adapter = this.adapters.get(provider);
-        if (!adapter) {
-            throw new Error(`No adapter found for provider: ${provider}`);
-        }
-        return adapter;
-    }
-
-    public async validateApiKey(provider: AIProvider): Promise<boolean> {
-        const adapter = this.getAdapterForProvider(provider);
-        try {
-            return await adapter.validateApiKey();
-        } catch (error) {
-            console.error(`Error validating API key for ${provider}:`, error);
-            return false;
-        }
-    }
-
-    public async updateSettings(newSettings: Partial<PluginSettings>): Promise<void> {
-        await this.settingsService.updateSettings(newSettings);
-        this.reinitialize();
-    }
-
-    public getVaultRoot(): TFolder {
-        return this.app.vault.getRoot();
-    }
-
-    public getExistingPages(): string[] {
-        return this.app.vault.getMarkdownFiles().map(file => file.basename);
-    }
-
-    public async testConnection(provider: AIProvider): Promise<boolean> {
-        try {
-            const adapter = this.getAdapterForProvider(provider);
-            const isValid = await adapter.validateApiKey();
-            if (!isValid) {
-                throw new Error("Invalid API key");
-            }
-            
-            const testPrompt = "This is a test prompt. Please respond with 'OK' if you receive this message.";
-            const modelApiName = this.getCurrentModel(provider);
-            const response = await adapter.generateResponse(testPrompt, modelApiName);
-            
-            if (response.success && response.data && typeof response.data === 'string' && response.data.includes('OK')) {
-                return true;
-            } else {
-                throw new Error("Unexpected response from AI provider");
-            }
-        } catch (error) {
-            console.error(`Error testing connection to ${provider}:`, error);
-            return false;
-        }
-    }
-
+    /**
+     * Retrieves all available AI models across all providers.
+     */
     public getAllAvailableModels(): { provider: AIProvider; model: AIModel }[] {
         const availableModels: { provider: AIProvider; model: AIModel }[] = [];
 
@@ -249,7 +348,12 @@ export class AIService {
         return availableModels;
     }
 
-    private getModelDetails(provider: AIProvider, modelName: string): AIModel | undefined {
+    /**
+     * Retrieves model details based on provider and model name.
+     * @param provider - The AI provider.
+     * @param modelName - The name of the model.
+     */
+    public getModelDetails(provider: AIProvider, modelName: string): AIModel | undefined {
         const models = AIModelMap[provider];
         return models.find(model => model.apiName === modelName);
     }

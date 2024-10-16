@@ -29,6 +29,7 @@ export interface AIModelConfig {
 
 export interface AIAdapter {
     generateResponse(prompt: string, model: string): Promise<AIResponse>;
+    testConnection(prompt: string, model: string): Promise<boolean>;
     validateApiKey(): Promise<boolean>;
     getAvailableModels(): string[];
     getProviderType(): AIProvider;
