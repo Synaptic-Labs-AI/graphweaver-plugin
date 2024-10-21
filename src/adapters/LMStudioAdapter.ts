@@ -69,7 +69,7 @@ export class LMStudioAdapter implements AIAdapter {
         }
     }
 
-    private createJsonSchema() {
+    public createJsonSchema() {
         return {
             name: "assistant_response",
             strict: "true",

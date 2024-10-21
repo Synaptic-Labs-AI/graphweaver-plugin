@@ -84,6 +84,8 @@ const excludedFiles = [
   'codeSummary.cjs',
   '*.config.js', // Exclude all config files ending with .config.js
   '*codesummary*', // Exclude any file or folder containing 'codesummary' in its name
+  'main.js',
+  'data.json'
 ];
 
 // OpenRouter API configuration

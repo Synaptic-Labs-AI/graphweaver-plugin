@@ -10,6 +10,7 @@ import { TagManagerAccordion } from './src/components/accordions/TagManagerAccor
 import { OntologyGenerationAccordion } from './src/components/accordions/OntologyGenerationAccordion';
 import { BatchProcessorAccordion } from './src/components/accordions/BatchProcessorAccordion';
 import { AdvancedAccordion } from './src/components/accordions/AdvancedAccordion';
+import { KnowledgeBloomAccordion } from './src/components/accordions/KnowledgeBloomAccordion';
 import { JsonValidationService } from './src/services/JsonValidationService';
 
 export default class GraphWeaverPlugin extends Plugin {
@@ -58,6 +59,11 @@ export default class GraphWeaverPlugin extends Plugin {
             name: 'Generate Wikilinks',
             callback: this.generateWikilinks.bind(this),
         });
+        this.addCommand({
+            id: 'generate-knowledge-bloom',
+            name: 'Generate Knowledge Bloom',
+            callback: this.generateKnowledgeBloom.bind(this),
+        });
     }
 
     async onunload() {
@@ -90,6 +96,7 @@ export default class GraphWeaverPlugin extends Plugin {
         const menu = new Menu();
         menu.addItem((item) => item.setTitle('Generate Frontmatter').setIcon('file-plus').onClick(this.generateFrontmatter.bind(this)));
         menu.addItem((item) => item.setTitle('Generate Wikilinks').setIcon('link').onClick(this.generateWikilinks.bind(this)));
+        menu.addItem((item) => item.setTitle('Generate Knowledge Bloom').setIcon('flower').onClick(this.generateKnowledgeBloom.bind(this)));
         menu.showAtMouseEvent(evt);
     }
 
@@ -133,6 +140,35 @@ export default class GraphWeaverPlugin extends Plugin {
         }
     }
 
+    public async generateKnowledgeBloom() {
+        const activeFile = this.app.workspace.getActiveFile();
+        if (!activeFile) {
+            new Notice('No active file. Please open a file to generate Knowledge Bloom.');
+            return;
+        }
+
+        try {
+            new Notice('Generating Knowledge Bloom...');
+            const result = await this.aiService.generateKnowledgeBloom(activeFile);
+            
+            for (const note of result.generatedNotes) {
+                const filePath = `${note.title}.md`;
+                const file = this.app.vault.getAbstractFileByPath(filePath);
+                
+                if (file instanceof TFile) {
+                    await this.app.vault.modify(file, note.content);
+                } else {
+                    await this.app.vault.create(filePath, note.content);
+                }
+            }
+
+            new Notice(`Generated ${result.generatedNotes.length} new notes!`);
+        } catch (error) {
+            console.error('Error generating Knowledge Bloom:', error);
+            new Notice('Error generating Knowledge Bloom. Please check the console for details.');
+        }
+    }
+
     public addOrUpdateFrontMatter(content: string, newFrontMatter: string): string {
         const frontMatterRegex = /^---\n([\s\S]*?)\n---/;
         const match = content.match(frontMatterRegex);
@@ -163,6 +199,7 @@ class GraphWeaverSettingTab extends PluginSettingTab {
         new TagManagerAccordion(this.app, containerEl, this.plugin.settingsService, this.plugin.aiService).render();
         new OntologyGenerationAccordion(this.app, containerEl, this.plugin.settingsService, this.plugin.aiService).render();
         new BatchProcessorAccordion(this.app, containerEl, this.plugin.settingsService, this.plugin.aiService).render();
+        new KnowledgeBloomAccordion(this.app, containerEl, this.plugin.settingsService, this.plugin.aiService).render();
         new AdvancedAccordion(containerEl, this.plugin.settingsService).render();
     }
 }

@@ -46,47 +46,59 @@ export class FrontMatterGenerator extends BaseGenerator {
         return formattedContent;
     }
 
+    /**
+     * Prepares the prompt for the AI, including the JSON schema.
+     * @param input The input data required for generation.
+     * @returns The prepared prompt string.
+     */
     protected preparePrompt(input: FrontMatterInput): string {
-        const schema = this.jsonSchemaGenerator.generateSchema();
+        // Use generateBaseSchema instead of generateSchema
+        const schema = this.jsonSchemaGenerator.generateBaseSchema();
         const propertyPrompt = input.customProperties.map(prop => 
             `${prop.name} (${prop.type}): ${prop.description}`
         ).join('\n');
         const tagPrompt = input.customTags.map(tag => tag.name).join(', ');
 
         return `
-            Generate front matter for the following note content.
-            Use the provided JSON schema to structure your response.
-            Include relevant custom properties and tags.
+Generate front matter for the following note content.
+Use the provided JSON schema to structure your response.
+Include relevant custom properties and tags.
 
-            Custom Properties:
-            ${propertyPrompt}
+Custom Properties:
+${propertyPrompt}
 
-            Available Tags:
-            ${tagPrompt}
+Available Tags:
+${tagPrompt}
 
-            JSON Schema:
-            ${JSON.stringify(schema, null, 2)}
+JSON Schema:
+${JSON.stringify(schema, null, 2)}
 
-            Note Content:
-            ${input.noteContent}
+Note Content:
+${input.noteContent}
 
-            Provide the filled out JSON object as your response, with no additional text.
-            Only include fields that are relevant to the content.
-        `;
+Provide the filled out JSON object as your response, with no additional text.
+Only include fields that are relevant to the content.
+`;
     }
 
-    protected formatOutput(aiResponse: any, originalContent: string): string {
-        console.log("Raw AI Response:", JSON.stringify(aiResponse, null, 2));
+    /**
+     * Converts validated JSON data into Markdown format with front matter.
+     * @param data The validated JSON data.
+     * @param originalContent The original note content.
+     * @returns The Markdown string.
+     */
+    protected formatOutput(data: any, originalContent: string): string {
+        console.log("Raw AI Response:", JSON.stringify(data, null, 2));
         
         let parsedResponse: any;
         
-        // If aiResponse is already an object, use it directly
-        if (typeof aiResponse === 'object' && aiResponse !== null) {
-            parsedResponse = aiResponse;
+        // If data is already an object, use it directly
+        if (typeof data === 'object' && data !== null) {
+            parsedResponse = data;
         } else {
-            // If aiResponse is a string, try to parse it
+            // If data is a string, try to parse it
             try {
-                parsedResponse = JSON.parse(aiResponse);
+                parsedResponse = JSON.parse(data);
             } catch (error) {
                 console.error("Error parsing AI response:", error);
                 return originalContent; // Return original content if parsing fails
@@ -118,8 +130,15 @@ export class FrontMatterGenerator extends BaseGenerator {
         let result: string;
         if (hasFrontMatter) {
             // If frontmatter exists, append new frontmatter to it
-            const [existingFrontMatter, ...contentParts] = originalContent.split('---');
-            result = `---\n${existingFrontMatter.trim()}\n${newFrontMatter}\n---\n${contentParts.join('---').trim()}`;
+            const parts = originalContent.split('---');
+            if (parts.length >= 3) {
+                const existingFrontMatter = parts[1].trim();
+                const contentParts = parts.slice(2).join('---').trim();
+                result = `---\n${existingFrontMatter}\n${newFrontMatter}\n---\n${contentParts}`;
+            } else {
+                // Malformed existing front matter, overwrite
+                result = `---\n${newFrontMatter}\n---\n\n${originalContent.trim()}`;
+            }
         } else {
             // If no frontmatter, add new frontmatter at the beginning
             result = `---\n${newFrontMatter}\n---\n\n${originalContent.trim()}`;

@@ -1,10 +1,9 @@
-// src/services/SettingsService.ts
-
-import { PluginSettings, DEFAULT_SETTINGS } from "../models/Settings";
+import { PluginSettings, DEFAULT_SETTINGS, KnowledgeBloomSettings } from "../models/Settings";
 import { EventEmitter } from "events";
 import { Plugin } from "obsidian";
 import { AIProvider } from "../models/AIModels";
 import { Tag } from "../models/PropertyTag";
+import { JsonValidationService } from "./JsonValidationService";
 
 type SettingsKey = keyof PluginSettings;
 type NestedSettingsKey<T extends SettingsKey> = keyof PluginSettings[T];
@@ -17,16 +16,17 @@ export class SettingsService {
     public settings: PluginSettings;
     public emitter: EventEmitter;
     public plugin: Plugin;
+    public jsonValidationService: JsonValidationService;
 
     constructor(plugin: Plugin, initialSettings: PluginSettings) {
         this.plugin = plugin;
         this.settings = initialSettings;
         this.emitter = new EventEmitter();
+        this.jsonValidationService = new JsonValidationService(); // Initialize JsonValidationService
     }
 
     public async loadSettings(): Promise<void> {
         const data = await this.plugin.loadData();
-        this.settings = this.deepMerge(DEFAULT_SETTINGS, data as DeepPartial<PluginSettings>);
         this.settings = this.deepMerge(DEFAULT_SETTINGS, data as DeepPartial<PluginSettings>);
     }
 
@@ -95,18 +95,36 @@ export class SettingsService {
         return this.settings.localLMStudio;
     }
 
+    public getKnowledgeBloomSettings(): KnowledgeBloomSettings {
+        return this.settings.knowledgeBloom;
+    }
+
+    public async updateKnowledgeBloomSettings(
+        settings: DeepPartial<KnowledgeBloomSettings>
+    ): Promise<void> {
+        this.settings.knowledgeBloom = this.deepMerge(this.settings.knowledgeBloom, settings);
+        await this.saveSettings();
+        this.emitter.emit('settingsChanged', { knowledgeBloom: this.settings.knowledgeBloom });
+    }
+
+    public async updateKnowledgeBloomSetting<K extends keyof KnowledgeBloomSettings>(
+        key: K,
+        value: KnowledgeBloomSettings[K]
+    ): Promise<void> {
+        this.settings.knowledgeBloom[key] = value;
+        await this.saveSettings();
+        this.emitter.emit('settingsChanged', { knowledgeBloom: { [key]: value } });
+    }
+
     public async updateTags(newTags: Tag[]): Promise<void> {
-        // Merge new tags with existing tags, avoiding duplicates
         const existingTags = this.settings.tags.customTags || [];
         const mergedTags = [...existingTags];
 
         for (const newTag of newTags) {
             const existingIndex = mergedTags.findIndex(t => t.name === newTag.name);
             if (existingIndex !== -1) {
-                // Update existing tag
                 mergedTags[existingIndex] = { ...mergedTags[existingIndex], ...newTag };
             } else {
-                // Add new tag
                 mergedTags.push(newTag);
             }
         }
@@ -158,5 +176,9 @@ export class SettingsService {
     public isObject(item: unknown): item is Record<string, unknown> {
         return item !== null && typeof item === 'object' && !Array.isArray(item);
     }
-}
 
+    // Getter for JsonValidationService
+    public getJsonValidationService(): JsonValidationService {
+        return this.jsonValidationService;
+    }
+}

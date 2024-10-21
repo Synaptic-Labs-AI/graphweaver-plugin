@@ -1,6 +1,28 @@
+import Ajv, { ErrorObject } from 'ajv';
 import { Notice } from 'obsidian';
 
 export class JsonValidationService {
+    public ajv: Ajv;
+
+    constructor() {
+        this.ajv = new Ajv({ allErrors: true, strict: false });
+    }
+
+    /**
+     * Validates the JSON data against the provided schema.
+     * @param data The JSON data to validate.
+     * @param schema The JSON schema to validate against.
+     * @returns True if valid, false otherwise.
+     */
+    public validate(data: any, schema: object): boolean {
+        const validate = this.ajv.compile(schema);
+        const valid = validate(data);
+        if (!valid) {
+            console.error('JSON Validation Errors:', validate.errors);
+        }
+        return valid;
+    }
+
     /**
      * Validates and cleans the JSON string.
      * @param jsonString The JSON string to validate and clean.

@@ -1,6 +1,13 @@
 import { AIProvider } from "./AIModels";
 import { PropertyTag, Tag } from "./PropertyTag";
 
+export interface KnowledgeBloomSettings {
+    outputFolder: string;
+    overwriteExisting: boolean;
+    defaultPrompt: string;
+    selectedModel: string; // Add this line
+}
+
 export interface PluginSettings {
     aiProvider: {
         selected: AIProvider;
@@ -29,6 +36,7 @@ export interface PluginSettings {
     ontology: {
         lastGenerated: string;
     };
+    knowledgeBloom: KnowledgeBloomSettings;
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -60,5 +68,11 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     },
     ontology: {
         lastGenerated: ''
+    },
+    knowledgeBloom: {
+        selectedModel: 'string',
+        outputFolder: '',
+        overwriteExisting: false,
+        defaultPrompt: 'Generate a comprehensive note about {LINK}. Include key concepts, definitions, and relevant examples if applicable.'
     }
 };

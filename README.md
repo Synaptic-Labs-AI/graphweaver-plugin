@@ -70,3 +70,7 @@ GraphWeaver supports multiple AI providers. In the settings:
 - Experiment with different AI providers to find the best fit for your writing style and needs.
 
 Remember, GraphWeaver is here to enhance your note-taking process. Feel free to adjust its suggestions to better fit your personal knowledge management style.
+
+Update Settings.ts to include Knowledge Bloom settings.
+Modify SettingsService.ts to handle the new settings.
+Update styles.css to style any new UI components

@@ -1,5 +1,3 @@
-// src/services/AIService.ts
-
 import { App, TFile, TFolder } from "obsidian";
 import { 
     AIProvider, 
@@ -23,6 +21,7 @@ import { WikilinkGenerator } from '../generators/WikilinkGenerator';
 import { OntologyGenerator, OntologyInput, OntologyResult } from '../generators/OntologyGenerator';
 import { BatchProcessor, BatchProcessorResult } from '../generators/BatchProcessor';
 import { JsonSchemaGenerator } from '../generators/JsonSchemaGenerator';
+import { KnowledgeBloomGenerator, KnowledgeBloomResult } from '../generators/KnowledgeBloomGenerator';
 
 // Import Models
 import { Tag } from '../models/PropertyTag';
@@ -37,6 +36,7 @@ export class AIService {
     public ontologyGenerator: OntologyGenerator;
     public batchProcessor: BatchProcessor;
     public jsonSchemaGenerator: JsonSchemaGenerator;
+    public knowledgeBloomGenerator: KnowledgeBloomGenerator;
 
     constructor(
         public app: App,
@@ -65,10 +65,8 @@ export class AIService {
         const currentProvider = this.getCurrentProvider();
         const currentAdapter = this.getAdapterForProvider(currentProvider);
 
-        // Initialize JSON Schema Generator
+        // Initialize generators
         this.jsonSchemaGenerator = new JsonSchemaGenerator(this.settingsService);
-
-        // Initialize other generators
         this.frontMatterGenerator = new FrontMatterGenerator(currentAdapter, this.settingsService, this.jsonSchemaGenerator);
         this.wikilinkGenerator = new WikilinkGenerator(currentAdapter, this.settingsService);
         this.ontologyGenerator = new OntologyGenerator(currentAdapter, this.settingsService);
@@ -79,6 +77,9 @@ export class AIService {
             this.wikilinkGenerator, 
             this.app
         );
+
+        // Initialize KnowledgeBloomGenerator with the app object
+        this.knowledgeBloomGenerator = new KnowledgeBloomGenerator(currentAdapter, this.settingsService, this.app);
     }
 
     /**
@@ -318,6 +319,22 @@ export class AIService {
     }
 
     /**
+     * Generates new notes based on wikilinks in the given file.
+     * @param sourceFile - The file containing wikilinks to generate notes for.
+     * @param userPrompt - Optional user-provided context for note generation.
+     */
+    public async generateKnowledgeBloom(sourceFile: TFile, userPrompt?: string): Promise<KnowledgeBloomResult> {
+        try {
+            const knowledgeBloomSettings = this.settingsService.getSettings().knowledgeBloom;
+            const selectedModel = knowledgeBloomSettings.selectedModel;
+            return await this.knowledgeBloomGenerator.generate({ sourceFile, userPrompt });
+        } catch (error) {
+            console.error("Error in Knowledge Bloom generation:", error);
+            throw new Error(`Knowledge Bloom generation failed: ${(error as Error).message}`);
+        }
+    }
+    
+    /**
      * Retrieves all available AI models across all providers.
      */
     public getAllAvailableModels(): { provider: AIProvider; model: AIModel }[] {
@@ -337,7 +354,7 @@ export class AIService {
         }
 
         // Include local model if set up
-        const localLMStudioSettings = this.settingsService.getLocalLMStudioSettings();
+        const localLMStudioSettings = this.settingsService.getSettings().localLMStudio;
         if (localLMStudioSettings.enabled && localLMStudioSettings.modelName) {
             availableModels.push({
                 provider: AIProvider.LMStudio,
