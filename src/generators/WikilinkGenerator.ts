@@ -78,17 +78,18 @@ export class WikilinkGenerator extends BaseGenerator<WikilinkInput, WikilinkOutp
             .join(', ') || '';
 
         return `
-            Analyze the following content and suggest key phrases that could be turned into wikilinks.
-            Consider the existing pages in the vault and prioritize linking to them.
-            Also consider the following custom tags used in this knowledge base: ${customTags}
+# MISSION
+Act as an expert in recommending wikilinks for potential future research notes.
+Analyze the following content and suggest key phrases, proper nouns, people, places, events, and concepts that would make for a relevant and practical note.
+Consider the existing pages in the vault and prioritize linking to them. Ignore all tags and front matter when generating.
 
-            Content:
-            ${input.content}
+# CONTENT
+${input.content}
 
-            Existing pages:
-            ${input.existingPages.join(', ')}
+# EXISTING PAGES
+${input.existingPages.join(', ')}
 
-            Provide your suggestions as a JSON array of strings.
+Provide your suggestions as a JSON array of strings, omitting all characters before or after, including backticks.
         `;
     }
 

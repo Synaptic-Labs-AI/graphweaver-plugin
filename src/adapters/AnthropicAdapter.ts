@@ -16,23 +16,32 @@ export class AnthropicAdapter implements AIAdapter {
         this.models = AIModelMap[AIProvider.Anthropic];
     }
 
-    public async generateResponse(prompt: string, modelApiName: string): Promise<AIResponse> {
+    public async generateResponse(prompt: string, modelApiName: string, options?: { 
+        rawResponse?: boolean;
+        maxTokens?: number; 
+    }): Promise<AIResponse> {
         try {
             const apiModel = this.getApiModelName(modelApiName);
             if (!apiModel) {
                 throw new Error(`Invalid model: ${modelApiName} for ${this.getProviderType()}`);
             }
-
+    
             if (!this.apiKey) {
                 throw new Error('Anthropic API key is not set');
             }
-
+    
             const settings = this.settingsService.getSettings();
             const temperature = this.getTemperature(settings);
-            const maxTokens = this.getMaxTokens(settings);
-
+            const maxTokens = options?.maxTokens || this.getMaxTokens(settings);
+    
             const response = await this.makeApiRequest(apiModel, prompt, temperature, maxTokens);
             const content = this.extractContentFromResponse(response);
+    
+            // If rawResponse is true, skip JSON validation
+            if (options?.rawResponse) {
+                return { success: true, data: content };
+            }
+    
             const validatedContent = await this.jsonValidationService.validateAndCleanJson(content);
             return { success: true, data: validatedContent };
         } catch (error) {

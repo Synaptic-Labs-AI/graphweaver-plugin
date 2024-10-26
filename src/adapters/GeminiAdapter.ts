@@ -1,22 +1,34 @@
 import { Notice, requestUrl, RequestUrlResponse } from 'obsidian';
-import { AIProvider, AIResponse, AIAdapter, AIModel, AIModelMap } from '../models/AIModels';
+import { AIProvider, AIResponse, AIAdapter, AIModel, AIModelMap, AIResponseOptions } from '../models/AIModels';
 import { SettingsService } from '../services/SettingsService';
 import { JsonValidationService } from '../services/JsonValidationService';
 
+/**
+ * Gemini service adapter implementation
+ * Handles communication with Google's Gemini API
+ * Note: Gemini has a different API structure from other providers
+ */
 export class GeminiAdapter implements AIAdapter {
-    public apiKey: string;
-    public models: AIModel[];
+    private apiKey: string;
+    private models: AIModel[];
 
     constructor(
-        public settingsService: SettingsService,
-        public jsonValidationService: JsonValidationService
+        private settingsService: SettingsService,
+        private jsonValidationService: JsonValidationService
     ) {
         const aiProviderSettings = this.settingsService.getSetting('aiProvider');
         this.apiKey = aiProviderSettings.apiKeys[AIProvider.Google] || '';
         this.models = AIModelMap[AIProvider.Google];
     }
 
-    public async generateResponse(prompt: string, modelApiName: string): Promise<AIResponse> {
+    /**
+     * Generate a response using the Gemini API
+     */
+    public async generateResponse(
+        prompt: string,
+        modelApiName: string,
+        options?: AIResponseOptions
+    ): Promise<AIResponse> {
         try {
             const apiModel = this.getApiModelName(modelApiName);
             if (!apiModel) {
@@ -29,58 +41,100 @@ export class GeminiAdapter implements AIAdapter {
 
             const settings = this.settingsService.getSettings();
             const temperature = this.getTemperature(settings);
-            const maxTokens = this.getMaxTokens(settings);
+            const maxTokens = options?.maxTokens || this.getMaxTokens(settings);
 
-            const response = await this.makeApiRequest(apiModel, prompt, temperature, maxTokens);
+            const response = await this.makeApiRequest({
+                model: apiModel,
+                prompt,
+                temperature,
+                maxTokens,
+                rawResponse: options?.rawResponse
+            });
+
             const content = this.extractContentFromResponse(response);
-            const validatedContent = await this.jsonValidationService.validateAndCleanJson(content);
-            return { success: true, data: validatedContent };
+
+            // Return raw content if requested
+            if (options?.rawResponse) {
+                return { success: true, data: content };
+            }
+
+            try {
+                // For JSON responses, we need to ensure the content is valid JSON
+                const validatedContent = await this.jsonValidationService.validateAndCleanJson(content);
+                return { success: true, data: validatedContent };
+            } catch (jsonError) {
+                // If JSON validation fails and we're not in raw mode, format as JSON
+                return {
+                    success: true,
+                    data: { response: content }
+                };
+            }
         } catch (error) {
             return this.handleError(error);
         }
     }
 
+    /**
+     * Test connection to Gemini API
+     */
     public async testConnection(prompt: string, modelApiName: string): Promise<boolean> {
         try {
             if (!this.apiKey) {
-                throw new Error('Google API key is not set');
+                return false;
             }
 
-            const apiModel = this.getApiModelName(modelApiName);
-            const response = await this.makeApiRequest(apiModel, prompt, 0.7, 50);
-            const content = this.extractContentFromResponse(response);
-            return content.toLowerCase().includes('ok');
+            const response = await this.generateResponse(
+                prompt || "Return the word 'OK'.",
+                modelApiName,
+                { rawResponse: true }
+            );
+
+            if (!response.success || typeof response.data !== 'string') {
+                return false;
+            }
+
+            return response.data.toLowerCase().includes('ok');
         } catch (error) {
             console.error('Error in Gemini test connection:', error);
             return false;
         }
     }
 
-    public getTemperature(settings: any): number {
-        return (settings.advanced.temperature >= 0 && settings.advanced.temperature <= 1) 
-            ? settings.advanced.temperature 
-            : 0.7;
-    }
+    /**
+     * Make a request to the Gemini API
+     */
+    private async makeApiRequest(params: {
+        model: string;
+        prompt: string;
+        temperature: number;
+        maxTokens: number;
+        rawResponse?: boolean;
+    }): Promise<RequestUrlResponse> {
+        // Build the system prompt based on response type
+        const systemPrompt = params.rawResponse
+            ? "You are a helpful assistant."
+            : "You are a helpful assistant that responds in JSON format. Your response should be valid JSON with a 'response' field containing your answer.";
 
-    public getMaxTokens(settings: any): number {
-        return (settings.advanced.maxTokens > 0) ? settings.advanced.maxTokens : 1000;
-    }
-
-    public async makeApiRequest(apiModel: string, prompt: string, temperature: number, maxTokens: number): Promise<RequestUrlResponse> {
+        // Gemini uses a different request format
         const requestBody = {
-            contents: [{
-                parts: [{ text: prompt }]
-            }],
+            contents: [
+                {
+                    parts: [
+                        { text: systemPrompt },
+                        { text: params.prompt }
+                    ]
+                }
+            ],
             generationConfig: {
-                temperature: temperature,
-                maxOutputTokens: maxTokens,
+                temperature: params.temperature,
+                maxOutputTokens: params.maxTokens,
                 topK: 40,
                 topP: 0.95
             }
         };
 
         const response = await requestUrl({
-            url: `https://generativelanguage.googleapis.com/v1/models/${apiModel}:generateContent`,
+            url: `https://generativelanguage.googleapis.com/v1/models/${params.model}:generateContent`,
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -90,32 +144,73 @@ export class GeminiAdapter implements AIAdapter {
         });
 
         if (response.status !== 200) {
-            throw new Error(`API request failed with status ${response.status}: ${response.text}`);
+            const errorBody = response.json;
+            throw new Error(
+                `API request failed with status ${response.status}: ${
+                    errorBody?.error?.message || response.text
+                }`
+            );
         }
 
         return response;
     }
 
-    public extractContentFromResponse(response: RequestUrlResponse): string {
+    /**
+     * Extract content from Gemini API response
+     */
+    private extractContentFromResponse(response: RequestUrlResponse): string {
+        if (!response.json?.candidates?.[0]?.content?.parts?.[0]?.text) {
+            throw new Error('Invalid response format from Gemini API');
+        }
         const content = response.json.candidates[0].content;
         return content.parts[0].text;
     }
 
-    public handleError(error: unknown): AIResponse {
+    /**
+     * Get temperature setting
+     */
+    private getTemperature(settings: any): number {
+        return (settings.advanced?.temperature >= 0 && settings.advanced?.temperature <= 1)
+            ? settings.advanced.temperature
+            : 0.7;
+    }
+
+    /**
+     * Get max tokens setting
+     */
+    private getMaxTokens(settings: any): number {
+        return (settings.advanced?.maxTokens > 0) ? settings.advanced.maxTokens : 1000;
+    }
+
+    /**
+     * Handle errors in API calls
+     */
+    private handleError(error: unknown): AIResponse {
         console.error('Error in Gemini API call:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         new Notice(`Gemini API Error: ${errorMessage}`);
         return { success: false, error: errorMessage };
     }
 
+    /**
+     * Validate API key
+     */
     public async validateApiKey(): Promise<boolean> {
         try {
             if (!this.apiKey) {
                 throw new Error('Google API key is not set');
             }
 
-            const response = await this.testConnection("Return the word 'OK'.", this.models[0].apiName);
-            if (response) {
+            if (this.models.length === 0) {
+                throw new Error('No models available for Gemini');
+            }
+
+            const isValid = await this.testConnection(
+                "Return the word 'OK'.",
+                this.models[0].apiName
+            );
+
+            if (isValid) {
                 new Notice('Gemini API key validated successfully');
                 return true;
             } else {
@@ -128,30 +223,53 @@ export class GeminiAdapter implements AIAdapter {
         }
     }
 
+    /**
+     * Get available models
+     */
     public getAvailableModels(): string[] {
         return this.models.map(model => model.apiName);
     }
 
+    /**
+     * Get provider type
+     */
     public getProviderType(): AIProvider {
         return AIProvider.Google;
     }
 
+    /**
+     * Set API key
+     */
     public setApiKey(apiKey: string): void {
         this.apiKey = apiKey;
     }
 
+    /**
+     * Get API key
+     */
     public getApiKey(): string {
         return this.apiKey;
     }
 
+    /**
+     * Configure the adapter
+     */
     public configure(config: any): void {
-        // Implement any additional configuration logic here
+        if (config?.apiKey) {
+            this.setApiKey(config.apiKey);
+        }
     }
 
+    /**
+     * Check if adapter is ready
+     */
     public isReady(): boolean {
-        return !!this.apiKey;
+        return !!this.apiKey && this.models.length > 0;
     }
 
+    /**
+     * Get API model name
+     */
     public getApiModelName(modelApiName: string): string {
         const model = this.models.find(m => m.apiName === modelApiName);
         if (!model) {

@@ -1,11 +1,7 @@
-// KnowledgeBloomGenerator.ts
-
 import { TFile, App, Notice } from 'obsidian';
 import { BaseGenerator, BaseGeneratorInput, BaseGeneratorOutput } from './BaseGenerator';
-import { AIAdapter } from '../adapters/AIAdapter';
+import { AIAdapter, AIResponseOptions } from '../models/AIModels';
 import { SettingsService } from '../services/SettingsService';
-import { JsonSchemaGenerator } from './JsonSchemaGenerator';
-import { JsonValidationService } from '../services/JsonValidationService';
 import { FrontMatterGenerator, FrontMatterInput, FrontMatterOutput } from './FrontMatterGenerator';
 import { PropertyTag } from '../models/PropertyTag';
 
@@ -16,7 +12,7 @@ export interface KnowledgeBloomInput extends BaseGeneratorInput {
     sourceFile: TFile;            // The source file containing wikilinks
     userPrompt?: string;          // Optional user context for generation
     currentWikilink?: string;     // Current wikilink being processed
-    schema?: object;              // JSON schema for the current generation
+    currentNoteTitle?: string;    // Title of the current note
 }
 
 /**
@@ -34,8 +30,6 @@ export interface KnowledgeBloomOutput extends BaseGeneratorOutput {
  * Extends BaseGenerator with specific input/output types for Knowledge Bloom functionality.
  */
 export class KnowledgeBloomGenerator extends BaseGenerator<KnowledgeBloomInput, KnowledgeBloomOutput> {
-    public jsonSchemaGenerator: JsonSchemaGenerator;
-    public jsonValidationService: JsonValidationService;
     public frontMatterGenerator: FrontMatterGenerator;
     public currentInput: KnowledgeBloomInput | null = null;
 
@@ -46,19 +40,17 @@ export class KnowledgeBloomGenerator extends BaseGenerator<KnowledgeBloomInput, 
         frontMatterGenerator: FrontMatterGenerator // Inject FrontMatterGenerator
     ) {
         super(aiAdapter, settingsService);
-        this.jsonSchemaGenerator = new JsonSchemaGenerator(this.settingsService);
-        this.jsonValidationService = this.settingsService.getJsonValidationService();
         this.frontMatterGenerator = frontMatterGenerator;
     }
 
     /**
-     * Override the generate method to handle multiple wikilinks
+     * Generate new notes from wikilinks in the source document
      * @param input The input parameters for generation
      * @returns Promise resolving to generated notes
      */
     public async generate(input: KnowledgeBloomInput): Promise<KnowledgeBloomOutput> {
         this.currentInput = input;
-        console.log('KnowledgeBloomGenerator: Starting Knowledge Bloom generation');
+        console.log('KnowledgeBloomGenerator: Starting generation process');
         
         try {
             if (!this.validateInput(input)) {
@@ -72,56 +64,16 @@ export class KnowledgeBloomGenerator extends BaseGenerator<KnowledgeBloomInput, 
                 throw new Error('No wikilinks found in the source file.');
             }
 
-            // Initialize the output
+            const folderPath = this.getFolderPath(input.sourceFile);
             const output: KnowledgeBloomOutput = { generatedNotes: [] };
 
-            // Process each wikilink
-            for (const link of wikilinks) {
-                try {
-                    const schema = this.jsonSchemaGenerator.generateSchemaForTopic(link);
-                    
-                    const prompt = this.preparePrompt({
-                        sourceFile: input.sourceFile,
-                        userPrompt: input.userPrompt,
-                        currentWikilink: link,
-                        schema: schema
-                    });
+            const generationPromises = wikilinks.map(link => 
+                this.processWikilink(link, folderPath, input, output)
+            );
 
-                    const model = await this.getCurrentModel();
-                    const aiResponse = await this.aiAdapter.generateResponse(prompt, model);
-
-                    if (!aiResponse.success || !aiResponse.data) {
-                        throw new Error(`AI failed to generate response for "${link}": ${aiResponse.error || 'Unknown error'}`);
-                    }
-
-                    if (!this.jsonValidationService.validate(aiResponse.data)) {
-                        throw new Error(`Invalid JSON response for "${link}"`);
-                    }
-
-                    // Extract content and properties from AI response
-                    const content = aiResponse.data.content || '';
-                    const customProperties: PropertyTag[] = this.extractCustomProperties(aiResponse.data);
-                    const customTags: string[] = this.extractCustomTags(aiResponse.data);
-
-                    // Use FrontMatterGenerator to generate front matter
-                    const frontMatterInput: FrontMatterInput = {
-                        content: content, 
-                        customProperties: customProperties, 
-                        customTags: customTags
-                    };
-
-                    const frontMatterResult: FrontMatterOutput = await this.frontMatterGenerator.generate(frontMatterInput);
-                    const markdownContent = frontMatterResult.content;
-
-                    output.generatedNotes.push({ title: link, content: markdownContent });
-                    console.log(`KnowledgeBloomGenerator: Successfully generated note for "${link}".`);
-                } catch (error) {
-                    console.error(`Error generating note for "${link}":`, error);
-                    new Notice(`Failed to generate note for "${link}": ${(error as Error).message}`);
-                }
-            }
-
+            await Promise.allSettled(generationPromises);
             return output;
+            
         } catch (error) {
             return this.handleError(error as Error);
         } finally {
@@ -130,89 +82,170 @@ export class KnowledgeBloomGenerator extends BaseGenerator<KnowledgeBloomInput, 
     }
 
     /**
-     * Implements the abstract formatOutput method from BaseGenerator
-     * Processes the AI response and generates the KnowledgeBloomOutput
-     * @param aiResponse AI response (not used in this overridden method)
-     * @param originalInput Original input parameters (not used in this overridden method)
-     * @returns KnowledgeBloomOutput with generated notes
+     * Process a single wikilink to generate a new note
      */
-    protected formatOutput(aiResponse: any, originalInput: KnowledgeBloomInput): KnowledgeBloomOutput {
-        // Since we've overridden generate, we don't use formatOutput here.
-        // Alternatively, you can refactor the class to better utilize the base class.
-        throw new Error('Method not implemented.');
+    private async processWikilink(
+        link: string, 
+        folderPath: string, 
+        input: KnowledgeBloomInput, 
+        output: KnowledgeBloomOutput
+    ): Promise<void> {
+        try {
+            if (this.doesNoteExist(link, folderPath)) {
+                console.log(`KnowledgeBloomGenerator: Note for "${link}" already exists. Skipping.`);
+                return;
+            }
+
+            // Generate the note content
+            const markdownContent = await this.generateMarkdownContent(link, input);
+            const finalContent = await this.addFrontMatter(markdownContent);
+
+            // Create the new note
+            const newFilePath = `${folderPath}/${link}.md`;
+            await this.app.vault.create(newFilePath, finalContent);
+
+            output.generatedNotes.push({ title: link, content: finalContent });
+            console.log(`KnowledgeBloomGenerator: Successfully generated note for "${link}".`);
+        } catch (error) {
+            console.error(`Error processing wikilink "${link}":`, error);
+            new Notice(`Failed to generate note for "${link}": ${(error as Error).message}`);
+        }
     }
 
     /**
-     * Extracts unique wikilinks from a file
-     * @param file The file to extract wikilinks from
-     * @returns Array of unique wikilink strings
+     * Generate markdown content for a single wikilink
      */
-    protected async extractWikilinks(file: TFile): Promise<string[]> {
-        console.log(`KnowledgeBloomGenerator: Extracting wikilinks from ${file.path}`);
+    private async generateMarkdownContent(link: string, input: KnowledgeBloomInput): Promise<string> {
+        const prompt = this.preparePrompt({
+            ...input,
+            currentWikilink: link,
+            currentNoteTitle: input.sourceFile.basename
+        });
+
+        const model = await this.getCurrentModel();
+        const options: AIResponseOptions = { rawResponse: true };
+        const response = await this.aiAdapter.generateResponse(prompt, model, options);
+
+        if (!response.success || !response.data) {
+            throw new Error(`Failed to generate content for "${link}": ${response.error || 'Unknown error'}`);
+        }
+
+        let content = response.data;
+        
+        // Handle different response types with proper type checking
+        if (typeof content === 'object' && content !== null) {
+            // Type assertion for accessing potential properties
+            const contentObj = content as Record<string, unknown>;
+            
+            if ('content' in contentObj && typeof contentObj.content === 'string') {
+                content = contentObj.content;
+            } else if ('response' in contentObj && typeof contentObj.response === 'string') {
+                content = contentObj.response;
+            } else {
+                content = JSON.stringify(content);
+            }
+        }
+
+        // Ensure we have a string and clean it
+        const contentString = String(content).trim();
+
+        // Remove any accidentally included front matter
+        return contentString.replace(/^---\n[\s\S]*?\n---\n*/g, '');
+    }
+
+    /**
+     * Add front matter to the generated content
+     */
+    private async addFrontMatter(content: string): Promise<string> {
+        const frontMatterInput: FrontMatterInput = {
+            content,
+            customProperties: this.extractCustomProperties(content),
+            customTags: this.extractCustomTags(content)
+        };
+
+        const frontMatterResult = await this.frontMatterGenerator.generate(frontMatterInput);
+        return frontMatterResult.content;
+    }
+
+    /**
+     * Extract unique wikilinks from a file
+     */
+    private async extractWikilinks(file: TFile): Promise<string[]> {
         const content = await this.app.vault.read(file);
         const wikilinks = content.match(/\[\[([^\]]+)\]\]/g) || [];
-        const links = wikilinks.map((link: string) => link.slice(2, -2));
-        const uniqueLinks = Array.from(new Set(links.map(link => link.toLowerCase())));
-        console.log(`KnowledgeBloomGenerator: Extracted ${uniqueLinks.length} unique wikilinks: ${uniqueLinks.join(', ')}`);
-        return uniqueLinks;
+        const links = wikilinks.map(link => link.slice(2, -2));
+        return Array.from(new Set(links.map(link => link.toLowerCase())));
     }
 
     /**
-     * Prepares the AI prompt with schema and context
-     * @param input The input containing wikilink and schema
-     * @returns Formatted prompt string
+     * Extract custom properties from content
+     */
+    protected extractCustomProperties(content: string): PropertyTag[] {
+        try {
+            return this.settingsService.getSettings().frontMatter.customProperties;
+        } catch (error) {
+            console.error('Error extracting custom properties:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Extract custom tags from content
+     */
+    protected extractCustomTags(content: string): string[] {
+        try {
+            return this.settingsService.getSettings().tags.customTags.map(tag => tag.name);
+        } catch (error) {
+            console.error('Error extracting custom tags:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Prepare the AI prompt for content generation
      */
     protected preparePrompt(input: KnowledgeBloomInput): string {
-        if (!input.currentWikilink || !input.schema) {
-            throw new Error('Missing required wikilink or schema in input');
+        if (!input.currentWikilink || !input.currentNoteTitle) {
+            throw new Error('Missing required wikilink or note title');
         }
 
         return `
-You are an AI assistant that helps generate structured notes.
+# MISSION
+Act as an expert Research Assistant that specializes in writing structured notes that are accessible and practical based on a provided topic.
 
-Please generate a JSON object that adheres to the following schema:
-${JSON.stringify(input.schema, null, 2)}
+# GUIDELINES
+- Write the note in Markdown format.
+- Do NOT include any JSON objects or front matter.
+- Ensure the content is well-structured and comprehensive.
+- Omit any words before or after the Markdown content.
 
-Ensure that the JSON is well-formed and follows the schema precisely.
+# TOPIC
+Write a detailed note about "${input.currentWikilink}" in relation to "${input.currentNoteTitle}".
 
-Topic: "${input.currentWikilink}"
-${input.userPrompt ? `Additional Context: ${input.userPrompt}` : ''}
-
-Response:
+${input.userPrompt ? `## Additional Context:\n${input.userPrompt}` : ''}
 `;
     }
 
     /**
-     * Extracts custom properties from AI response data based on schema
-     * @param data AI response data
-     * @returns Array of PropertyTag
+     * Check if a note exists at the given path
      */
-    public extractCustomProperties(data: any): PropertyTag[] {
-        const settings = this.settingsService.getSettings();
-        // Extract properties based on schema and AI response
-        return settings.frontMatter.customProperties.map((property: PropertyTag) => ({
-            name: property.name,
-            description: property.description,
-            type: property.type,
-            required: property.required,
-            multipleValues: property.multipleValues
-        }));
+    private doesNoteExist(title: string, folderPath: string): boolean {
+        const filePath = `${folderPath}/${title}.md`;
+        const file = this.app.vault.getAbstractFileByPath(filePath);
+        return file instanceof TFile;
     }
 
     /**
-     * Extracts custom tags from AI response data based on settings
-     * @param data AI response data
-     * @returns Array of tags
+     * Get the folder path for the new note
      */
-    public extractCustomTags(data: any): string[] {
-        const settings = this.settingsService.getSettings();
-        return settings.tags.customTags.map(tag => tag.name);
+    private getFolderPath(file: TFile): string {
+        const pathSegments = file.path.split('/');
+        pathSegments.pop();
+        return pathSegments.join('/');
     }
 
     /**
-     * Validate input parameters
-     * @param input The input to validate
-     * @returns True if input is valid
+     * Validate the input parameters
      */
     protected validateInput(input: KnowledgeBloomInput): boolean {
         const isValid = input?.sourceFile instanceof TFile;
@@ -221,8 +254,7 @@ Response:
     }
 
     /**
-     * Gets current AI model for generation
-     * @returns Promise resolving to model identifier
+     * Get the current AI model
      */
     protected async getCurrentModel(): Promise<string> {
         const settings = this.getSettings();
@@ -236,12 +268,18 @@ Response:
     }
 
     /**
-     * Custom error handler for Knowledge Bloom
-     * @param error The error to handle
+     * Handle generation errors
      */
     protected handleError(error: Error): never {
         console.error(`KnowledgeBloomGenerator: Knowledge Bloom generation error: ${error.message}`, error);
         new Notice(`Knowledge Bloom generation failed: ${error.message}`);
-        throw new Error(`Knowledge Bloom generation failed: ${error.message}`);
+        throw error;
+    }
+
+    /**
+     * Format output (not used in this implementation)
+     */
+    protected formatOutput(_aiResponse: any, _originalInput: KnowledgeBloomInput): KnowledgeBloomOutput {
+        throw new Error('Method not implemented - using custom generate method');
     }
 }

@@ -88,23 +88,28 @@ export class FrontMatterGenerator extends BaseGenerator<FrontMatterInput, FrontM
         const tagPrompt = input.customTags?.join(', ') || '';
 
         return `
-Generate YAML front matter for the following note content.
-Use the provided JSON schema to structure your response.
-Include relevant custom properties and tags.
+# MISSION
+Act as an expert analyzer and creator of metadata, with a specialization in ontological organization. Use the custom properties and available tags below to generate JSON formatted text based on the provided schema, using the note content for reference.
 
-Custom Properties:
+# GUIDELINES
+- You must ONLY use the properties provided, taking the description of the property as guidance for generation.
+- Prioritize use of the available tags, but remain flexible in choosing additional tags that would be useful in labelling the note content.
+- Omit all other text including words before or after or backticks, returning ONLY the formatted JSON.
+
+## Custom Properties
 ${propertyPrompt}
 
-Available Tags:
+## Available Tags
 ${tagPrompt}
 
-JSON Schema:
-${JSON.stringify(schema, null, 2)}
-
-Note Content:
+## Note Content
+Below is the content of the note you can use to generate completed JSON schema. Omit it from your generation.
 ${input.content}
 
-Provide the YAML front matter only, enclosed between '---' lines, with no additional text.
+## JSON Schema:
+${JSON.stringify(schema, null, 2)}
+
+Remember, return only the properly formatted JSON with no words before or after, or backticks.
 `;
     }
 

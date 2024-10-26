@@ -1,7 +1,7 @@
 import { Notice, requestUrl } from 'obsidian';
 import { SettingsService } from '../services/SettingsService';
 import { JsonValidationService } from '../services/JsonValidationService';
-import { AIProvider, AIResponse, AIAdapter } from '../models/AIModels';
+import { AIProvider, AIResponse, AIAdapter, AIResponseOptions } from '../models/AIModels';
 
 export class LMStudioAdapter implements AIAdapter {
     public model: string;
@@ -14,13 +14,16 @@ export class LMStudioAdapter implements AIAdapter {
         this.updateSettings();
     }
 
-    public async generateResponse(prompt: string, model: string = 'default'): Promise<AIResponse> {
+    public async generateResponse(
+        prompt: string, 
+        model: string = 'default',
+        options?: AIResponseOptions
+    ): Promise<AIResponse> {
         try {
             if (!this.isReady()) {
                 throw new Error('LM Studio settings are not properly configured');
             }
 
-            const jsonSchema = this.createJsonSchema();
             const response = await requestUrl({
                 url: `http://localhost:${this.port}/v1/chat/completions`,
                 method: 'POST',
@@ -32,19 +35,21 @@ export class LMStudioAdapter implements AIAdapter {
                     messages: [
                         {
                             role: "system",
-                            content: "You are a helpful assistant that responds in JSON format."
+                            content: options?.rawResponse 
+                                ? "You are a helpful assistant." 
+                                : "You are a helpful assistant that responds in JSON format."
                         },
                         {
                             role: "user",
                             content: prompt
                         }
                     ],
-                    response_format: {
+                    response_format: options?.rawResponse ? undefined : {
                         type: "json_schema",
-                        json_schema: jsonSchema
+                        json_schema: this.createJsonSchema()
                     },
                     temperature: 0.7,
-                    max_tokens: 1000,
+                    max_tokens: options?.maxTokens || 1000,
                     stream: false
                 })
             });
@@ -54,6 +59,16 @@ export class LMStudioAdapter implements AIAdapter {
             }
 
             const content = response.json.choices[0].message.content;
+
+            // Handle raw response if requested
+            if (options?.rawResponse) {
+                return {
+                    success: true,
+                    data: content
+                };
+            }
+
+            // Otherwise validate JSON
             const validatedContent = await this.jsonValidationService.validateAndCleanJson(content);
             return {
                 success: true,
@@ -92,9 +107,19 @@ export class LMStudioAdapter implements AIAdapter {
             }
 
             const response = await this.generateResponse("Return the word 'OK'.", model);
-            return response.success && response.data && typeof response.data === 'object' && 
-                   'response' in response.data && typeof response.data.response === 'string' && 
-                   response.data.response.toLowerCase().includes('ok');
+            
+            if (!response.success || !response.data) {
+                return false;
+            }
+
+            // Type guard to check if data is an object with response property
+            if (typeof response.data === 'object' && response.data !== null && 
+                'response' in response.data && 
+                typeof (response.data as { response: unknown }).response === 'string') {
+                return (response.data as { response: string }).response.toLowerCase().includes('ok');
+            }
+
+            return false;
         } catch (error) {
             console.error('Error in LM Studio test connection:', error);
             return false;

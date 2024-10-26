@@ -41,44 +41,263 @@ var AIProvider = /* @__PURE__ */ ((AIProvider2) => {
 })(AIProvider || {});
 var AIModelMap = {
   ["openai" /* OpenAI */]: [
-    { name: "GPT 4o mini", apiName: "gpt-4o-mini" },
-    { name: "GPT 4o", apiName: "gpt-4o" },
-    { name: "GPT o1 Preview", apiName: "o1-preview" },
-    { name: "GPT o1 Mini", apiName: "o1-mini" }
+    {
+      name: "GPT 4o mini",
+      apiName: "gpt-4o-mini",
+      capabilities: {
+        maxTokens: 128e3,
+        supportsFunctions: true,
+        supportsStreaming: true
+      }
+    },
+    {
+      name: "GPT 4o",
+      apiName: "gpt-4o",
+      capabilities: {
+        maxTokens: 128e3,
+        supportsFunctions: true,
+        supportsStreaming: true,
+        supportsVision: true
+      }
+    },
+    {
+      name: "GPT o1 Preview",
+      apiName: "o1-preview",
+      capabilities: {
+        maxTokens: 128e3,
+        supportsFunctions: true,
+        supportsStreaming: true
+      }
+    },
+    {
+      name: "GPT o1 Mini",
+      apiName: "o1-mini",
+      capabilities: {
+        maxTokens: 128e3,
+        supportsFunctions: true,
+        supportsStreaming: true
+      }
+    }
   ],
   ["anthropic" /* Anthropic */]: [
-    { name: "Claude 3 Haiku", apiName: "claude-3-haiku-20240307" },
-    { name: "Claude 3 Sonnet", apiName: "claude-3-sonnet-20240229" },
-    { name: "Claude 3 Opus", apiName: "claude-3-opus-20240229" },
-    { name: "Claude 3.5 Sonnet", apiName: "claude-3-5-sonnet-20240620" }
+    {
+      name: "Claude 3 Haiku",
+      apiName: "claude-3-haiku-20240307",
+      capabilities: {
+        maxTokens: 2e5,
+        supportsFunctions: true,
+        supportsStreaming: true
+      }
+    },
+    {
+      name: "Claude 3 Sonnet",
+      apiName: "claude-3-sonnet-20240229",
+      capabilities: {
+        maxTokens: 2e5,
+        supportsFunctions: true,
+        supportsStreaming: true,
+        supportsVision: true
+      }
+    },
+    {
+      name: "Claude 3 Opus",
+      apiName: "claude-3-opus-20240229",
+      capabilities: {
+        maxTokens: 2e5,
+        supportsFunctions: true,
+        supportsStreaming: true,
+        supportsVision: true
+      }
+    },
+    {
+      name: "Claude 3.5 Sonnet",
+      apiName: "claude-3-5-sonnet-20240620",
+      capabilities: {
+        maxTokens: 2e5,
+        supportsFunctions: true,
+        supportsStreaming: true,
+        supportsVision: true
+      }
+    }
   ],
   ["google" /* Google */]: [
-    { name: "Gemini 1.5 Flash", apiName: "gemini-1.5-flash" },
-    { name: "Gemini 1.5 Flash 8B", apiName: "gemini-1.5-flash-8b" },
-    { name: "Gemini 1.5 Pro", apiName: "gemini-1.5-pro" }
+    {
+      name: "Gemini 1.5 Flash",
+      apiName: "gemini-1.5-flash",
+      capabilities: {
+        maxTokens: 32e3,
+        supportsStreaming: true
+      }
+    },
+    {
+      name: "Gemini 1.5 Flash 8B",
+      apiName: "gemini-1.5-flash-8b",
+      capabilities: {
+        maxTokens: 32e3,
+        supportsStreaming: true
+      }
+    },
+    {
+      name: "Gemini 1.5 Pro",
+      apiName: "gemini-1.5-pro",
+      capabilities: {
+        maxTokens: 32e3,
+        supportsStreaming: true,
+        supportsVision: true
+      }
+    }
   ],
   ["groq" /* Groq */]: [
-    { name: "Llama 3.1 70B", apiName: "llama-3.1-70b-versatile" },
-    { name: "Llama 3.1 8B", apiName: "llama-3.1-8b-instant" },
-    { name: "Llama 3.2 1B (Preview)", apiName: "llama-3.2-1b-preview" },
-    { name: "Llama 3.2 3B (Preview)", apiName: "llama-3.2-3b-preview" }
+    {
+      name: "Llama 3.1 70B",
+      apiName: "llama-3.1-70b-versatile",
+      capabilities: {
+        maxTokens: 32e3,
+        supportsStreaming: true
+      }
+    },
+    {
+      name: "Llama 3.1 8B",
+      apiName: "llama-3.1-8b-instant",
+      capabilities: {
+        maxTokens: 32e3,
+        supportsStreaming: true
+      }
+    },
+    {
+      name: "Llama 3.2 1B (Preview)",
+      apiName: "llama-3.2-1b-preview",
+      capabilities: {
+        maxTokens: 32e3,
+        supportsStreaming: true
+      }
+    },
+    {
+      name: "Llama 3.2 3B (Preview)",
+      apiName: "llama-3.2-3b-preview",
+      capabilities: {
+        maxTokens: 32e3,
+        supportsStreaming: true
+      }
+    }
   ],
   ["openrouter" /* OpenRouter */]: [
-    { name: "Anthropic Claude 3 Haiku", apiName: "anthropic/claude-3-haiku" },
-    { name: "Anthropic Claude 3 Opus", apiName: "anthropic/claude-3-opus" },
-    { name: "Anthropic Claude 3.5 Sonnet", apiName: "anthropic/claude-3.5-sonnet" },
-    { name: "Google Gemini Flash 1.5", apiName: "google/gemini-flash-1.5" },
-    { name: "Google Gemini Flash 1.5 8B", apiName: "google/gemini-flash-1.5-8b" },
-    { name: "Google Gemini Pro 1.5", apiName: "google/gemini-pro-1.5" },
-    { name: "Mistralai Mistral Large", apiName: "mistralai/mistral-large" },
-    { name: "Mistralai Mistral Nemo", apiName: "mistralai/mistral-nemo" },
-    { name: "OpenAI GPT 4o", apiName: "openai/gpt-4o" },
-    { name: "OpenAI GPT 4o Mini", apiName: "openai/gpt-4o-mini" },
-    { name: "OpenAI o1 Mini", apiName: "openai/o1-mini" },
-    { name: "OpenAI o1 Preview", apiName: "openai/o1-preview" }
+    {
+      name: "Anthropic Claude 3 Haiku",
+      apiName: "anthropic/claude-3-haiku",
+      capabilities: {
+        maxTokens: 2e5,
+        supportsFunctions: true,
+        supportsStreaming: true
+      }
+    },
+    {
+      name: "Anthropic Claude 3 Opus",
+      apiName: "anthropic/claude-3-opus",
+      capabilities: {
+        maxTokens: 2e5,
+        supportsFunctions: true,
+        supportsStreaming: true,
+        supportsVision: true
+      }
+    },
+    {
+      name: "Anthropic Claude 3.5 Sonnet",
+      apiName: "anthropic/claude-3.5-sonnet",
+      capabilities: {
+        maxTokens: 2e5,
+        supportsFunctions: true,
+        supportsStreaming: true,
+        supportsVision: true
+      }
+    },
+    {
+      name: "Google Gemini Flash 1.5",
+      apiName: "google/gemini-flash-1.5",
+      capabilities: {
+        maxTokens: 32e3,
+        supportsStreaming: true
+      }
+    },
+    {
+      name: "Google Gemini Flash 1.5 8B",
+      apiName: "google/gemini-flash-1.5-8b",
+      capabilities: {
+        maxTokens: 32e3,
+        supportsStreaming: true
+      }
+    },
+    {
+      name: "Google Gemini Pro 1.5",
+      apiName: "google/gemini-pro-1.5",
+      capabilities: {
+        maxTokens: 32e3,
+        supportsStreaming: true,
+        supportsVision: true
+      }
+    },
+    {
+      name: "Mistralai Mistral Large",
+      apiName: "mistralai/mistral-large",
+      capabilities: {
+        maxTokens: 32e3,
+        supportsStreaming: true
+      }
+    },
+    {
+      name: "Mistralai Mistral Nemo",
+      apiName: "mistralai/mistral-nemo",
+      capabilities: {
+        maxTokens: 32e3,
+        supportsStreaming: true
+      }
+    },
+    {
+      name: "OpenAI GPT 4o",
+      apiName: "openai/gpt-4o",
+      capabilities: {
+        maxTokens: 128e3,
+        supportsFunctions: true,
+        supportsStreaming: true,
+        supportsVision: true
+      }
+    },
+    {
+      name: "OpenAI GPT 4o Mini",
+      apiName: "openai/gpt-4o-mini",
+      capabilities: {
+        maxTokens: 128e3,
+        supportsFunctions: true,
+        supportsStreaming: true
+      }
+    },
+    {
+      name: "OpenAI o1 Mini",
+      apiName: "openai/o1-mini",
+      capabilities: {
+        maxTokens: 128e3,
+        supportsFunctions: true,
+        supportsStreaming: true
+      }
+    },
+    {
+      name: "OpenAI o1 Preview",
+      apiName: "openai/o1-preview",
+      capabilities: {
+        maxTokens: 128e3,
+        supportsFunctions: true,
+        supportsStreaming: true
+      }
+    }
   ],
   ["lmstudio" /* LMStudio */]: [
-    { name: "Custom", apiName: "custom" }
+    {
+      name: "Custom",
+      apiName: "custom",
+      capabilities: {
+        supportsStreaming: false
+      }
+    }
   ]
 };
 
@@ -134,44 +353,65 @@ var OpenAIAdapter = class {
     this.apiKey = aiProviderSettings.apiKeys["openai" /* OpenAI */] || "";
     this.models = AIModelMap["openai" /* OpenAI */];
   }
-  async generateResponse(prompt, modelApiName) {
+  /**
+   * Generate a response using the OpenAI API
+   */
+  async generateResponse(prompt, modelApiName, options) {
     try {
       const apiModel = this.getApiModelName(modelApiName);
       if (!apiModel) {
         throw new Error(`No valid model found for ${this.getProviderType()}`);
       }
+      if (!this.apiKey) {
+        throw new Error("OpenAI API key is not set");
+      }
       const settings = this.settingsService.getSettings();
       const temperature = this.getTemperature(settings);
-      const maxTokens = this.getMaxTokens(settings);
-      const response = await this.makeApiRequest(apiModel, prompt, temperature, maxTokens);
+      const maxTokens = (options == null ? void 0 : options.maxTokens) || this.getMaxTokens(settings);
+      const response = await this.makeApiRequest({
+        model: apiModel,
+        prompt,
+        temperature,
+        maxTokens,
+        rawResponse: options == null ? void 0 : options.rawResponse
+      });
       const content = this.extractContentFromResponse(response);
+      if (options == null ? void 0 : options.rawResponse) {
+        return { success: true, data: content };
+      }
       const validatedContent = await this.jsonValidationService.validateAndCleanJson(content);
       return { success: true, data: validatedContent };
     } catch (error) {
       return this.handleError(error);
     }
   }
+  /**
+   * Test connection to OpenAI API
+   */
   async testConnection(prompt, modelApiName) {
     try {
       if (!this.apiKey) {
-        throw new Error("OpenAI API key is not set");
+        return false;
       }
-      const apiModel = this.getApiModelName(modelApiName);
-      const response = await this.makeApiRequest(apiModel, prompt, 0.7, 50, false);
-      const content = this.extractContentFromResponse(response);
-      return content.toLowerCase().includes("ok");
+      const response = await this.generateResponse(
+        prompt || "Return the word 'OK'.",
+        modelApiName,
+        { rawResponse: true }
+      );
+      if (!response.success || typeof response.data !== "string") {
+        return false;
+      }
+      return response.data.toLowerCase().includes("ok");
     } catch (error) {
       console.error("Error in OpenAI test connection:", error);
       return false;
     }
   }
-  getTemperature(settings) {
-    return settings.advanced.temperature >= 0 && settings.advanced.temperature <= 1 ? settings.advanced.temperature : 0.7;
-  }
-  getMaxTokens(settings) {
-    return settings.advanced.maxTokens > 0 ? settings.advanced.maxTokens : 1e3;
-  }
-  async makeApiRequest(apiModel, prompt, temperature, maxTokens, jsonResponse = true) {
+  /**
+   * Make a request to the OpenAI API
+   */
+  async makeApiRequest(params) {
+    var _a;
     const response = await (0, import_obsidian.requestUrl)({
       url: "https://api.openai.com/v1/chat/completions",
       method: "POST",
@@ -180,37 +420,78 @@ var OpenAIAdapter = class {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: apiModel,
+        model: params.model,
         messages: [
-          { role: "system", content: "You are a helpful assistant designed to output JSON." },
-          { role: "user", content: prompt }
+          {
+            role: "system",
+            content: params.rawResponse ? "You are a helpful assistant." : "You are a helpful assistant that responds in JSON format."
+          },
+          { role: "user", content: params.prompt }
         ],
-        temperature,
-        max_tokens: maxTokens,
-        response_format: jsonResponse ? { type: "json_object" } : void 0
+        temperature: params.temperature,
+        max_tokens: params.maxTokens,
+        n: 1,
+        stream: false,
+        response_format: params.rawResponse ? void 0 : { type: "json_object" }
       })
     });
     if (response.status !== 200) {
-      throw new Error(`API request failed with status ${response.status}`);
+      const errorBody = response.json;
+      throw new Error(
+        `API request failed with status ${response.status}: ${((_a = errorBody == null ? void 0 : errorBody.error) == null ? void 0 : _a.message) || "Unknown error"}`
+      );
     }
     return response;
   }
+  /**
+   * Extract content from API response
+   */
   extractContentFromResponse(response) {
+    var _a, _b, _c, _d;
+    if (!((_d = (_c = (_b = (_a = response.json) == null ? void 0 : _a.choices) == null ? void 0 : _b[0]) == null ? void 0 : _c.message) == null ? void 0 : _d.content)) {
+      throw new Error("Invalid response format from OpenAI API");
+    }
     return response.json.choices[0].message.content;
   }
+  /**
+   * Get temperature setting
+   */
+  getTemperature(settings) {
+    var _a, _b;
+    return ((_a = settings.advanced) == null ? void 0 : _a.temperature) >= 0 && ((_b = settings.advanced) == null ? void 0 : _b.temperature) <= 1 ? settings.advanced.temperature : 0.7;
+  }
+  /**
+   * Get max tokens setting
+   */
+  getMaxTokens(settings) {
+    var _a;
+    return ((_a = settings.advanced) == null ? void 0 : _a.maxTokens) > 0 ? settings.advanced.maxTokens : 1e3;
+  }
+  /**
+   * Handle errors in API calls
+   */
   handleError(error) {
     console.error("Error in OpenAI API call:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
     new import_obsidian.Notice(`OpenAI API Error: ${errorMessage}`);
     return { success: false, error: errorMessage };
   }
+  /**
+   * Validate API key
+   */
   async validateApiKey() {
     try {
       if (!this.apiKey) {
         throw new Error("OpenAI API key is not set");
       }
-      const response = await this.testConnection("Return the word 'OK'.", this.models[0].apiName);
-      if (response) {
+      if (this.models.length === 0) {
+        throw new Error("No models available for OpenAI");
+      }
+      const isValid = await this.testConnection(
+        "Return the word 'OK'.",
+        this.models[0].apiName
+      );
+      if (isValid) {
         new import_obsidian.Notice("OpenAI API key validated successfully");
         return true;
       } else {
@@ -222,23 +503,47 @@ var OpenAIAdapter = class {
       return false;
     }
   }
+  /**
+   * Get available models
+   */
   getAvailableModels() {
     return this.models.map((model) => model.apiName);
   }
+  /**
+   * Get provider type
+   */
   getProviderType() {
     return "openai" /* OpenAI */;
   }
+  /**
+   * Set API key
+   */
   setApiKey(apiKey) {
     this.apiKey = apiKey;
   }
+  /**
+   * Get API key
+   */
   getApiKey() {
     return this.apiKey;
   }
+  /**
+   * Configure the adapter
+   */
   configure(config) {
+    if (config == null ? void 0 : config.apiKey) {
+      this.setApiKey(config.apiKey);
+    }
   }
+  /**
+   * Check if adapter is ready
+   */
   isReady() {
-    return !!this.apiKey;
+    return !!this.apiKey && this.models.length > 0;
   }
+  /**
+   * Get API model name
+   */
   getApiModelName(modelApiName) {
     var _a;
     const model = this.models.find((m) => m.apiName === modelApiName);
@@ -260,7 +565,7 @@ var AnthropicAdapter = class {
     this.apiKey = aiProviderSettings.apiKeys["anthropic" /* Anthropic */] || "";
     this.models = AIModelMap["anthropic" /* Anthropic */];
   }
-  async generateResponse(prompt, modelApiName) {
+  async generateResponse(prompt, modelApiName, options) {
     try {
       const apiModel = this.getApiModelName(modelApiName);
       if (!apiModel) {
@@ -271,9 +576,12 @@ var AnthropicAdapter = class {
       }
       const settings = this.settingsService.getSettings();
       const temperature = this.getTemperature(settings);
-      const maxTokens = this.getMaxTokens(settings);
+      const maxTokens = (options == null ? void 0 : options.maxTokens) || this.getMaxTokens(settings);
       const response = await this.makeApiRequest(apiModel, prompt, temperature, maxTokens);
       const content = this.extractContentFromResponse(response);
+      if (options == null ? void 0 : options.rawResponse) {
+        return { success: true, data: content };
+      }
       const validatedContent = await this.jsonValidationService.validateAndCleanJson(content);
       return { success: true, data: validatedContent };
     } catch (error) {
@@ -385,7 +693,10 @@ var GeminiAdapter = class {
     this.apiKey = aiProviderSettings.apiKeys["google" /* Google */] || "";
     this.models = AIModelMap["google" /* Google */];
   }
-  async generateResponse(prompt, modelApiName) {
+  /**
+   * Generate a response using the Gemini API
+   */
+  async generateResponse(prompt, modelApiName, options) {
     try {
       const apiModel = this.getApiModelName(modelApiName);
       if (!apiModel) {
@@ -396,49 +707,77 @@ var GeminiAdapter = class {
       }
       const settings = this.settingsService.getSettings();
       const temperature = this.getTemperature(settings);
-      const maxTokens = this.getMaxTokens(settings);
-      const response = await this.makeApiRequest(apiModel, prompt, temperature, maxTokens);
+      const maxTokens = (options == null ? void 0 : options.maxTokens) || this.getMaxTokens(settings);
+      const response = await this.makeApiRequest({
+        model: apiModel,
+        prompt,
+        temperature,
+        maxTokens,
+        rawResponse: options == null ? void 0 : options.rawResponse
+      });
       const content = this.extractContentFromResponse(response);
-      const validatedContent = await this.jsonValidationService.validateAndCleanJson(content);
-      return { success: true, data: validatedContent };
+      if (options == null ? void 0 : options.rawResponse) {
+        return { success: true, data: content };
+      }
+      try {
+        const validatedContent = await this.jsonValidationService.validateAndCleanJson(content);
+        return { success: true, data: validatedContent };
+      } catch (jsonError) {
+        return {
+          success: true,
+          data: { response: content }
+        };
+      }
     } catch (error) {
       return this.handleError(error);
     }
   }
+  /**
+   * Test connection to Gemini API
+   */
   async testConnection(prompt, modelApiName) {
     try {
       if (!this.apiKey) {
-        throw new Error("Google API key is not set");
+        return false;
       }
-      const apiModel = this.getApiModelName(modelApiName);
-      const response = await this.makeApiRequest(apiModel, prompt, 0.7, 50);
-      const content = this.extractContentFromResponse(response);
-      return content.toLowerCase().includes("ok");
+      const response = await this.generateResponse(
+        prompt || "Return the word 'OK'.",
+        modelApiName,
+        { rawResponse: true }
+      );
+      if (!response.success || typeof response.data !== "string") {
+        return false;
+      }
+      return response.data.toLowerCase().includes("ok");
     } catch (error) {
       console.error("Error in Gemini test connection:", error);
       return false;
     }
   }
-  getTemperature(settings) {
-    return settings.advanced.temperature >= 0 && settings.advanced.temperature <= 1 ? settings.advanced.temperature : 0.7;
-  }
-  getMaxTokens(settings) {
-    return settings.advanced.maxTokens > 0 ? settings.advanced.maxTokens : 1e3;
-  }
-  async makeApiRequest(apiModel, prompt, temperature, maxTokens) {
+  /**
+   * Make a request to the Gemini API
+   */
+  async makeApiRequest(params) {
+    var _a;
+    const systemPrompt = params.rawResponse ? "You are a helpful assistant." : "You are a helpful assistant that responds in JSON format. Your response should be valid JSON with a 'response' field containing your answer.";
     const requestBody = {
-      contents: [{
-        parts: [{ text: prompt }]
-      }],
+      contents: [
+        {
+          parts: [
+            { text: systemPrompt },
+            { text: params.prompt }
+          ]
+        }
+      ],
       generationConfig: {
-        temperature,
-        maxOutputTokens: maxTokens,
+        temperature: params.temperature,
+        maxOutputTokens: params.maxTokens,
         topK: 40,
         topP: 0.95
       }
     };
     const response = await (0, import_obsidian3.requestUrl)({
-      url: `https://generativelanguage.googleapis.com/v1/models/${apiModel}:generateContent`,
+      url: `https://generativelanguage.googleapis.com/v1/models/${params.model}:generateContent`,
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -447,27 +786,63 @@ var GeminiAdapter = class {
       body: JSON.stringify(requestBody)
     });
     if (response.status !== 200) {
-      throw new Error(`API request failed with status ${response.status}: ${response.text}`);
+      const errorBody = response.json;
+      throw new Error(
+        `API request failed with status ${response.status}: ${((_a = errorBody == null ? void 0 : errorBody.error) == null ? void 0 : _a.message) || response.text}`
+      );
     }
     return response;
   }
+  /**
+   * Extract content from Gemini API response
+   */
   extractContentFromResponse(response) {
+    var _a, _b, _c, _d, _e, _f;
+    if (!((_f = (_e = (_d = (_c = (_b = (_a = response.json) == null ? void 0 : _a.candidates) == null ? void 0 : _b[0]) == null ? void 0 : _c.content) == null ? void 0 : _d.parts) == null ? void 0 : _e[0]) == null ? void 0 : _f.text)) {
+      throw new Error("Invalid response format from Gemini API");
+    }
     const content = response.json.candidates[0].content;
     return content.parts[0].text;
   }
+  /**
+   * Get temperature setting
+   */
+  getTemperature(settings) {
+    var _a, _b;
+    return ((_a = settings.advanced) == null ? void 0 : _a.temperature) >= 0 && ((_b = settings.advanced) == null ? void 0 : _b.temperature) <= 1 ? settings.advanced.temperature : 0.7;
+  }
+  /**
+   * Get max tokens setting
+   */
+  getMaxTokens(settings) {
+    var _a;
+    return ((_a = settings.advanced) == null ? void 0 : _a.maxTokens) > 0 ? settings.advanced.maxTokens : 1e3;
+  }
+  /**
+   * Handle errors in API calls
+   */
   handleError(error) {
     console.error("Error in Gemini API call:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
     new import_obsidian3.Notice(`Gemini API Error: ${errorMessage}`);
     return { success: false, error: errorMessage };
   }
+  /**
+   * Validate API key
+   */
   async validateApiKey() {
     try {
       if (!this.apiKey) {
         throw new Error("Google API key is not set");
       }
-      const response = await this.testConnection("Return the word 'OK'.", this.models[0].apiName);
-      if (response) {
+      if (this.models.length === 0) {
+        throw new Error("No models available for Gemini");
+      }
+      const isValid = await this.testConnection(
+        "Return the word 'OK'.",
+        this.models[0].apiName
+      );
+      if (isValid) {
         new import_obsidian3.Notice("Gemini API key validated successfully");
         return true;
       } else {
@@ -479,23 +854,47 @@ var GeminiAdapter = class {
       return false;
     }
   }
+  /**
+   * Get available models
+   */
   getAvailableModels() {
     return this.models.map((model) => model.apiName);
   }
+  /**
+   * Get provider type
+   */
   getProviderType() {
     return "google" /* Google */;
   }
+  /**
+   * Set API key
+   */
   setApiKey(apiKey) {
     this.apiKey = apiKey;
   }
+  /**
+   * Get API key
+   */
   getApiKey() {
     return this.apiKey;
   }
+  /**
+   * Configure the adapter
+   */
   configure(config) {
+    if (config == null ? void 0 : config.apiKey) {
+      this.setApiKey(config.apiKey);
+    }
   }
+  /**
+   * Check if adapter is ready
+   */
   isReady() {
-    return !!this.apiKey;
+    return !!this.apiKey && this.models.length > 0;
   }
+  /**
+   * Get API model name
+   */
   getApiModelName(modelApiName) {
     var _a;
     const model = this.models.find((m) => m.apiName === modelApiName);
@@ -517,7 +916,10 @@ var GroqAdapter = class {
     this.apiKey = aiProviderSettings.apiKeys["groq" /* Groq */] || "";
     this.models = AIModelMap["groq" /* Groq */];
   }
-  async generateResponse(prompt, modelApiName) {
+  /**
+   * Generate a response using the Groq API
+   */
+  async generateResponse(prompt, modelApiName, options) {
     try {
       const apiModel = this.getApiModelName(modelApiName);
       if (!apiModel) {
@@ -528,36 +930,51 @@ var GroqAdapter = class {
       }
       const settings = this.settingsService.getSettings();
       const temperature = this.getTemperature(settings);
-      const maxTokens = this.getMaxTokens(settings);
-      const response = await this.makeApiRequest(apiModel, prompt, temperature, maxTokens);
+      const maxTokens = (options == null ? void 0 : options.maxTokens) || this.getMaxTokens(settings);
+      const response = await this.makeApiRequest({
+        model: apiModel,
+        prompt,
+        temperature,
+        maxTokens,
+        rawResponse: options == null ? void 0 : options.rawResponse
+      });
       const content = this.extractContentFromResponse(response);
+      if (options == null ? void 0 : options.rawResponse) {
+        return { success: true, data: content };
+      }
       const validatedContent = await this.jsonValidationService.validateAndCleanJson(content);
       return { success: true, data: validatedContent };
     } catch (error) {
       return this.handleError(error);
     }
   }
+  /**
+   * Test connection to Groq API
+   */
   async testConnection(prompt, modelApiName) {
     try {
       if (!this.apiKey) {
         throw new Error("Groq API key is not set");
       }
-      const apiModel = this.getApiModelName(modelApiName);
-      const response = await this.makeApiRequest(apiModel, prompt, 0.7, 50);
-      const content = this.extractContentFromResponse(response);
-      return content.toLowerCase().includes("ok");
+      const response = await this.generateResponse(
+        prompt || "Return the word 'OK'.",
+        modelApiName,
+        { rawResponse: true }
+      );
+      if (!response.success || typeof response.data !== "string") {
+        return false;
+      }
+      return response.data.toLowerCase().includes("ok");
     } catch (error) {
       console.error("Error in Groq test connection:", error);
       return false;
     }
   }
-  getTemperature(settings) {
-    return settings.advanced.temperature >= 0 && settings.advanced.temperature <= 1 ? settings.advanced.temperature : 0.7;
-  }
-  getMaxTokens(settings) {
-    return settings.advanced.maxTokens > 0 ? settings.advanced.maxTokens : 1e3;
-  }
-  async makeApiRequest(apiModel, prompt, temperature, maxTokens) {
+  /**
+   * Make a request to the Groq API
+   */
+  async makeApiRequest(params) {
+    var _a;
     const response = await (0, import_obsidian4.requestUrl)({
       url: "https://api.groq.com/openai/v1/chat/completions",
       method: "POST",
@@ -566,37 +983,76 @@ var GroqAdapter = class {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: apiModel,
+        model: params.model,
         messages: [
-          { role: "system", content: "You are a helpful assistant that responds in JSON format." },
-          { role: "user", content: prompt }
+          {
+            role: "system",
+            content: params.rawResponse ? "You are a helpful assistant." : "You are a helpful assistant that responds in JSON format."
+          },
+          { role: "user", content: params.prompt }
         ],
-        temperature,
-        max_tokens: maxTokens,
-        response_format: { type: "json_object" }
+        temperature: params.temperature,
+        max_tokens: params.maxTokens,
+        response_format: params.rawResponse ? void 0 : { type: "json_object" }
       })
     });
     if (response.status !== 200) {
-      throw new Error(`API request failed with status ${response.status}`);
+      const errorBody = response.json;
+      throw new Error(
+        `API request failed with status ${response.status}: ${((_a = errorBody == null ? void 0 : errorBody.error) == null ? void 0 : _a.message) || "Unknown error"}`
+      );
     }
     return response;
   }
+  /**
+   * Extract content from API response
+   */
   extractContentFromResponse(response) {
+    var _a, _b, _c, _d;
+    if (!((_d = (_c = (_b = (_a = response.json) == null ? void 0 : _a.choices) == null ? void 0 : _b[0]) == null ? void 0 : _c.message) == null ? void 0 : _d.content)) {
+      throw new Error("Invalid response format from Groq API");
+    }
     return response.json.choices[0].message.content;
   }
+  /**
+   * Get temperature setting
+   */
+  getTemperature(settings) {
+    var _a, _b;
+    return ((_a = settings.advanced) == null ? void 0 : _a.temperature) >= 0 && ((_b = settings.advanced) == null ? void 0 : _b.temperature) <= 1 ? settings.advanced.temperature : 0.7;
+  }
+  /**
+   * Get max tokens setting
+   */
+  getMaxTokens(settings) {
+    var _a;
+    return ((_a = settings.advanced) == null ? void 0 : _a.maxTokens) > 0 ? settings.advanced.maxTokens : 1e3;
+  }
+  /**
+   * Handle errors in API calls
+   */
   handleError(error) {
     console.error("Error in Groq API call:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
     new import_obsidian4.Notice(`Groq API Error: ${errorMessage}`);
     return { success: false, error: errorMessage };
   }
+  /**
+   * Validate API key
+   */
   async validateApiKey() {
     try {
       if (!this.apiKey) {
         throw new Error("Groq API key is not set");
       }
-      const response = await this.testConnection("Return the word 'OK'.", this.models[0].apiName);
-      if (response) {
+      if (this.models.length === 0) {
+        throw new Error("No models available for Groq");
+      }
+      const isValid = await this.testConnection(
+        "Return the word 'OK'.",
+        this.models[0].apiName
+      );
+      if (isValid) {
         new import_obsidian4.Notice("Groq API key validated successfully");
         return true;
       } else {
@@ -608,23 +1064,47 @@ var GroqAdapter = class {
       return false;
     }
   }
+  /**
+   * Get available models
+   */
   getAvailableModels() {
     return this.models.map((model) => model.apiName);
   }
+  /**
+   * Get provider type
+   */
   getProviderType() {
     return "groq" /* Groq */;
   }
+  /**
+   * Set API key
+   */
   setApiKey(apiKey) {
     this.apiKey = apiKey;
   }
+  /**
+   * Get API key
+   */
   getApiKey() {
     return this.apiKey;
   }
+  /**
+   * Configure the adapter
+   */
   configure(config) {
+    if (config == null ? void 0 : config.apiKey) {
+      this.setApiKey(config.apiKey);
+    }
   }
+  /**
+   * Check if adapter is ready
+   */
   isReady() {
-    return !!this.apiKey;
+    return !!this.apiKey && this.models.length > 0;
   }
+  /**
+   * Get API model name
+   */
   getApiModelName(modelApiName) {
     var _a;
     const model = this.models.find((m) => m.apiName === modelApiName);
@@ -646,7 +1126,10 @@ var OpenRouterAdapter = class {
     this.apiKey = aiProviderSettings.apiKeys["openrouter" /* OpenRouter */] || "";
     this.models = AIModelMap["openrouter" /* OpenRouter */];
   }
-  async generateResponse(prompt, modelApiName) {
+  /**
+   * Generate a response using the OpenRouter API
+   */
+  async generateResponse(prompt, modelApiName, options) {
     try {
       const apiModel = this.getApiModelName(modelApiName);
       if (!apiModel) {
@@ -657,48 +1140,73 @@ var OpenRouterAdapter = class {
       }
       const settings = this.settingsService.getSettings();
       const temperature = this.getTemperature(settings);
-      const maxTokens = this.getMaxTokens(settings);
-      const response = await this.makeApiRequest(apiModel, prompt, temperature, maxTokens);
+      const maxTokens = (options == null ? void 0 : options.maxTokens) || this.getMaxTokens(settings);
+      const response = await this.makeApiRequest(
+        apiModel,
+        prompt,
+        temperature,
+        maxTokens,
+        options == null ? void 0 : options.rawResponse
+      );
       const content = this.extractContentFromResponse(response);
+      if (options == null ? void 0 : options.rawResponse) {
+        return { success: true, data: content };
+      }
       const validatedContent = await this.jsonValidationService.validateAndCleanJson(content);
       return { success: true, data: validatedContent };
     } catch (error) {
       return this.handleError(error);
     }
   }
+  /**
+   * Test connection to OpenRouter API
+   */
   async testConnection(prompt, modelApiName) {
     try {
       if (!this.apiKey) {
-        throw new Error("OpenRouter API key is not set");
+        return false;
       }
-      const apiModel = this.getApiModelName(modelApiName);
-      const response = await this.makeApiRequest(apiModel, prompt, 0.7, 50);
-      const content = this.extractContentFromResponse(response);
-      return content.toLowerCase().includes("ok");
+      const response = await this.generateResponse(
+        prompt || "Return the word 'OK'.",
+        modelApiName,
+        { rawResponse: true }
+      );
+      if (!response.success || typeof response.data !== "string") {
+        return false;
+      }
+      return response.data.toLowerCase().includes("ok");
     } catch (error) {
       console.error("Error in OpenRouter test connection:", error);
       return false;
     }
   }
-  getTemperature(settings) {
-    return settings.advanced.temperature >= 0 && settings.advanced.temperature <= 1 ? settings.advanced.temperature : 0.7;
-  }
-  getMaxTokens(settings) {
-    return settings.advanced.maxTokens > 0 ? settings.advanced.maxTokens : 1e3;
-  }
-  async makeApiRequest(apiModel, prompt, temperature, maxTokens) {
+  /**
+   * Make a request to the OpenRouter API
+   */
+  async makeApiRequest(apiModel, prompt, temperature, maxTokens, rawResponse) {
     const response = await (0, import_obsidian5.requestUrl)({
       url: `https://openrouter.ai/api/v1/chat/completions`,
       method: "POST",
       headers: {
         "Authorization": `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://github.com/yourusername/obsidian-plugin",
+        // Replace with your plugin's URL
+        "X-Title": "Obsidian Plugin"
+        // Replace with your plugin's name
       },
       body: JSON.stringify({
         model: apiModel,
-        messages: [{ role: "user", content: prompt }],
+        messages: [
+          {
+            role: "system",
+            content: rawResponse ? "You are a helpful assistant." : "You are a helpful assistant that responds in JSON format."
+          },
+          { role: "user", content: prompt }
+        ],
         temperature,
-        max_tokens: maxTokens
+        max_tokens: maxTokens,
+        response_format: rawResponse ? void 0 : { type: "json_object" }
       })
     });
     if (response.status !== 200) {
@@ -706,22 +1214,55 @@ var OpenRouterAdapter = class {
     }
     return response;
   }
+  /**
+   * Extract content from API response
+   */
   extractContentFromResponse(response) {
+    var _a, _b, _c, _d;
+    if (!((_d = (_c = (_b = (_a = response.json) == null ? void 0 : _a.choices) == null ? void 0 : _b[0]) == null ? void 0 : _c.message) == null ? void 0 : _d.content)) {
+      throw new Error("Invalid response format from OpenRouter API");
+    }
     return response.json.choices[0].message.content;
   }
+  /**
+   * Get temperature setting
+   */
+  getTemperature(settings) {
+    var _a, _b;
+    return ((_a = settings.advanced) == null ? void 0 : _a.temperature) >= 0 && ((_b = settings.advanced) == null ? void 0 : _b.temperature) <= 1 ? settings.advanced.temperature : 0.7;
+  }
+  /**
+   * Get max tokens setting
+   */
+  getMaxTokens(settings) {
+    var _a;
+    return ((_a = settings.advanced) == null ? void 0 : _a.maxTokens) > 0 ? settings.advanced.maxTokens : 1e3;
+  }
+  /**
+   * Handle errors in API calls
+   */
   handleError(error) {
     console.error("Error in OpenRouter API call:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
     new import_obsidian5.Notice(`OpenRouter API Error: ${errorMessage}`);
     return { success: false, error: errorMessage };
   }
+  /**
+   * Validate API key
+   */
   async validateApiKey() {
     try {
       if (!this.apiKey) {
         throw new Error("OpenRouter API key is not set");
       }
-      const response = await this.testConnection("Return the word 'OK'.", this.models[0].apiName);
-      if (response) {
+      if (this.models.length === 0) {
+        throw new Error("No models available for OpenRouter");
+      }
+      const isValid = await this.testConnection(
+        "Return the word 'OK'.",
+        this.models[0].apiName
+      );
+      if (isValid) {
         new import_obsidian5.Notice("OpenRouter API key validated successfully");
         return true;
       } else {
@@ -733,23 +1274,47 @@ var OpenRouterAdapter = class {
       return false;
     }
   }
+  /**
+   * Get available models
+   */
   getAvailableModels() {
     return this.models.map((model) => model.apiName);
   }
+  /**
+   * Get provider type
+   */
   getProviderType() {
     return "openrouter" /* OpenRouter */;
   }
+  /**
+   * Set API key
+   */
   setApiKey(apiKey) {
     this.apiKey = apiKey;
   }
+  /**
+   * Get API key
+   */
   getApiKey() {
     return this.apiKey;
   }
+  /**
+   * Configure the adapter
+   */
   configure(config) {
+    if (config == null ? void 0 : config.apiKey) {
+      this.setApiKey(config.apiKey);
+    }
   }
+  /**
+   * Check if adapter is ready
+   */
   isReady() {
-    return !!this.apiKey;
+    return !!this.apiKey && this.models.length > 0;
   }
+  /**
+   * Get API model name
+   */
   getApiModelName(modelApiName) {
     var _a;
     const model = this.models.find((m) => m.apiName === modelApiName);
@@ -769,12 +1334,11 @@ var LMStudioAdapter = class {
     this.jsonValidationService = jsonValidationService;
     this.updateSettings();
   }
-  async generateResponse(prompt, model = "default") {
+  async generateResponse(prompt, model = "default", options) {
     try {
       if (!this.isReady()) {
         throw new Error("LM Studio settings are not properly configured");
       }
-      const jsonSchema = this.createJsonSchema();
       const response = await (0, import_obsidian6.requestUrl)({
         url: `http://localhost:${this.port}/v1/chat/completions`,
         method: "POST",
@@ -786,19 +1350,19 @@ var LMStudioAdapter = class {
           messages: [
             {
               role: "system",
-              content: "You are a helpful assistant that responds in JSON format."
+              content: (options == null ? void 0 : options.rawResponse) ? "You are a helpful assistant." : "You are a helpful assistant that responds in JSON format."
             },
             {
               role: "user",
               content: prompt
             }
           ],
-          response_format: {
+          response_format: (options == null ? void 0 : options.rawResponse) ? void 0 : {
             type: "json_schema",
-            json_schema: jsonSchema
+            json_schema: this.createJsonSchema()
           },
           temperature: 0.7,
-          max_tokens: 1e3,
+          max_tokens: (options == null ? void 0 : options.maxTokens) || 1e3,
           stream: false
         })
       });
@@ -806,6 +1370,12 @@ var LMStudioAdapter = class {
         throw new Error(`API request failed with status ${response.status}`);
       }
       const content = response.json.choices[0].message.content;
+      if (options == null ? void 0 : options.rawResponse) {
+        return {
+          success: true,
+          data: content
+        };
+      }
       const validatedContent = await this.jsonValidationService.validateAndCleanJson(content);
       return {
         success: true,
@@ -841,7 +1411,13 @@ var LMStudioAdapter = class {
         return false;
       }
       const response = await this.generateResponse("Return the word 'OK'.", model);
-      return response.success && response.data && typeof response.data === "object" && "response" in response.data && typeof response.data.response === "string" && response.data.response.toLowerCase().includes("ok");
+      if (!response.success || !response.data) {
+        return false;
+      }
+      if (typeof response.data === "object" && response.data !== null && "response" in response.data && typeof response.data.response === "string") {
+        return response.data.response.toLowerCase().includes("ok");
+      }
+      return false;
     } catch (error) {
       console.error("Error in LM Studio test connection:", error);
       return false;
@@ -1020,23 +1596,28 @@ var FrontMatterGenerator = class extends BaseGenerator {
     ).join("\n")) || "";
     const tagPrompt = ((_b = input.customTags) == null ? void 0 : _b.join(", ")) || "";
     return `
-Generate YAML front matter for the following note content.
-Use the provided JSON schema to structure your response.
-Include relevant custom properties and tags.
+# MISSION
+Act as an expert analyzer and creator of metadata, with a specialization in ontological organization. Use the custom properties and available tags below to generate JSON formatted text based on the provided schema, using the note content for reference.
 
-Custom Properties:
+# GUIDELINES
+- You must ONLY use the properties provided, taking the description of the property as guidance for generation.
+- Prioritize use of the available tags, but remain flexible in choosing additional tags that would be useful in labelling the note content.
+- Omit all other text including words before or after or backticks, returning ONLY the formatted JSON.
+
+## Custom Properties
 ${propertyPrompt}
 
-Available Tags:
+## Available Tags
 ${tagPrompt}
 
-JSON Schema:
-${JSON.stringify(schema, null, 2)}
-
-Note Content:
+## Note Content
+Below is the content of the note you can use to generate completed JSON schema. Omit it from your generation.
 ${input.content}
 
-Provide the YAML front matter only, enclosed between '---' lines, with no additional text.
+## JSON Schema:
+${JSON.stringify(schema, null, 2)}
+
+Remember, return only the properly formatted JSON with no words before or after, or backticks.
 `;
   }
   /**
@@ -1184,17 +1765,18 @@ var WikilinkGenerator = class extends BaseGenerator {
     const settings = this.getSettings();
     const customTags = settings.tags.customTags.map((tag) => tag.name).join(", ") || "";
     return `
-            Analyze the following content and suggest key phrases that could be turned into wikilinks.
-            Consider the existing pages in the vault and prioritize linking to them.
-            Also consider the following custom tags used in this knowledge base: ${customTags}
+# MISSION
+Act as an expert in recommending wikilinks for potential future research notes.
+Analyze the following content and suggest key phrases, proper nouns, people, places, events, and concepts that would make for a relevant and practical note.
+Consider the existing pages in the vault and prioritize linking to them. Ignore all tags and front matter when generating.
 
-            Content:
-            ${input.content}
+# CONTENT
+${input.content}
 
-            Existing pages:
-            ${input.existingPages.join(", ")}
+# EXISTING PAGES
+${input.existingPages.join(", ")}
 
-            Provide your suggestions as a JSON array of strings.
+Provide your suggestions as a JSON array of strings, omitting all characters before or after, including backticks.
         `;
   }
   /**
@@ -1490,33 +2072,39 @@ var OntologyGenerator = class extends BaseGenerator {
     const folderNames = input.folders.map((folder) => folder.name).join(", ");
     const tags = input.tags.join(", ");
     return `
-            Analyze the following information about a knowledge base and synthesize an ontology.
-            Based on the overall structure and content, suggest a set of tags that would create a cohesive and useful ontology for this knowledge base.
+# MISSION
+Act as an expert in Ontological Science, specializing in taking unstructured information from an Obsidian vault, and creating tags to create a means of connecting the information.
+Analyze the following information about a knowledge base and synthesize an ontology.
+Based on the overall structure and content, suggest a set of tags that would create a cohesive and useful ontology for this knowledge base.
 
-            Files: ${fileNames}
-            Folders: ${folderNames}
-            Existing Tags: ${tags}
-            ${input.userContext ? `Additional Context: ${input.userContext}` : ""}
+**Files:**
+${fileNames}
 
-            For each suggested tag in the ontology, provide:
-            {
-                "Name": {
-                    "description": "a brief but robust instruction on what this tag represents",
-                    "type": "string", // Specify the type
-                    "required": false, // Specify if the tag is required
-                    "multipleValues": false // Specify if the tag can have multiple values
-                }
-            }
+**Folders:** 
+${folderNames}
 
-            Consider the following when creating the ontology:
-            1. Identify overarching themes and concepts present in the knowledge base.
-            2. Suggest tags that would help categorize and connect information across different files and folders.
-            3. Build upon existing tags, either by refining them or suggesting complementary tags.
-            4. Aim for a balance between specificity and generality in the suggested tags.
-            5. Consider the hierarchical structure implied by the folder organization.
+**Existing Tags:** 
+${tags}
 
-            Provide your response as a JSON object where the keys are the tag names and the values are objects containing the description, type, required, and multipleValues.
-            Aim to suggest between 10 to 20 tags that would form a comprehensive ontology for this knowledge base.
+${input.userContext ? `**Additional Context:** ${input.userContext}` : ""}
+
+For each suggested tag in the ontology, provide:
+{
+    "Name": {
+        "description": "a brief but robust instruction on what this tag represents, and when it should be applied",
+    }
+}
+
+Consider the following when creating the ontology:
+1. Identify overarching themes and concepts present in the knowledge base.
+2. Suggest tags that would help categorize and connect information across different files and folders.
+3. Build upon existing tags, either by refining them or suggesting complementary tags.
+4. Aim for a balance between specificity and generality in the suggested tags.
+5. Consider the hierarchical structure implied by the folder organization.
+6. Omit all spaces from tags names (e.g. AlbertEinstein instead of Albert Einstein)
+
+Provide your response as a JSON object where the keys are the tag names and the values are objects containing the description.
+Suggest enough tags to form a comprehensive ontology for this knowledge base.
         `;
   }
   /**
@@ -1972,18 +2560,16 @@ var KnowledgeBloomGenerator = class extends BaseGenerator {
     super(aiAdapter, settingsService);
     this.app = app;
     this.currentInput = null;
-    this.jsonSchemaGenerator = new JsonSchemaGenerator(this.settingsService);
-    this.jsonValidationService = this.settingsService.getJsonValidationService();
     this.frontMatterGenerator = frontMatterGenerator;
   }
   /**
-   * Override the generate method to handle multiple wikilinks
+   * Generate new notes from wikilinks in the source document
    * @param input The input parameters for generation
    * @returns Promise resolving to generated notes
    */
   async generate(input) {
     this.currentInput = input;
-    console.log("KnowledgeBloomGenerator: Starting Knowledge Bloom generation");
+    console.log("KnowledgeBloomGenerator: Starting generation process");
     try {
       if (!this.validateInput(input)) {
         throw new Error("Invalid input for Knowledge Bloom generation");
@@ -1993,41 +2579,12 @@ var KnowledgeBloomGenerator = class extends BaseGenerator {
       if (wikilinks.length === 0) {
         throw new Error("No wikilinks found in the source file.");
       }
+      const folderPath = this.getFolderPath(input.sourceFile);
       const output = { generatedNotes: [] };
-      for (const link of wikilinks) {
-        try {
-          const schema = this.jsonSchemaGenerator.generateSchemaForTopic(link);
-          const prompt = this.preparePrompt({
-            sourceFile: input.sourceFile,
-            userPrompt: input.userPrompt,
-            currentWikilink: link,
-            schema
-          });
-          const model = await this.getCurrentModel();
-          const aiResponse = await this.aiAdapter.generateResponse(prompt, model);
-          if (!aiResponse.success || !aiResponse.data) {
-            throw new Error(`AI failed to generate response for "${link}": ${aiResponse.error || "Unknown error"}`);
-          }
-          if (!this.jsonValidationService.validate(aiResponse.data)) {
-            throw new Error(`Invalid JSON response for "${link}"`);
-          }
-          const content = aiResponse.data.content || "";
-          const customProperties = this.extractCustomProperties(aiResponse.data);
-          const customTags = this.extractCustomTags(aiResponse.data);
-          const frontMatterInput = {
-            content,
-            customProperties,
-            customTags
-          };
-          const frontMatterResult = await this.frontMatterGenerator.generate(frontMatterInput);
-          const markdownContent = frontMatterResult.content;
-          output.generatedNotes.push({ title: link, content: markdownContent });
-          console.log(`KnowledgeBloomGenerator: Successfully generated note for "${link}".`);
-        } catch (error) {
-          console.error(`Error generating note for "${link}":`, error);
-          new import_obsidian8.Notice(`Failed to generate note for "${link}": ${error.message}`);
-        }
-      }
+      const generationPromises = wikilinks.map(
+        (link) => this.processWikilink(link, folderPath, input, output)
+      );
+      await Promise.allSettled(generationPromises);
       return output;
     } catch (error) {
       return this.handleError(error);
@@ -2036,80 +2593,139 @@ var KnowledgeBloomGenerator = class extends BaseGenerator {
     }
   }
   /**
-   * Implements the abstract formatOutput method from BaseGenerator
-   * Processes the AI response and generates the KnowledgeBloomOutput
-   * @param aiResponse AI response (not used in this overridden method)
-   * @param originalInput Original input parameters (not used in this overridden method)
-   * @returns KnowledgeBloomOutput with generated notes
+   * Process a single wikilink to generate a new note
    */
-  formatOutput(aiResponse, originalInput) {
-    throw new Error("Method not implemented.");
+  async processWikilink(link, folderPath, input, output) {
+    try {
+      if (this.doesNoteExist(link, folderPath)) {
+        console.log(`KnowledgeBloomGenerator: Note for "${link}" already exists. Skipping.`);
+        return;
+      }
+      const markdownContent = await this.generateMarkdownContent(link, input);
+      const finalContent = await this.addFrontMatter(markdownContent);
+      const newFilePath = `${folderPath}/${link}.md`;
+      await this.app.vault.create(newFilePath, finalContent);
+      output.generatedNotes.push({ title: link, content: finalContent });
+      console.log(`KnowledgeBloomGenerator: Successfully generated note for "${link}".`);
+    } catch (error) {
+      console.error(`Error processing wikilink "${link}":`, error);
+      new import_obsidian8.Notice(`Failed to generate note for "${link}": ${error.message}`);
+    }
   }
   /**
-   * Extracts unique wikilinks from a file
-   * @param file The file to extract wikilinks from
-   * @returns Array of unique wikilink strings
+   * Generate markdown content for a single wikilink
+   */
+  async generateMarkdownContent(link, input) {
+    const prompt = this.preparePrompt({
+      ...input,
+      currentWikilink: link,
+      currentNoteTitle: input.sourceFile.basename
+    });
+    const model = await this.getCurrentModel();
+    const options = { rawResponse: true };
+    const response = await this.aiAdapter.generateResponse(prompt, model, options);
+    if (!response.success || !response.data) {
+      throw new Error(`Failed to generate content for "${link}": ${response.error || "Unknown error"}`);
+    }
+    let content = response.data;
+    if (typeof content === "object" && content !== null) {
+      const contentObj = content;
+      if ("content" in contentObj && typeof contentObj.content === "string") {
+        content = contentObj.content;
+      } else if ("response" in contentObj && typeof contentObj.response === "string") {
+        content = contentObj.response;
+      } else {
+        content = JSON.stringify(content);
+      }
+    }
+    const contentString = String(content).trim();
+    return contentString.replace(/^---\n[\s\S]*?\n---\n*/g, "");
+  }
+  /**
+   * Add front matter to the generated content
+   */
+  async addFrontMatter(content) {
+    const frontMatterInput = {
+      content,
+      customProperties: this.extractCustomProperties(content),
+      customTags: this.extractCustomTags(content)
+    };
+    const frontMatterResult = await this.frontMatterGenerator.generate(frontMatterInput);
+    return frontMatterResult.content;
+  }
+  /**
+   * Extract unique wikilinks from a file
    */
   async extractWikilinks(file) {
-    console.log(`KnowledgeBloomGenerator: Extracting wikilinks from ${file.path}`);
     const content = await this.app.vault.read(file);
     const wikilinks = content.match(/\[\[([^\]]+)\]\]/g) || [];
     const links = wikilinks.map((link) => link.slice(2, -2));
-    const uniqueLinks = Array.from(new Set(links.map((link) => link.toLowerCase())));
-    console.log(`KnowledgeBloomGenerator: Extracted ${uniqueLinks.length} unique wikilinks: ${uniqueLinks.join(", ")}`);
-    return uniqueLinks;
+    return Array.from(new Set(links.map((link) => link.toLowerCase())));
   }
   /**
-   * Prepares the AI prompt with schema and context
-   * @param input The input containing wikilink and schema
-   * @returns Formatted prompt string
+   * Extract custom properties from content
+   */
+  extractCustomProperties(content) {
+    try {
+      return this.settingsService.getSettings().frontMatter.customProperties;
+    } catch (error) {
+      console.error("Error extracting custom properties:", error);
+      return [];
+    }
+  }
+  /**
+   * Extract custom tags from content
+   */
+  extractCustomTags(content) {
+    try {
+      return this.settingsService.getSettings().tags.customTags.map((tag) => tag.name);
+    } catch (error) {
+      console.error("Error extracting custom tags:", error);
+      return [];
+    }
+  }
+  /**
+   * Prepare the AI prompt for content generation
    */
   preparePrompt(input) {
-    if (!input.currentWikilink || !input.schema) {
-      throw new Error("Missing required wikilink or schema in input");
+    if (!input.currentWikilink || !input.currentNoteTitle) {
+      throw new Error("Missing required wikilink or note title");
     }
     return `
-You are an AI assistant that helps generate structured notes.
+# MISSION
+Act as an expert Research Assistant that specializes in writing structured notes that are accessible and practical based on a provided topic.
 
-Please generate a JSON object that adheres to the following schema:
-${JSON.stringify(input.schema, null, 2)}
+# GUIDELINES
+- Write the note in Markdown format.
+- Do NOT include any JSON objects or front matter.
+- Ensure the content is well-structured and comprehensive.
+- Omit any words before or after the Markdown content.
 
-Ensure that the JSON is well-formed and follows the schema precisely.
+# TOPIC
+Write a detailed note about "${input.currentWikilink}" in relation to "${input.currentNoteTitle}".
 
-Topic: "${input.currentWikilink}"
-${input.userPrompt ? `Additional Context: ${input.userPrompt}` : ""}
-
-Response:
+${input.userPrompt ? `## Additional Context:
+${input.userPrompt}` : ""}
 `;
   }
   /**
-   * Extracts custom properties from AI response data based on schema
-   * @param data AI response data
-   * @returns Array of PropertyTag
+   * Check if a note exists at the given path
    */
-  extractCustomProperties(data) {
-    const settings = this.settingsService.getSettings();
-    return settings.frontMatter.customProperties.map((property) => ({
-      name: property.name,
-      description: property.description,
-      type: property.type,
-      required: property.required,
-      multipleValues: property.multipleValues
-    }));
+  doesNoteExist(title, folderPath) {
+    const filePath = `${folderPath}/${title}.md`;
+    const file = this.app.vault.getAbstractFileByPath(filePath);
+    return file instanceof import_obsidian8.TFile;
   }
   /**
-   * Extracts custom tags from AI response data based on settings
-   * @param data AI response data
-   * @returns Array of tags
+   * Get the folder path for the new note
    */
-  extractCustomTags(data) {
-    const settings = this.settingsService.getSettings();
-    return settings.tags.customTags.map((tag) => tag.name);
+  getFolderPath(file) {
+    const pathSegments = file.path.split("/");
+    pathSegments.pop();
+    return pathSegments.join("/");
   }
   /**
-   * Validate input parameters
-   * @param input The input to validate
-   * @returns True if input is valid
+   * Validate the input parameters
    */
   validateInput(input) {
     const isValid = (input == null ? void 0 : input.sourceFile) instanceof import_obsidian8.TFile;
@@ -2117,8 +2733,7 @@ Response:
     return isValid;
   }
   /**
-   * Gets current AI model for generation
-   * @returns Promise resolving to model identifier
+   * Get the current AI model
    */
   async getCurrentModel() {
     var _a;
@@ -2130,13 +2745,18 @@ Response:
     return selectedModel;
   }
   /**
-   * Custom error handler for Knowledge Bloom
-   * @param error The error to handle
+   * Handle generation errors
    */
   handleError(error) {
     console.error(`KnowledgeBloomGenerator: Knowledge Bloom generation error: ${error.message}`, error);
     new import_obsidian8.Notice(`Knowledge Bloom generation failed: ${error.message}`);
-    throw new Error(`Knowledge Bloom generation failed: ${error.message}`);
+    throw error;
+  }
+  /**
+   * Format output (not used in this implementation)
+   */
+  formatOutput(_aiResponse, _originalInput) {
+    throw new Error("Method not implemented - using custom generate method");
   }
 };
 

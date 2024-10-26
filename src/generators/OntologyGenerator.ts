@@ -64,33 +64,39 @@ export class OntologyGenerator extends BaseGenerator<OntologyInput, OntologyResu
         const tags = input.tags.join(', ');
 
         return `
-            Analyze the following information about a knowledge base and synthesize an ontology.
-            Based on the overall structure and content, suggest a set of tags that would create a cohesive and useful ontology for this knowledge base.
+# MISSION
+Act as an expert in Ontological Science, specializing in taking unstructured information from an Obsidian vault, and creating tags to create a means of connecting the information.
+Analyze the following information about a knowledge base and synthesize an ontology.
+Based on the overall structure and content, suggest a set of tags that would create a cohesive and useful ontology for this knowledge base.
 
-            Files: ${fileNames}
-            Folders: ${folderNames}
-            Existing Tags: ${tags}
-            ${input.userContext ? `Additional Context: ${input.userContext}` : ''}
+**Files:**
+${fileNames}
 
-            For each suggested tag in the ontology, provide:
-            {
-                "Name": {
-                    "description": "a brief but robust instruction on what this tag represents",
-                    "type": "string", // Specify the type
-                    "required": false, // Specify if the tag is required
-                    "multipleValues": false // Specify if the tag can have multiple values
-                }
-            }
+**Folders:** 
+${folderNames}
 
-            Consider the following when creating the ontology:
-            1. Identify overarching themes and concepts present in the knowledge base.
-            2. Suggest tags that would help categorize and connect information across different files and folders.
-            3. Build upon existing tags, either by refining them or suggesting complementary tags.
-            4. Aim for a balance between specificity and generality in the suggested tags.
-            5. Consider the hierarchical structure implied by the folder organization.
+**Existing Tags:** 
+${tags}
 
-            Provide your response as a JSON object where the keys are the tag names and the values are objects containing the description, type, required, and multipleValues.
-            Aim to suggest between 10 to 20 tags that would form a comprehensive ontology for this knowledge base.
+${input.userContext ? `**Additional Context:** ${input.userContext}` : ''}
+
+For each suggested tag in the ontology, provide:
+{
+    "Name": {
+        "description": "a brief but robust instruction on what this tag represents, and when it should be applied",
+    }
+}
+
+Consider the following when creating the ontology:
+1. Identify overarching themes and concepts present in the knowledge base.
+2. Suggest tags that would help categorize and connect information across different files and folders.
+3. Build upon existing tags, either by refining them or suggesting complementary tags.
+4. Aim for a balance between specificity and generality in the suggested tags.
+5. Consider the hierarchical structure implied by the folder organization.
+6. Omit all spaces from tags names (e.g. AlbertEinstein instead of Albert Einstein)
+
+Provide your response as a JSON object where the keys are the tag names and the values are objects containing the description.
+Suggest enough tags to form a comprehensive ontology for this knowledge base.
         `;
     }
 
