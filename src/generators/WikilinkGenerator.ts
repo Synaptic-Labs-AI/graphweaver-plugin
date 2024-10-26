@@ -214,14 +214,28 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
     }
 
     /**
-     * Normalizes text for wikilink usage
+     * Normalizes text for wikilink usage while preserving original capitalization
+     * @param text - The text to be normalized
+     * @returns Normalized text with preserved capitalization
      */
     public normalizeWikilinkText(text: string): string {
-        let normalized = text.trim();
-        normalized = normalized.replace(/\s+/g, ' ');
+        // Store original text to preserve capitalization
+        const originalText = text.trim();
         
-        return normalized.replace(this.PATTERNS.SPECIAL_CHARS_REGEX, 
+        // Replace multiple spaces with single space
+        let normalized = originalText.replace(/\s+/g, ' ');
+        
+        // Remove special characters except allowed ones
+        normalized = normalized.replace(this.PATTERNS.SPECIAL_CHARS_REGEX, 
             char => this.CONFIG.ALLOWED_SPECIAL_CHARS.includes(char) ? char : '');
+        
+        // If the normalized text differs only in case from original,
+        // preserve the original capitalization
+        if (normalized.toLowerCase() === originalText.toLowerCase()) {
+            return originalText;
+        }
+        
+        return normalized;
     }
 
     /**

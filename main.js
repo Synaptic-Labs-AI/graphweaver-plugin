@@ -1875,15 +1875,21 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
     return !trimmed.match(this.PATTERNS.MALFORMED_REGEX);
   }
   /**
-   * Normalizes text for wikilink usage
+   * Normalizes text for wikilink usage while preserving original capitalization
+   * @param text - The text to be normalized
+   * @returns Normalized text with preserved capitalization
    */
   normalizeWikilinkText(text) {
-    let normalized = text.trim();
-    normalized = normalized.replace(/\s+/g, " ");
-    return normalized.replace(
+    const originalText = text.trim();
+    let normalized = originalText.replace(/\s+/g, " ");
+    normalized = normalized.replace(
       this.PATTERNS.SPECIAL_CHARS_REGEX,
       (char) => this.CONFIG.ALLOWED_SPECIAL_CHARS.includes(char) ? char : ""
     );
+    if (normalized.toLowerCase() === originalText.toLowerCase()) {
+      return originalText;
+    }
+    return normalized;
   }
   /**
    * Checks if a position is within an existing wikilink
@@ -3875,96 +3881,210 @@ var StatusHistoryModal = class extends import_obsidian12.Modal {
 };
 
 // src/components/status/ProcessingStatusBar.ts
+var ProcessingState2 = /* @__PURE__ */ ((ProcessingState3) => {
+  ProcessingState3["IDLE"] = "idle";
+  ProcessingState3["RUNNING"] = "running";
+  ProcessingState3["ERROR"] = "error";
+  return ProcessingState3;
+})(ProcessingState2 || {});
 var ProcessingStatusBar = class {
-  constructor(app, statusBar, eventEmitter, aiService, settingsService, databaseService) {
+  constructor(app, statusBar, eventEmitter, aiService, settingsService, databaseService, config = {}) {
     this.app = app;
     this.statusBar = statusBar;
     this.eventEmitter = eventEmitter;
     this.aiService = aiService;
     this.settingsService = settingsService;
     this.databaseService = databaseService;
+    this.config = config;
+    this.DEFAULT_CONFIG = {
+      showTooltips: true,
+      updateInterval: 1e3,
+      animationEnabled: true
+    };
     this.currentState = "idle" /* IDLE */;
-    this.currentStatus = {
+    this.currentStatus = this.getDefaultStatus();
+    this.statusBarItem = this.createStatusBarItem();
+    this.iconContainer = this.createIconContainer();
+    this.initialize();
+  }
+  /**
+   * Initialize the status bar component
+   */
+  initialize() {
+    this.setupEventListeners();
+    this.updateDisplay();
+    this.startPeriodicUpdates();
+  }
+  /**
+   * Create the main status bar item
+   */
+  createStatusBarItem() {
+    const item = this.statusBar.createEl("div", {
+      cls: "processing-status-bar mod-clickable"
+    });
+    if (this.getConfig().showTooltips) {
+      item.setAttribute("aria-label", "Processing Status");
+    }
+    item.addEventListener("click", this.handleClick.bind(this));
+    return item;
+  }
+  /**
+   * Create the icon container
+   */
+  createIconContainer() {
+    return this.statusBarItem.createDiv({
+      cls: "processing-status-icon",
+      attr: {
+        "aria-hidden": "true"
+      }
+    });
+  }
+  /**
+   * Set up all event listeners
+   */
+  setupEventListeners() {
+    this.eventEmitter.on("start", ({ status }) => {
+      if (status) {
+        this.updateStatus("running" /* RUNNING */, status);
+      }
+    });
+    this.eventEmitter.on("complete", async (stats) => {
+      const hasErrors = this.currentStatus.errors.length > 0;
+      this.updateStatus(
+        hasErrors ? "error" /* ERROR */ : "idle" /* IDLE */,
+        this.createCompleteStatus(stats)
+      );
+    });
+    this.eventEmitter.on("progress", (status) => {
+      if (status) {
+        this.updateStatus(this.currentState, status);
+      }
+    });
+    this.eventEmitter.on("error", () => {
+      this.updateStatus("error" /* ERROR */, this.currentStatus);
+    });
+  }
+  /**
+   * Update current status and trigger display update
+   */
+  updateStatus(state, status) {
+    this.currentState = state;
+    this.currentStatus = status;
+    this.updateDisplay();
+  }
+  /**
+   * Update the visual display of the status bar
+   */
+  updateDisplay() {
+    this.updateStateClasses();
+    this.updateIcon();
+    if (this.getConfig().showTooltips) {
+      this.updateTooltip();
+    }
+  }
+  /**
+   * Update the status bar state classes
+   */
+  updateStateClasses() {
+    Object.values(ProcessingState2).forEach((state) => {
+      this.statusBarItem.removeClass(`status-${state}`);
+    });
+    this.statusBarItem.addClass(`status-${this.currentState}`);
+  }
+  /**
+   * Update the status icon
+   */
+  updateIcon() {
+    this.iconContainer.empty();
+    (0, import_obsidian13.setIcon)(this.iconContainer, "loader-2");
+    this.iconContainer.toggleClass(
+      "animated",
+      this.getConfig().animationEnabled && this.currentState === "running" /* RUNNING */
+    );
+  }
+  /**
+   * Update the tooltip text
+   */
+  updateTooltip() {
+    const tooltipText = this.getTooltipText();
+    this.statusBarItem.setAttribute("aria-label", tooltipText);
+    this.statusBarItem.dataset.tooltip = tooltipText;
+  }
+  /**
+   * Get the current tooltip text based on state and status
+   */
+  getTooltipText() {
+    const { filesProcessed, filesQueued } = this.currentStatus;
+    switch (this.currentState) {
+      case "running" /* RUNNING */:
+        return `Processing: ${filesProcessed}/${filesQueued} files`;
+      case "error" /* ERROR */:
+        return `Error: ${this.currentStatus.errors.length} errors occurred`;
+      case "idle" /* IDLE */:
+        return filesProcessed > 0 ? `Complete: ${filesProcessed} files processed` : "Ready";
+      default:
+        return "Unknown status";
+    }
+  }
+  /**
+   * Handle status bar click
+   */
+  async handleClick() {
+    const recentStats = await this.databaseService.getProcessingStats();
+    new StatusHistoryModal(
+      this.app,
+      this.getSafeStatus(),
+      recentStats
+    ).open();
+  }
+  /**
+   * Start periodic status updates
+   */
+  startPeriodicUpdates() {
+    if (this.updateInterval) {
+      clearInterval(this.updateInterval);
+    }
+    this.updateInterval = setInterval(() => {
+      if (this.currentState === "running" /* RUNNING */) {
+        this.updateDisplay();
+      }
+    }, this.getConfig().updateInterval);
+  }
+  /**
+   * Get merged configuration with defaults
+   */
+  getConfig() {
+    return { ...this.DEFAULT_CONFIG, ...this.config };
+  }
+  /**
+   * Get default status object
+   */
+  getDefaultStatus() {
+    return {
       state: "idle",
       filesQueued: 0,
       filesProcessed: 0,
       filesRemaining: 0,
       errors: []
     };
-    this.initialize();
   }
   /**
-   * Initialize the status bar UI
+   * Create status object for completion
    */
-  initialize() {
-    this.statusBarItem = this.statusBar.createEl("div", {
-      cls: "processing-status-bar mod-clickable"
-    });
-    this.iconContainer = this.statusBarItem.createDiv({
-      cls: "processing-status-icon"
-    });
-    this.updateIcon("idle" /* IDLE */);
-    this.statusBarItem.addEventListener("click", this.handleClick.bind(this));
-    this.activateListeners();
-  }
-  /**
-   * Set up all event listeners
-   */
-  activateListeners() {
-    this.eventEmitter.on("start", (data) => {
-      if (data && data.status) {
-        this.currentStatus = data.status;
-        this.updateIcon("running" /* RUNNING */);
-      }
-    });
-    this.eventEmitter.on("complete", async (stats) => {
-      if (stats) {
-        this.currentStatus = {
-          state: "idle",
-          filesQueued: stats.totalFiles,
-          filesProcessed: stats.processedFiles,
-          filesRemaining: 0,
-          errors: this.currentStatus.errors || []
-        };
-      }
-      this.updateIcon("idle" /* IDLE */);
-    });
-    this.eventEmitter.on("progress", (status) => {
-      if (status) {
-        this.currentStatus = status;
-      }
-    });
-  }
-  /**
-   * Update the status icon based on state
-   */
-  updateIcon(state) {
-    this.currentState = state;
-    this.iconContainer.empty();
-    const iconMap = {
-      ["idle" /* IDLE */]: "check",
-      ["running" /* RUNNING */]: "loader-2",
-      ["paused" /* PAUSED */]: "pause",
-      ["error" /* ERROR */]: "alert-triangle"
+  createCompleteStatus(stats) {
+    return {
+      state: "idle",
+      filesQueued: stats.totalFiles,
+      filesProcessed: stats.processedFiles,
+      filesRemaining: 0,
+      errors: this.currentStatus.errors || []
     };
-    (0, import_obsidian13.setIcon)(this.iconContainer, iconMap[state]);
-    this.iconContainer.toggleClass("rotating", state === "running" /* RUNNING */);
-    const states = [
-      "idle" /* IDLE */,
-      "running" /* RUNNING */,
-      "paused" /* PAUSED */,
-      "error" /* ERROR */
-    ];
-    states.forEach((s) => {
-      this.statusBarItem.toggleClass(`status-${s}`, state === s);
-    });
   }
   /**
-   * Handle click event - open history modal with real data
+   * Get safe status object with default values
    */
-  async handleClick() {
-    const recentStats = await this.databaseService.getProcessingStats();
-    const safeStatus = {
+  getSafeStatus() {
+    return {
       ...this.currentStatus,
       errors: this.currentStatus.errors || [],
       filesQueued: this.currentStatus.filesQueued || 0,
@@ -3972,16 +4092,14 @@ var ProcessingStatusBar = class {
       filesRemaining: this.currentStatus.filesRemaining || 0,
       state: this.currentStatus.state || "idle"
     };
-    new StatusHistoryModal(
-      this.app,
-      safeStatus,
-      recentStats
-    ).open();
   }
   /**
    * Clean up resources
    */
   destroy() {
+    if (this.updateInterval) {
+      clearInterval(this.updateInterval);
+    }
     this.eventEmitter.removeAllListeners();
     this.statusBarItem.remove();
   }
