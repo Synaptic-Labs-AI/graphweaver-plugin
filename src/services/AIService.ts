@@ -1,4 +1,6 @@
-import { App, TFile, TFolder } from "obsidian";
+// src/services/AIService.ts
+
+import { App, TFile, TFolder, Notice } from "obsidian";
 import { 
     AIProvider, 
     AIAdapter, 
@@ -6,47 +8,59 @@ import {
     AIModel, 
     AIModelMap 
 } from '../models/AIModels';
+
+// Import Adapters
 import { OpenAIAdapter } from "../adapters/OpenAIAdapter";
 import { AnthropicAdapter } from "../adapters/AnthropicAdapter";
 import { GeminiAdapter } from "../adapters/GeminiAdapter";
 import { GroqAdapter } from "../adapters/GroqAdapter";
 import { OpenRouterAdapter } from "../adapters/OpenRouterAdapter";
 import { LMStudioAdapter } from "../adapters/LMStudioAdapter";
+
+// Import Services
 import { SettingsService } from "./SettingsService";
 import { JsonValidationService } from "./JsonValidationService";
+import { DatabaseService } from "./DatabaseService";
 
 // Import Generators
-import { FrontMatterGenerator } from '../generators/FrontMatterGenerator';
-import { WikilinkGenerator } from '../generators/WikilinkGenerator';
+import { FrontMatterGenerator, FrontMatterInput, FrontMatterOutput } from '../generators/FrontMatterGenerator';
+import { WikilinkGenerator, WikilinkOutput } from '../generators/WikilinkGenerator';
 import { OntologyGenerator, OntologyInput, OntologyResult } from '../generators/OntologyGenerator';
-import { BatchProcessor, BatchProcessorResult } from '../generators/BatchProcessor';
+import { BatchProcessor, BatchProcessorOutput } from '../generators/BatchProcessor';
 import { JsonSchemaGenerator } from '../generators/JsonSchemaGenerator';
-import { KnowledgeBloomGenerator, KnowledgeBloomResult } from '../generators/KnowledgeBloomGenerator';
+import { KnowledgeBloomGenerator, KnowledgeBloomOutput } from '../generators/KnowledgeBloomGenerator';
 
 // Import Models
-import { Tag } from '../models/PropertyTag';
-import { PluginSettings } from '../models/Settings';
+import { Tag, PropertyTag } from '../models/PropertyTag';
+import { PluginSettings } from '../settings/Settings';
 
 export class AIService {
     public adapters: Map<AIProvider, AIAdapter>;
-
-    // Declare missing properties
+    public databaseService: DatabaseService;
+    
+    // Declare generator properties
+    public jsonSchemaGenerator: JsonSchemaGenerator;
     public frontMatterGenerator: FrontMatterGenerator;
     public wikilinkGenerator: WikilinkGenerator;
     public ontologyGenerator: OntologyGenerator;
     public batchProcessor: BatchProcessor;
-    public jsonSchemaGenerator: JsonSchemaGenerator;
     public knowledgeBloomGenerator: KnowledgeBloomGenerator;
 
     constructor(
         public app: App,
         public settingsService: SettingsService,
-        public jsonValidationService: JsonValidationService
+        public jsonValidationService: JsonValidationService,
+        databaseService: DatabaseService
     ) {
+        this.databaseService = databaseService;
+        this.adapters = new Map<AIProvider, AIAdapter>();
         this.initializeAdapters();
         this.initializeGenerators();
     }
 
+    /**
+     * Initializes all AI adapters based on supported providers.
+     */
     public initializeAdapters(): void {
         this.adapters = new Map<AIProvider, AIAdapter>([
             [AIProvider.OpenAI, new OpenAIAdapter(this.settingsService, this.jsonValidationService)],
@@ -58,6 +72,11 @@ export class AIService {
         ]);
     }
 
+    public getCurrentAdapter(): AIAdapter {
+        const provider = this.getCurrentProvider();
+        return this.getAdapterForProvider(provider);
+    }
+
     /**
      * Initializes all generators required for AI operations.
      */
@@ -65,21 +84,31 @@ export class AIService {
         const currentProvider = this.getCurrentProvider();
         const currentAdapter = this.getAdapterForProvider(currentProvider);
 
-        // Initialize generators
+        // Initialize JsonSchemaGenerator
         this.jsonSchemaGenerator = new JsonSchemaGenerator(this.settingsService);
+
+        // Initialize FrontMatterGenerator
         this.frontMatterGenerator = new FrontMatterGenerator(currentAdapter, this.settingsService, this.jsonSchemaGenerator);
+
+        // Initialize other generators
         this.wikilinkGenerator = new WikilinkGenerator(currentAdapter, this.settingsService);
         this.ontologyGenerator = new OntologyGenerator(currentAdapter, this.settingsService);
         this.batchProcessor = new BatchProcessor(
-            currentAdapter, 
-            this.settingsService, 
-            this.frontMatterGenerator, 
-            this.wikilinkGenerator, 
-            this.app
+            currentAdapter,
+            this.settingsService,
+            this.frontMatterGenerator,
+            this.wikilinkGenerator,
+            this.databaseService,
+            this.app // Add this parameter
         );
 
-        // Initialize KnowledgeBloomGenerator with the app object
-        this.knowledgeBloomGenerator = new KnowledgeBloomGenerator(currentAdapter, this.settingsService, this.app);
+        // Initialize KnowledgeBloomGenerator with FrontMatterGenerator
+        this.knowledgeBloomGenerator = new KnowledgeBloomGenerator(
+            currentAdapter, 
+            this.settingsService, 
+            this.app, 
+            this.frontMatterGenerator // Pass FrontMatterGenerator here
+        );
     }
 
     /**
@@ -244,7 +273,13 @@ export class AIService {
      */
     public async generateFrontMatter(content: string): Promise<string> {
         try {
-            return await this.frontMatterGenerator.generate(content);
+            const input: FrontMatterInput = { 
+                content, 
+                customProperties: this.extractCustomProperties(content),
+                customTags: this.extractCustomTags(content)
+            };
+            const frontMatterResult: FrontMatterOutput = await this.frontMatterGenerator.generate(input);
+            return frontMatterResult.content;
         } catch (error) {
             console.error("Error generating front matter:", error);
             throw new Error(`Failed to generate front matter: ${(error as Error).message}`);
@@ -254,11 +289,16 @@ export class AIService {
     /**
      * Generates wikilinks for the given content.
      * @param content - The content for which to generate wikilinks.
+     * @returns Updated content with wikilinks generated.
      */
     public async generateWikilinks(content: string): Promise<string> {
-        const existingPages = this.getExistingPages();
         try {
-            return await this.wikilinkGenerator.generate({ content, existingPages });
+            const existingPages = this.getExistingPages();
+            const wikilinkResult: WikilinkOutput = await this.wikilinkGenerator.generate({ 
+                content, 
+                existingPages 
+            });
+            return wikilinkResult.content;
         } catch (error) {
             console.error("Error generating wikilinks:", error);
             throw new Error(`Failed to generate wikilinks: ${(error as Error).message}`);
@@ -266,14 +306,14 @@ export class AIService {
     }
 
     /**
-     * Generates an ontology based on the provided input.
+     * Generates ontology based on the provided input.
      * @param input - The input parameters for ontology generation.
+     * @returns The generated ontology result.
      */
     public async generateOntology(input: OntologyInput): Promise<OntologyResult> {
         try {
-            const adapter = this.getAdapterForProvider(input.provider);
-            const generator = new OntologyGenerator(adapter, this.settingsService);
-            return await generator.generate(input);
+            const ontologyResult = await this.ontologyGenerator.generate(input);
+            return ontologyResult;
         } catch (error) {
             console.error("Error generating ontology:", error);
             throw new Error(`Failed to generate ontology: ${(error as Error).message}`);
@@ -281,59 +321,37 @@ export class AIService {
     }
 
     /**
-     * Updates tags based on suggested tags.
-     * @param suggestedTags - An array of suggested tags with name and description.
+     * Updates tags based on the suggested tags.
+     * @param suggestedTags - Array of suggested tags to update.
      */
-    public async updateTags(suggestedTags: { name: string; description: string }[]): Promise<void> {
+    public async updateTags(suggestedTags: Tag[]): Promise<void> {
         try {
-            const newTags: Tag[] = suggestedTags.map(tag => ({
-                name: tag.name,
-                description: tag.description,
-                type: 'string',
-                required: false,
-                multipleValues: false
-            }));
+            // Assuming that tags are managed via SettingsService
+            // Fetch current settings
+            const settings = this.settingsService.getSettings();
 
-            await this.settingsService.updateTags(newTags);
+            // Merge suggested tags with existing tags, avoiding duplicates
+            const existingTagNames = new Set(settings.tags.customTags.map(tag => tag.name));
+            const newTags = suggestedTags.filter(tag => !existingTagNames.has(tag.name));
+
+            if (newTags.length === 0) {
+                new Notice('No new tags to add.');
+                return;
+            }
+
+            // Append new tags to existing tags
+            settings.tags.customTags.push(...newTags);
+
+            // Update settings
+            await this.settingsService.updateSettings({ tags: settings.tags });
+
+            new Notice(`Added ${newTags.length} new tags successfully!`);
         } catch (error) {
             console.error("Error updating tags:", error);
             throw new Error(`Failed to update tags: ${(error as Error).message}`);
         }
     }
-    
-    /**
-     * Processes a batch of files based on the provided options.
-     * @param files - An array of files to process.
-     * @param options - Options specifying which generators to run.
-     */
-    public async batchProcess(
-        files: TFile[], 
-        options: { generateFrontMatter: boolean, generateWikilinks: boolean }
-    ): Promise<BatchProcessorResult> {
-        try {
-            return await this.batchProcessor.generate({ files, ...options });
-        } catch (error) {
-            console.error("Error in batch processing:", error);
-            throw new Error(`Batch processing failed: ${(error as Error).message}`);
-        }
-    }
 
-    /**
-     * Generates new notes based on wikilinks in the given file.
-     * @param sourceFile - The file containing wikilinks to generate notes for.
-     * @param userPrompt - Optional user-provided context for note generation.
-     */
-    public async generateKnowledgeBloom(sourceFile: TFile, userPrompt?: string): Promise<KnowledgeBloomResult> {
-        try {
-            const knowledgeBloomSettings = this.settingsService.getSettings().knowledgeBloom;
-            const selectedModel = knowledgeBloomSettings.selectedModel;
-            return await this.knowledgeBloomGenerator.generate({ sourceFile, userPrompt });
-        } catch (error) {
-            console.error("Error in Knowledge Bloom generation:", error);
-            throw new Error(`Knowledge Bloom generation failed: ${(error as Error).message}`);
-        }
-    }
-    
     /**
      * Retrieves all available AI models across all providers.
      */
@@ -341,15 +359,19 @@ export class AIService {
         const availableModels: { provider: AIProvider; model: AIModel }[] = [];
 
         for (const provider of Object.values(AIProvider)) {
-            const adapter = this.getAdapterForProvider(provider);
-            if (adapter.isReady()) {
-                const models = this.getAvailableModels(provider);
-                models.forEach(modelName => {
-                    const model = this.getModelDetails(provider, modelName);
-                    if (model) {
-                        availableModels.push({ provider, model });
-                    }
-                });
+            try {
+                const adapter = this.getAdapterForProvider(provider);
+                if (adapter.isReady()) {
+                    const models = this.getAvailableModels(provider);
+                    models.forEach(modelName => {
+                        const model = this.getModelDetails(provider, modelName);
+                        if (model) {
+                            availableModels.push({ provider, model });
+                        }
+                    });
+                }
+            } catch (error) {
+                console.warn(`Skipping provider ${provider} due to error:`, error);
             }
         }
 
@@ -373,5 +395,43 @@ export class AIService {
     public getModelDetails(provider: AIProvider, modelName: string): AIModel | undefined {
         const models = AIModelMap[provider];
         return models.find(model => model.apiName === modelName);
+    }
+
+    /**
+     * Generates new notes based on wikilinks in the given file.
+     * @param sourceFile - The file containing wikilinks to generate notes for.
+     * @param userPrompt - Optional user-provided context for note generation.
+     */
+    public async generateKnowledgeBloom(sourceFile: TFile, userPrompt?: string): Promise<KnowledgeBloomOutput> {
+        try {
+            const knowledgeBloomSettings = this.settingsService.getSettings().knowledgeBloom;
+            const selectedModel = knowledgeBloomSettings.selectedModel;
+            return await this.knowledgeBloomGenerator.generate({ sourceFile, userPrompt });
+        } catch (error) {
+            console.error("Error generating Knowledge Bloom:", error);
+            throw new Error(`Knowledge Bloom generation failed: ${(error as Error).message}`);
+        }
+    }
+    
+    /**
+     * Extracts custom properties from content based on settings.
+     * @param content - The content to extract properties from.
+     * @returns Array of PropertyTag.
+     */
+    public extractCustomProperties(content: string): PropertyTag[] {
+        const settings = this.settingsService.getSettings();
+        // Extract properties based on your logic or settings
+        return settings.frontMatter.customProperties;
+    }
+
+    /**
+     * Extracts custom tags from content based on settings.
+     * @param content - The content to extract tags from.
+     * @returns Array of tag names.
+     */
+    public extractCustomTags(content: string): string[] {
+        const settings = this.settingsService.getSettings();
+        // Extract tags based on your logic or settings
+        return settings.tags.customTags.map(tag => tag.name);
     }
 }

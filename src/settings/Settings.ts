@@ -1,5 +1,5 @@
-import { AIProvider } from "./AIModels";
-import { PropertyTag, Tag } from "./PropertyTag";
+import { AIProvider } from "../models/AIModels";
+import { PropertyTag, Tag } from "../models/PropertyTag";
 
 export interface KnowledgeBloomSettings {
     outputFolder: string;

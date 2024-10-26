@@ -1,11 +1,14 @@
-import { Setting, ToggleComponent, TextComponent } from "obsidian";
+import { App, Setting, ToggleComponent, TextComponent } from "obsidian";
 import { BaseAccordion } from "./BaseAccordion";
 import { SettingsService } from "../../services/SettingsService";
+import { AIService } from "../../services/AIService";
 
 export class AdvancedAccordion extends BaseAccordion {
     constructor(
+        public app: App,
         containerEl: HTMLElement,
-        public settingsService: SettingsService
+        public settingsService: SettingsService,
+        public aiService: AIService
     ) {
         super(containerEl);
     }

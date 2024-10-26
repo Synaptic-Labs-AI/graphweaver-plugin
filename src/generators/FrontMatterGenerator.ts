@@ -1,17 +1,32 @@
-import { BaseGenerator } from './BaseGenerator';
+// FrontMatterGenerator.ts
+
+import { BaseGenerator, BaseGeneratorInput, BaseGeneratorOutput } from './BaseGenerator';
 import { AIAdapter } from '../adapters/AIAdapter';
 import { SettingsService } from '../services/SettingsService';
 import { JsonSchemaGenerator } from './JsonSchemaGenerator';
-import { PluginSettings } from '../models/Settings';
-import { PropertyTag, Tag } from '../models/PropertyTag';
+import { PropertyTag } from '../models/PropertyTag';
 
-interface FrontMatterInput {
-    noteContent: string;
-    customProperties: PropertyTag[];
-    customTags: Tag[];
+/**
+ * Input interface for front matter generation
+ */
+export interface FrontMatterInput extends BaseGeneratorInput {
+    content: string;                   // The note content to generate front matter for
+    customProperties?: PropertyTag[];  // Optional custom properties
+    customTags?: string[];             // Optional custom tags
 }
 
-export class FrontMatterGenerator extends BaseGenerator {
+/**
+ * Output interface for front matter generation
+ */
+export interface FrontMatterOutput extends BaseGeneratorOutput {
+    content: string;                   // The content with generated front matter
+}
+
+/**
+ * Generator class that creates and manages front matter content.
+ * Extends BaseGenerator with specific input/output types for front matter.
+ */
+export class FrontMatterGenerator extends BaseGenerator<FrontMatterInput, FrontMatterOutput> {
     public jsonSchemaGenerator: JsonSchemaGenerator;
 
     constructor(
@@ -23,44 +38,57 @@ export class FrontMatterGenerator extends BaseGenerator {
         this.jsonSchemaGenerator = jsonSchemaGenerator;
     }
 
-    public async generate(noteContent: string): Promise<string> {
+    /**
+     * Generates front matter for the provided content
+     * @param input The input containing content and optional properties
+     * @returns Promise resolving to content with front matter
+     */
+    public async generate(input: FrontMatterInput): Promise<FrontMatterOutput> {
         console.log('FrontMatterGenerator: Starting generation');
-        const settings = this.getSettings();
-        const customProperties = settings.frontMatter.customProperties;
-        const customTags = settings.tags.customTags;
+        
+        try {
+            const settings = this.getSettings();
+            
+            // Prepare complete input with settings
+            const completeInput: FrontMatterInput = {
+                ...input,
+                customProperties: input.customProperties || settings.frontMatter.customProperties,
+                customTags: input.customTags || settings.tags.customTags.map(tag => tag.name)
+            };
 
-        const input: FrontMatterInput = { noteContent, customProperties, customTags };
-        const prompt = this.preparePrompt(input);
-        const modelApiName = this.getCurrentModel();
-        console.log('FrontMatterGenerator: Sending request to AI');
-        const aiResponse = await this.aiAdapter.generateResponse(prompt, modelApiName);
-        console.log('FrontMatterGenerator: Received AI response:', JSON.stringify(aiResponse, null, 2));
+            const prompt = this.preparePrompt(completeInput);
+            const model = await this.getCurrentModel();
+            
+            console.log('FrontMatterGenerator: Sending request to AI');
+            const aiResponse = await this.aiAdapter.generateResponse(prompt, model);
+            
+            if (!aiResponse.success || !aiResponse.data) {
+                console.error('FrontMatterGenerator: AI response was unsuccessful or empty');
+                return { content: input.content }; // Return original content if AI generation fails
+            }
 
-        if (!aiResponse.success || !aiResponse.data) {
-            console.error('FrontMatterGenerator: AI response was unsuccessful or empty');
-            return noteContent; // Return original content if AI generation fails
+            return this.formatOutput(aiResponse.data, completeInput);
+        } catch (error) {
+            console.error('FrontMatterGenerator: Error during generation:', error);
+            return { content: input.content }; // Return original content on error
         }
-
-        const formattedContent = this.formatOutput(aiResponse.data, noteContent);
-        console.log('FrontMatterGenerator: Formatted output:', formattedContent);
-        return formattedContent;
     }
 
     /**
-     * Prepares the prompt for the AI, including the JSON schema.
-     * @param input The input data required for generation.
-     * @returns The prepared prompt string.
+     * Prepares the AI prompt with schema and context
+     * @param input The input containing content and properties
+     * @returns Formatted prompt string
      */
     protected preparePrompt(input: FrontMatterInput): string {
-        // Use generateBaseSchema instead of generateSchema
         const schema = this.jsonSchemaGenerator.generateBaseSchema();
-        const propertyPrompt = input.customProperties.map(prop => 
+        const propertyPrompt = input.customProperties?.map(prop => 
             `${prop.name} (${prop.type}): ${prop.description}`
-        ).join('\n');
-        const tagPrompt = input.customTags.map(tag => tag.name).join(', ');
+        ).join('\n') || '';
+        
+        const tagPrompt = input.customTags?.join(', ') || '';
 
         return `
-Generate front matter for the following note content.
+Generate YAML front matter for the following note content.
 Use the provided JSON schema to structure your response.
 Include relevant custom properties and tags.
 
@@ -74,91 +102,106 @@ JSON Schema:
 ${JSON.stringify(schema, null, 2)}
 
 Note Content:
-${input.noteContent}
+${input.content}
 
-Provide the filled out JSON object as your response, with no additional text.
-Only include fields that are relevant to the content.
+Provide the YAML front matter only, enclosed between '---' lines, with no additional text.
 `;
     }
 
     /**
-     * Converts validated JSON data into Markdown format with front matter.
-     * @param data The validated JSON data.
-     * @param originalContent The original note content.
-     * @returns The Markdown string.
+     * Formats AI response into proper front matter structure
+     * @param aiResponse The AI response data
+     * @param originalInput The original input parameters
+     * @returns Formatted output with front matter
      */
-    protected formatOutput(data: any, originalContent: string): string {
-        console.log("Raw AI Response:", JSON.stringify(data, null, 2));
-        
-        let parsedResponse: any;
-        
-        // If data is already an object, use it directly
+    protected formatOutput(aiResponse: any, originalInput: FrontMatterInput): FrontMatterOutput {
+        const parsedResponse = this.parseAIResponse(aiResponse);
+        if (!parsedResponse) {
+            return { content: originalInput.content };
+        }
+
+        const frontMatter = this.convertToFrontMatter(parsedResponse);
+        const finalContent = this.mergeFrontMatter(originalInput.content, frontMatter);
+
+        return { content: finalContent };
+    }
+
+    /**
+     * Parses and validates AI response
+     */
+    public parseAIResponse(data: any): any {
         if (typeof data === 'object' && data !== null) {
-            parsedResponse = data;
-        } else {
-            // If data is a string, try to parse it
-            try {
-                parsedResponse = JSON.parse(data);
-            } catch (error) {
-                console.error("Error parsing AI response:", error);
-                return originalContent; // Return original content if parsing fails
-            }
-        }
-        
-        console.log("Parsed AI Response:", JSON.stringify(parsedResponse, null, 2));
-
-        if (typeof parsedResponse !== 'object' || parsedResponse === null) {
-            console.error('Invalid AI response format: Not an object after parsing');
-            return originalContent; // Return original content if response is invalid
+            return data;
         }
 
-        // Check if the note already has frontmatter
-        const hasFrontMatter = originalContent.trim().startsWith('---');
-
-        // Convert parsedResponse to YAML-like format
-        let newFrontMatter = Object.entries(parsedResponse).map(([key, value]) => {
-            if (Array.isArray(value)) {
-                return `${key}:\n  - ${value.join('\n  - ')}`;
-            } else if (typeof value === 'object' && value !== null) {
-                return `${key}: ${JSON.stringify(value)}`;
-            } else {
-                return `${key}: ${value}`;
+        try {
+            const parsed = JSON.parse(data);
+            if (typeof parsed === 'object' && parsed !== null) {
+                return parsed;
             }
-        }).join('\n');
-
-        // Combine new frontmatter with content
-        let result: string;
-        if (hasFrontMatter) {
-            // If frontmatter exists, append new frontmatter to it
-            const parts = originalContent.split('---');
-            if (parts.length >= 3) {
-                const existingFrontMatter = parts[1].trim();
-                const contentParts = parts.slice(2).join('---').trim();
-                result = `---\n${existingFrontMatter}\n${newFrontMatter}\n---\n${contentParts}`;
-            } else {
-                // Malformed existing front matter, overwrite
-                result = `---\n${newFrontMatter}\n---\n\n${originalContent.trim()}`;
-            }
-        } else {
-            // If no frontmatter, add new frontmatter at the beginning
-            result = `---\n${newFrontMatter}\n---\n\n${originalContent.trim()}`;
+        } catch (error) {
+            console.error("Error parsing AI response:", error);
         }
 
-        console.log("Formatted output:", result);
-        return result;
+        return null;
     }
 
-    protected validateInput(input: any): boolean {
-        return typeof input === 'string' && input.trim().length > 0;
+    /**
+     * Converts parsed response to YAML front matter format
+     */
+    public convertToFrontMatter(data: any): string {
+        return Object.entries(data)
+            .map(([key, value]) => {
+                if (Array.isArray(value)) {
+                    return `${key}:\n${value.map((item: string) => `  - ${item}`).join('\n')}`;
+                } else if (typeof value === 'object' && value !== null) {
+                    return `${key}: ${JSON.stringify(value)}`;
+                } else {
+                    return `${key}: ${value}`;
+                }
+            })
+            .join('\n');
     }
 
-    public getCurrentModel(): string {
+    /**
+     * Merges front matter with original content
+     */
+    public mergeFrontMatter(content: string, frontMatter: string): string {
+        const hasFrontMatter = content.trim().startsWith('---');
+
+        if (!hasFrontMatter) {
+            return `---\n${frontMatter}\n---\n\n${content.trim()}`;
+        }
+
+        const parts = content.split('---');
+        if (parts.length >= 3) {
+            const existingFrontMatter = parts[1].trim();
+            const contentParts = parts.slice(2).join('---').trim();
+            return `---\n${frontMatter}\n---\n${contentParts}`;
+        }
+
+        return `---\n${frontMatter}\n---\n\n${content.trim()}`;
+    }
+
+    /**
+     * Validates input parameters
+     */
+    protected validateInput(input: FrontMatterInput): boolean {
+        return typeof input.content === 'string' && input.content.trim().length > 0;
+    }
+
+    /**
+     * Gets the current AI model
+     */
+    protected async getCurrentModel(): Promise<string> {
         const settings = this.getSettings();
         const providerType = this.aiAdapter.getProviderType();
         const modelApiName = settings.aiProvider?.selectedModels?.[providerType];
+        
         if (!modelApiName) {
             throw new Error(`No model selected for provider: ${providerType}`);
         }
+        
         return modelApiName;
     }
 }

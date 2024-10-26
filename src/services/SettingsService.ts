@@ -1,4 +1,4 @@
-import { PluginSettings, DEFAULT_SETTINGS, KnowledgeBloomSettings } from "../models/Settings";
+import { PluginSettings, DEFAULT_SETTINGS, KnowledgeBloomSettings } from "../settings/Settings";
 import { EventEmitter } from "events";
 import { Plugin } from "obsidian";
 import { AIProvider } from "../models/AIModels";

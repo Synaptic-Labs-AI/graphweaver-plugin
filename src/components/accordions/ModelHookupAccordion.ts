@@ -1,6 +1,6 @@
 // src/components/accordions/ModelHookupAccordion.ts
 
-import { App, Setting, Notice, TextComponent, DropdownComponent, ButtonComponent } from "obsidian";
+import { App, Setting, Notice, DropdownComponent, ButtonComponent } from "obsidian";
 import { AIService } from "../../services/AIService";
 import { SettingsService } from "../../services/SettingsService";
 import { AIProvider, AIModelMap, AIModel } from "../../models/AIModels";

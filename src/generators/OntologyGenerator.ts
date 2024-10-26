@@ -1,29 +1,44 @@
+// src/generators/OntologyGenerator.ts
+
 import { BaseGenerator } from './BaseGenerator';
 import { AIAdapter } from '../adapters/AIAdapter';
 import { SettingsService } from '../services/SettingsService';
 import { TFile, TFolder } from 'obsidian';
 import { AIProvider } from '../models/AIModels';
+import { Tag } from '../models/PropertyTag';
 
-export interface OntologyResult {
-    suggestedTags: {
-        name: string;
-        description: string;
-    }[];
-}
-
+/**
+ * Input interface for ontology generation.
+ */
 export interface OntologyInput {
     files: TFile[];
     folders: TFolder[];
     tags: string[];
     provider: AIProvider;
     modelApiName: string;
+    userContext?: string; // Optional field based on OntologyGeneratorModal.ts
 }
 
-export class OntologyGenerator extends BaseGenerator {
+/**
+ * Output interface for ontology generation.
+ */
+export interface OntologyResult {
+    suggestedTags: Tag[];
+}
+
+/**
+ * Generator class responsible for creating ontologies based on provided input.
+ */
+export class OntologyGenerator extends BaseGenerator<OntologyInput, OntologyResult> {
     constructor(aiAdapter: AIAdapter, settingsService: SettingsService) {
         super(aiAdapter, settingsService);
     }
 
+    /**
+     * Main method to generate ontology.
+     * @param input - Input parameters for ontology generation.
+     * @returns Promise resolving to the generated ontology.
+     */
     public async generate(input: OntologyInput): Promise<OntologyResult> {
         if (!this.validateInput(input)) {
             throw new Error('Invalid input for ontology generation');
@@ -34,10 +49,15 @@ export class OntologyGenerator extends BaseGenerator {
             const aiResponse = await this.aiAdapter.generateResponse(prompt, input.modelApiName);
             return this.formatOutput(aiResponse.data);
         } catch (error) {
-            this.handleError(error);
+            this.handleError(error as Error);
         }
     }
 
+    /**
+     * Prepares the AI prompt based on the input.
+     * @param input - Input parameters for ontology generation.
+     * @returns Formatted prompt string.
+     */
     protected preparePrompt(input: OntologyInput): string {
         const fileNames = input.files.map(file => file.basename).join(', ');
         const folderNames = input.folders.map(folder => folder.name).join(', ');
@@ -50,11 +70,15 @@ export class OntologyGenerator extends BaseGenerator {
             Files: ${fileNames}
             Folders: ${folderNames}
             Existing Tags: ${tags}
+            ${input.userContext ? `Additional Context: ${input.userContext}` : ''}
 
             For each suggested tag in the ontology, provide:
             {
                 "Name": {
-                    "description": "a brief but robust instruction on what this tag represents"
+                    "description": "a brief but robust instruction on what this tag represents",
+                    "type": "string", // Specify the type
+                    "required": false, // Specify if the tag is required
+                    "multipleValues": false // Specify if the tag can have multiple values
                 }
             }
 
@@ -65,14 +89,19 @@ export class OntologyGenerator extends BaseGenerator {
             4. Aim for a balance between specificity and generality in the suggested tags.
             5. Consider the hierarchical structure implied by the folder organization.
 
-            Provide your response as a JSON object where the keys are the tag names and the values are objects containing the description.
+            Provide your response as a JSON object where the keys are the tag names and the values are objects containing the description, type, required, and multipleValues.
             Aim to suggest between 10 to 20 tags that would form a comprehensive ontology for this knowledge base.
         `;
     }
 
+    /**
+     * Formats the AI response into the OntologyResult structure.
+     * @param aiResponse - Raw AI response data.
+     * @returns OntologyResult containing suggested tags.
+     */
     protected formatOutput(aiResponse: any): OntologyResult {
         let parsedResponse: any;
-    
+
         // If aiResponse is a string, try to parse it as JSON
         if (typeof aiResponse === 'string') {
             try {
@@ -89,35 +118,46 @@ export class OntologyGenerator extends BaseGenerator {
             console.error('Unexpected AI response format:', aiResponse);
             throw new Error('Invalid AI response format: expected an object or valid JSON string');
         }
-    
+
         if (typeof parsedResponse !== 'object' || parsedResponse === null) {
             throw new Error('Invalid AI response format: expected an object after parsing');
         }
-    
-        const suggestedTags = Object.entries(parsedResponse)
-            .map(([name, value]): { name: string; description: string } | null => {
+
+        const suggestedTags: Tag[] = Object.entries(parsedResponse)
+            .map(([name, value]): Tag | null => {
                 if (typeof value === 'object' && value !== null && 'description' in value) {
                     return {
                         name: String(name).trim(),
-                        description: String((value as any).description).trim()
+                        description: String((value as any).description).trim(),
+                        type: (value as any).type || 'string', // Default to 'string' if type not provided
+                        required: (value as any).required !== undefined ? Boolean((value as any).required) : false, // Default to false
+                        multipleValues: (value as any).multipleValues !== undefined ? Boolean((value as any).multipleValues) : false // Default to false
                     };
                 } else {
                     console.warn(`Unexpected format for tag ${name}:`, value);
                     return null;
                 }
             })
-            .filter((tag): tag is { name: string; description: string } => 
+            .filter((tag): tag is Tag => 
                 tag !== null && typeof tag.name === 'string' && tag.name.length > 0 && 
-                typeof tag.description === 'string' && tag.description.length > 0
+                typeof tag.description === 'string' && tag.description.length > 0 &&
+                typeof tag.type === 'string' &&
+                typeof tag.required === 'boolean' &&
+                typeof tag.multipleValues === 'boolean'
             );
-    
+
         if (suggestedTags.length === 0) {
             throw new Error('No valid tags found in AI response');
         }
-    
+
         return { suggestedTags };
     }
 
+    /**
+     * Attempts to fix incomplete JSON strings.
+     * @param json - Raw JSON string.
+     * @returns Fixed JSON string.
+     */
     public fixIncompleteJson(json: string): string {
         // Attempt to fix common JSON issues
         let fixedJson = json.trim();
@@ -133,13 +173,22 @@ export class OntologyGenerator extends BaseGenerator {
         return fixedJson;
     }
 
+    /**
+     * Validates the input parameters for ontology generation.
+     * @param input - Input parameters.
+     * @returns Boolean indicating validity.
+     */
     protected validateInput(input: OntologyInput): boolean {
         return Array.isArray(input.files) && 
                Array.isArray(input.folders) && 
                Array.isArray(input.tags);
     }
 
-    public getCurrentModel(): string {
+    /**
+     * Retrieves the current model selection for ontology generation.
+     * @returns Promise resolving to the selected model identifier.
+     */
+    protected async getCurrentModel(): Promise<string> {
         const settings = this.settingsService.getSettings();
         const providerType = this.aiAdapter.getProviderType();
         const selectedModel = settings.aiProvider?.selectedModels?.[providerType];
@@ -151,6 +200,10 @@ export class OntologyGenerator extends BaseGenerator {
         return selectedModel;
     }
 
+    /**
+     * Handles errors during ontology generation.
+     * @param error - The error encountered.
+     */
     protected handleError(error: Error): never {
         console.error(`Ontology generation error: ${error.message}`, error);
         throw new Error(`Ontology generation failed: ${error.message}`);

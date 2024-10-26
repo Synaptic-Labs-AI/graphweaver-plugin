@@ -1,150 +1,391 @@
-import { BaseGenerator } from './BaseGenerator';
+import { App, TFile, Notice } from 'obsidian';
+import { EventEmitter } from 'events';
+import { BaseGenerator, BaseGeneratorInput, BaseGeneratorOutput } from './BaseGenerator';
 import { AIAdapter } from '../adapters/AIAdapter';
 import { SettingsService } from '../services/SettingsService';
+import { DatabaseService } from '../services/DatabaseService';
 import { FrontMatterGenerator } from './FrontMatterGenerator';
 import { WikilinkGenerator } from './WikilinkGenerator';
-import { App, TFile } from 'obsidian';
+import {
+    ProcessingStatus,
+    ProcessingState,
+    ProcessingEvent,
+    ProcessingStats,
+    FileProcessingResult,
+    ProcessingOptions,
+    FileChunk,
+    ProcessingError,
+    DEFAULT_PROCESSING_OPTIONS
+} from '../models/ProcessingTypes';
 
-export interface BatchProcessorResult {
-    fileResults: {
-        file: TFile;
-        success: boolean;
-        error?: string;
-        frontMatterGenerated: boolean;
-        wikilinksGenerated: boolean;
-    }[];
-}
-
-interface BatchProcessorInput {
+/**
+ * Input/Output interfaces for batch processing
+ */
+interface BatchProcessorInput extends BaseGeneratorInput {
     files: TFile[];
     generateFrontMatter: boolean;
     generateWikilinks: boolean;
+    options?: Partial<ProcessingOptions>;
 }
 
-export class BatchProcessor extends BaseGenerator {
-    public frontMatterGenerator: FrontMatterGenerator;
-    public wikilinkGenerator: WikilinkGenerator;
-    public app: App;
+export interface BatchProcessorOutput extends BaseGeneratorOutput {
+    fileResults: FileProcessingResult[];
+    stats: ProcessingStats;
+}
+
+/**
+ * Enhanced processor for batch operations on multiple files
+ */
+export class BatchProcessor extends BaseGenerator<BatchProcessorInput, BatchProcessorOutput> {
+    private readonly NOTIFICATION_INTERVAL = 2000;
+    private lastNotificationTime = 0;
+    private processStartTime: number = 0;
+    public eventEmitter: EventEmitter;
+    private currentStatus: ProcessingStatus;
+    private options: ProcessingOptions;
+    private processingTimeout: NodeJS.Timeout | null = null;
 
     constructor(
-        aiAdapter: AIAdapter, 
+        aiAdapter: AIAdapter,
         settingsService: SettingsService,
-        frontMatterGenerator: FrontMatterGenerator,
-        wikilinkGenerator: WikilinkGenerator,
-        app: App
+        private frontMatterGenerator: FrontMatterGenerator,
+        private wikilinkGenerator: WikilinkGenerator,
+        private databaseService: DatabaseService,
+        private app: App
     ) {
         super(aiAdapter, settingsService);
-        this.frontMatterGenerator = frontMatterGenerator;
-        this.wikilinkGenerator = wikilinkGenerator;
-        this.app = app;
-        console.log('BatchProcessor: Initialized with:', 
-            {
-                aiAdapter: aiAdapter.constructor.name,
-                settingsService: settingsService.constructor.name,
-                frontMatterGenerator: frontMatterGenerator.constructor.name,
-                wikilinkGenerator: wikilinkGenerator.constructor.name
-            }
-        );
+        this.eventEmitter = new EventEmitter();
+        this.options = DEFAULT_PROCESSING_OPTIONS;
+        this.currentStatus = this.getDefaultStatus();
     }
 
-    public async generate(input: BatchProcessorInput): Promise<BatchProcessorResult> {
-        console.log('BatchProcessor: Starting batch processing with input:', input);
+    /**
+     * Main generation method
+     */
+    public async generate(input: BatchProcessorInput): Promise<BatchProcessorOutput> {
         if (!this.validateInput(input)) {
-            console.error('BatchProcessor: Invalid input for batch processing');
             throw new Error('Invalid input for batch processing');
         }
-    
-        const results: BatchProcessorResult = { fileResults: [] };
-    
-        for (const file of input.files) {
-            console.log(`BatchProcessor: Processing file: ${file.path}`);
-            let content = await this.app.vault.read(file);
-            console.log(`BatchProcessor: Original content length: ${content.length}`);
-            let frontMatterGenerated = false;
-            let wikilinksGenerated = false;
-    
-            try {
-                if (input.generateFrontMatter) {
-                    console.log('BatchProcessor: Attempting to generate front matter');
-                    console.log('BatchProcessor: FrontMatterGenerator instance:', this.frontMatterGenerator);
-                    const frontMatterResult = await this.frontMatterGenerator.generate(content);
-                    console.log('BatchProcessor: Front matter generation result length:', frontMatterResult.length);
-                    if (frontMatterResult !== content) {
-                        content = frontMatterResult;
-                        frontMatterGenerated = true;
-                        console.log('BatchProcessor: Front matter successfully generated');
-                    } else {
-                        console.log('BatchProcessor: No new front matter generated');
-                    }
-                } else {
-                    console.log('BatchProcessor: Front matter generation skipped');
-                }
-    
-                if (input.generateWikilinks) {
-                    console.log('BatchProcessor: Generating wikilinks');
-                    const existingPages = this.getExistingPages();
-                    const wikilinksResult = await this.wikilinkGenerator.generate({ content, existingPages });
-                    console.log('BatchProcessor: Wikilinks generation result length:', wikilinksResult.length);
-                    if (wikilinksResult !== content) {
-                        content = wikilinksResult;
-                        wikilinksGenerated = true;
-                        console.log('BatchProcessor: Wikilinks successfully generated');
-                    } else {
-                        console.log('BatchProcessor: No new wikilinks generated');
-                    }
-                } else {
-                    console.log('BatchProcessor: Wikilinks generation skipped');
-                }
-    
-                console.log('BatchProcessor: Modifying file');
-                await this.app.vault.modify(file, content);
-    
-                results.fileResults.push({ 
-                    file, 
-                    success: true, 
-                    frontMatterGenerated, 
-                    wikilinksGenerated 
-                });
-                console.log(`BatchProcessor: File processed successfully. Front matter generated: ${frontMatterGenerated}, Wikilinks generated: ${wikilinksGenerated}`);
-            } catch (error) {
-                console.error(`BatchProcessor: Error processing file ${file.path}:`, error);
-                results.fileResults.push({ 
-                    file, 
-                    success: false, 
-                    error: error.message, 
-                    frontMatterGenerated, 
-                    wikilinksGenerated 
-                });
+
+        this.processStartTime = Date.now();
+        this.options = { ...this.options, ...input.options };
+        
+        try {
+            await this.startProcessing(input.files);
+            const results = await this.processFiles(input);
+            const stats = await this.finalizeProcessing(results);
+
+            return {
+                fileResults: results,
+                stats
+            };
+        } catch (error) {
+            await this.handleError(error as Error);
+            throw error;
+        } finally {
+            await this.cleanup();
+        }
+    }
+
+    /**
+     * Start processing and initialize status
+     */
+    private async startProcessing(files: TFile[]): Promise<void> {
+        this.currentStatus = {
+            state: 'running',
+            filesQueued: files.length,
+            filesProcessed: 0,
+            filesRemaining: files.length,
+            startTime: this.processStartTime,
+            errors: []
+        };
+
+        this.emitEvent('start', { status: this.currentStatus });
+    }
+
+    /**
+     * Process all files in chunks
+     */
+    private async processFiles(input: BatchProcessorInput): Promise<FileProcessingResult[]> {
+        const chunks = this.createChunks(input.files);
+        const results: FileProcessingResult[] = [];
+
+        for (const chunk of chunks) {
+            if (this.currentStatus.state === 'paused') {
+                await this.waitForResume();
+            }
+
+            this.emitEvent('chunkStart', chunk);
+            const chunkResults = await this.processChunk(chunk, input);
+            results.push(...chunkResults);
+            this.emitEvent('chunkComplete', chunk);
+
+            if (chunks.indexOf(chunk) < chunks.length - 1) {
+                await this.delay(this.options.delayBetweenChunks);
             }
         }
-    
-        console.log('BatchProcessor: Batch processing completed. Results:', results);
+
         return results;
     }
 
+    /**
+     * Process a single chunk of files
+     */
+    private async processChunk(chunk: FileChunk, input: BatchProcessorInput): Promise<FileProcessingResult[]> {
+        const files = chunk.files
+            .map(path => this.app.vault.getAbstractFileByPath(path))
+            .filter((file): file is TFile => file instanceof TFile);
+
+        const results = await Promise.all(
+            files.map(file => this.processFile(file, input))
+        );
+
+        this.updateProgress(results.filter(r => r.success).length);
+        return results;
+    }
+
+    /**
+     * Process a single file
+     */
+    private async processFile(file: TFile, input: BatchProcessorInput): Promise<FileProcessingResult> {
+        const startTime = Date.now();
+        this.emitEvent('fileStart', { file: file.path });
+
+        try {
+            let content = await this.app.vault.read(file);
+            const processed = await this.generateContent(content, input);
+            await this.app.vault.modify(file, processed.content);
+
+            const result: FileProcessingResult = {
+                path: file.path,
+                success: true,
+                processingTime: Date.now() - startTime,
+                ...processed.flags
+            };
+
+            this.emitEvent('fileComplete', { result });
+            return result;
+        } catch (error) {
+            const errorResult = this.createErrorResult(file, error as Error);
+            this.handleProcessingError(errorResult.error);
+            return errorResult.result;
+        }
+    }
+
+    /**
+     * Generate content for a file
+     */
+    private async generateContent(content: string, input: BatchProcessorInput): Promise<{
+        content: string;
+        flags: {
+            frontMatterGenerated: boolean;
+            wikilinksGenerated: boolean;
+        };
+    }> {
+        let frontMatterGenerated = false;
+        let wikilinksGenerated = false;
+        let processedContent = content;
+
+        if (input.generateFrontMatter) {
+            const result = await this.frontMatterGenerator.generate({ content: processedContent });
+            frontMatterGenerated = result.content !== processedContent;
+            processedContent = result.content;
+        }
+
+        if (input.generateWikilinks) {
+            const pages = this.app.vault.getMarkdownFiles().map(file => file.basename);
+            const result = await this.wikilinkGenerator.generate({ 
+                content: processedContent, 
+                existingPages: pages 
+            });
+            wikilinksGenerated = result.content !== processedContent;
+            processedContent = result.content;
+        }
+
+        return {
+            content: processedContent,
+            flags: { frontMatterGenerated, wikilinksGenerated }
+        };
+    }
+
+    /**
+     * Finalize processing and calculate stats
+     */
+    private async finalizeProcessing(results: FileProcessingResult[]): Promise<ProcessingStats> {
+        const endTime = Date.now();
+        const successfulFiles = results.filter(r => r.success);
+        
+        const stats: ProcessingStats = {
+            totalFiles: results.length,
+            processedFiles: successfulFiles.length,
+            errorFiles: results.length - successfulFiles.length,
+            skippedFiles: 0,
+            startTime: this.processStartTime,
+            endTime,
+            averageProcessingTime: this.calculateAverageTime(successfulFiles)
+        };
+
+        await this.databaseService.addProcessingStats(stats);
+        this.emitEvent('complete', stats);
+        
+        return stats;
+    }
+
+    /**
+     * Update processing progress
+     */
+    private updateProgress(processedCount: number): void {
+        this.currentStatus.filesProcessed += processedCount;
+        this.currentStatus.filesRemaining -= processedCount;
+        
+        const elapsed = Date.now() - (this.currentStatus.startTime || 0);
+        const filesPerMs = this.currentStatus.filesProcessed / elapsed;
+        this.currentStatus.estimatedTimeRemaining = 
+            this.currentStatus.filesRemaining / filesPerMs;
+
+        this.emitEvent('progress', this.currentStatus);
+        this.maybeShowNotification();
+    }
+
+    private maybeShowNotification(): void {
+        const now = Date.now();
+        if (now - this.lastNotificationTime > this.NOTIFICATION_INTERVAL) {
+            const { filesProcessed, filesQueued } = this.currentStatus;
+            new Notice(
+                `Processing files: ${filesProcessed}/${filesQueued} ` +
+                `(${Math.round(filesProcessed/filesQueued*100)}%)`
+            );
+            this.lastNotificationTime = now;
+        }
+    }
+
+    // Helper methods
+    private getDefaultStatus(): ProcessingStatus {
+        return {
+            state: 'idle',
+            filesQueued: 0,
+            filesProcessed: 0,
+            filesRemaining: 0,
+            errors: []
+        };
+    }
+
+    private createChunks(files: TFile[]): FileChunk[] {
+        const chunks: FileChunk[] = [];
+        for (let i = 0; i < files.length; i += this.options.chunkSize) {
+            chunks.push({
+                files: files.slice(i, i + this.options.chunkSize).map(f => f.path),
+                index: Math.floor(i / this.options.chunkSize),
+                size: Math.min(this.options.chunkSize, files.length - i)
+            });
+        }
+        return chunks;
+    }
+
+    private createErrorResult(file: TFile, error: Error): {
+        error: ProcessingError;
+        result: FileProcessingResult;
+    } {
+        const errorInfo: ProcessingError = {
+            filePath: file.path,
+            error: error.message,
+            timestamp: Date.now(),
+            retryCount: 0
+        };
+
+        const result: FileProcessingResult = {
+            path: file.path,
+            success: false,
+            error: error.message,
+            processingTime: 0,
+            frontMatterGenerated: false,
+            wikilinksGenerated: false
+        };
+
+        return { error: errorInfo, result };
+    }
+
+    private calculateAverageTime(results: FileProcessingResult[]): number {
+        if (results.length === 0) return 0;
+        const totalTime = results.reduce((sum, r) => sum + r.processingTime, 0);
+        return totalTime / results.length;
+    }
+
+    private handleProcessingError(error: ProcessingError): void {
+        this.currentStatus.errors.push(error);
+        this.emitEvent('error', error);
+    }
+
+    private async waitForResume(): Promise<void> {
+        return new Promise(resolve => {
+            const check = () => {
+                if (this.currentStatus.state === 'running') {
+                    resolve();
+                } else {
+                    this.processingTimeout = setTimeout(check, 100);
+                }
+            };
+            check();
+        });
+    }
+
+    private async delay(ms: number): Promise<void> {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    private async cleanup(): Promise<void> {
+        if (this.processingTimeout) {
+            clearTimeout(this.processingTimeout);
+        }
+        this.currentStatus.state = 'idle';
+    }
+
+    // Public methods for external control
+    public on(event: keyof ProcessingEvent, callback: (data: any) => void): void {
+        this.eventEmitter.on(event, callback);
+    }
+
+    public pause(): void {
+        if (this.currentStatus.state === 'running') {
+            this.currentStatus.state = 'paused';
+            this.emitEvent('pause', null);
+        }
+    }
+
+    public resume(): void {
+        if (this.currentStatus.state === 'paused') {
+            this.currentStatus.state = 'running';
+            this.emitEvent('resume', null);
+        }
+    }
+
+    private emitEvent(type: keyof ProcessingEvent, data: any): void {
+        this.eventEmitter.emit(type, data);
+    }
+
     protected validateInput(input: BatchProcessorInput): boolean {
-        const isValid = Array.isArray(input.files) && 
+        return Array.isArray(input.files) && 
                input.files.length > 0 && 
                typeof input.generateFrontMatter === 'boolean' &&
                typeof input.generateWikilinks === 'boolean';
-        console.log('BatchProcessor: Input validation result:', isValid);
-        return isValid;
     }
 
-    public getExistingPages(): string[] {
-        const pages = this.app.vault.getMarkdownFiles().map(file => file.basename);
-        console.log('BatchProcessor: Existing pages:', pages);
-        return pages;
-    }
-
-    // Implement the abstract methods from BaseGenerator
-    protected preparePrompt(input: BatchProcessorInput): string {
-        console.log('BatchProcessor: preparePrompt called, but not used in this class');
+    // Required BaseGenerator methods
+    protected preparePrompt(_input: BatchProcessorInput): string {
         return '';
     }
 
-    protected formatOutput(aiResponse: any): any {
-        console.log('BatchProcessor: formatOutput called, but not used in this class');
-        return aiResponse;
+    protected formatOutput(_aiResponse: any, _originalInput: BatchProcessorInput): BatchProcessorOutput {
+        return {
+            fileResults: [],
+            stats: {
+                totalFiles: 0,
+                processedFiles: 0,
+                skippedFiles: 0,
+                errorFiles: 0,
+                startTime: 0,
+                averageProcessingTime: 0
+            }
+        };
     }
 }

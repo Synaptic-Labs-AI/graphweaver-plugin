@@ -1,10 +1,37 @@
-// src/generators/BaseGenerator.ts
-
 import { AIAdapter } from '../adapters/AIAdapter';
 import { SettingsService } from '../services/SettingsService';
-import { PluginSettings } from '../models/Settings';
+import { PluginSettings } from '../settings/Settings';
 
-export abstract class BaseGenerator {
+/**
+ * Base interface for all generator inputs
+ */
+export interface BaseGeneratorInput {
+    [key: string]: any;
+}
+
+/**
+ * Base interface for all generator outputs
+ */
+export interface BaseGeneratorOutput {
+    [key: string]: any;
+}
+
+/**
+ * Interface for prompt preparation inputs
+ */
+export interface PreparePromptInput extends BaseGeneratorInput {
+    content?: string;
+    schema?: object;
+    userPrompt?: string;
+    [key: string]: any;
+}
+
+/**
+ * Abstract base class for all generators
+ * @template TInput Type of input the generator accepts
+ * @template TOutput Type of output the generator produces
+ */
+export abstract class BaseGenerator<TInput extends BaseGeneratorInput = BaseGeneratorInput, TOutput extends BaseGeneratorOutput = BaseGeneratorOutput> {
     protected aiAdapter: AIAdapter;
     protected settingsService: SettingsService;
 
@@ -15,29 +42,68 @@ export abstract class BaseGenerator {
 
     /**
      * Generate content based on input and settings.
-     * @param input The input data for generation (e.g., note content, file metadata)
-     * @returns A promise that resolves to the generated content
+     * @param input The input data for generation
+     * @returns Promise resolving to the generated content
      */
-    abstract generate(input: any): Promise<any>;
+    public async generate(input: TInput): Promise<TOutput> {
+        try {
+            if (!this.validateInput(input)) {
+                throw new Error('Invalid input provided');
+            }
+
+            const prompt = this.preparePrompt(input);
+            const model = await this.getCurrentModel();
+            const aiResponse = await this.aiAdapter.generateResponse(prompt, model);
+
+            if (!aiResponse.success || !aiResponse.data) {
+                throw new Error(aiResponse.error || 'Failed to generate content');
+            }
+
+            return this.formatOutput(aiResponse.data, input);
+        } catch (error) {
+            return this.handleError(error as Error);
+        }
+    }
 
     /**
      * Prepare the prompt for AI generation.
      * @param input The input data for prompt preparation
-     * @returns The prepared prompt string
      */
-    protected abstract preparePrompt(input: any): string;
+    protected abstract preparePrompt(input: TInput): string;
 
     /**
      * Format the AI response into the desired output format.
      * @param aiResponse The raw response from the AI adapter
-     * @param originalInput The original input provided to the generate method
-     * @returns The formatted output
+     * @param originalInput The original input provided
      */
-    protected abstract formatOutput(aiResponse: any, originalInput?: any): any;
+    protected abstract formatOutput(aiResponse: any, originalInput: TInput): TOutput;
+
+    /**
+     * Get the current model for this generator.
+     * @returns The model identifier string
+     */
+    protected async getCurrentModel(): Promise<string> {
+        const settings = this.getSettings();
+        const selectedModel = this.getSelectedModel(settings);
+
+        if (!selectedModel) {
+            throw new Error(`No model selected for ${this.constructor.name}`);
+        }
+
+        return selectedModel;
+    }
+
+    /**
+     * Get the selected model from settings.
+     * Can be overridden by subclasses to use specific model settings.
+     */
+    protected getSelectedModel(settings: PluginSettings): string | undefined {
+        const provider = this.aiAdapter.getProviderType();
+        return settings.aiProvider?.selectedModels?.[provider];
+    }
 
     /**
      * Get the current settings for this generator.
-     * @returns The relevant settings for this generator
      */
     protected getSettings(): PluginSettings {
         return this.settingsService.getSettings();
@@ -46,20 +112,37 @@ export abstract class BaseGenerator {
     /**
      * Validate the input before generation.
      * @param input The input to validate
-     * @returns True if the input is valid, false otherwise
      */
-    protected validateInput(input: any): boolean {
-        // Default implementation always returns true
-        // Subclasses should override this method if they need specific validation
-        return true;
+    protected validateInput(input: TInput): boolean {
+        return input !== null && input !== undefined;
     }
 
     /**
      * Handle errors that occur during generation.
      * @param error The error that occurred
-     * @throws A custom error with additional context
      */
     protected handleError(error: Error): never {
-        throw new Error(`Generation error in ${this.constructor.name}: ${error.message}`);
+        const errorMessage = `${this.constructor.name} error: ${error.message}`;
+        console.error(errorMessage);
+        throw new Error(errorMessage);
+    }
+
+    /**
+     * Utility method to clean and format text content
+     */
+    protected cleanContent(content: string): string {
+        return content.trim().replace(/\n{3,}/g, '\n\n');
+    }
+
+    /**
+     * Utility method to validate JSON data
+     */
+    protected isValidJson(data: any): boolean {
+        try {
+            JSON.parse(JSON.stringify(data));
+            return true;
+        } catch {
+            return false;
+        }
     }
 }
