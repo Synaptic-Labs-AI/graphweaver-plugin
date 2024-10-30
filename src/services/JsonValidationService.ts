@@ -1,3 +1,5 @@
+// src/services/JsonValidationService.ts
+
 import { Notice } from 'obsidian';
 
 /**
@@ -25,7 +27,7 @@ export class JsonValidationService {
             
             return false;
         } catch (error) {
-            console.error('JSON Validation Error:', error);
+            console.error('JsonValidationService: JSON Validation Error:', error);
             return false;
         }
     }
@@ -44,9 +46,11 @@ export class JsonValidationService {
             jsonString = jsonString.replace(/^```json?\s*|\s*```$/g, '');
 
             // Parse and return the JSON
-            return JSON.parse(jsonString);
+            const parsedJson = JSON.parse(jsonString);
+            console.log('JsonValidationService: Successfully parsed JSON:', parsedJson);
+            return parsedJson;
         } catch (error) {
-            console.error('Error validating JSON:', error);
+            console.error('JsonValidationService: Error validating JSON:', error);
             new Notice(`Invalid JSON format: ${error instanceof Error ? error.message : 'Unknown error'}`);
             throw new Error('Invalid JSON format');
         }
@@ -61,6 +65,7 @@ export class JsonValidationService {
         try {
             return JSON.parse(str);
         } catch (e) {
+            console.error('JsonValidationService: Initial JSON parse failed:', e);
             // Try to fix common JSON issues
             try {
                 // Fix unquoted keys
@@ -72,9 +77,11 @@ export class JsonValidationService {
                 // Remove trailing commas
                 str = str.replace(/,\s*([\]}])/g, '$1');
 
-                return JSON.parse(str);
-            } catch (e) {
-                console.error('Failed to parse JSON:', e);
+                const fixedJson = JSON.parse(str);
+                console.log('JsonValidationService: Successfully fixed and parsed JSON:', fixedJson);
+                return fixedJson;
+            } catch (fixError) {
+                console.error('JsonValidationService: Failed to fix and parse JSON:', fixError);
                 return null;
             }
         }

@@ -1,3 +1,5 @@
+// src/generators/WikilinkGenerator.ts
+
 import { BaseGenerator, BaseGeneratorInput, BaseGeneratorOutput } from './BaseGenerator';
 import { AIAdapter } from '../adapters/AIAdapter';
 import { SettingsService } from '../services/SettingsService';
@@ -54,6 +56,8 @@ export class WikilinkGenerator extends BaseGenerator<WikilinkInput, WikilinkOutp
      * @returns Promise<WikilinkOutput> with processed content
      */
     public async generate(input: WikilinkInput): Promise<WikilinkOutput> {
+        console.log('WikilinkGenerator: Starting generation');
+
         if (!this.validateInput(input)) {
             throw new Error('Invalid input for wikilink generation');
         }
@@ -61,9 +65,12 @@ export class WikilinkGenerator extends BaseGenerator<WikilinkInput, WikilinkOutp
         try {
             const prompt = this.preparePrompt(input);
             const model = await this.getCurrentModel();
+            console.log('WikilinkGenerator: Sending request to AI with prompt:', prompt);
             const aiResponse = await this.aiAdapter.generateResponse(prompt, model);
+            console.log('WikilinkGenerator: AI response received:', aiResponse);
             return this.formatOutput(aiResponse.data, input);
         } catch (error) {
+            console.error('WikilinkGenerator: Error during generation:', error);
             return this.handleError(error);
         }
     }
@@ -97,12 +104,18 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
      * Format the AI response into wikilink output
      */
     protected formatOutput(aiResponse: any, originalInput: WikilinkInput): WikilinkOutput {
+        console.log('WikilinkGenerator: Formatting AI response into wikilinks');
+
         const suggestedLinks = this.parseSuggestedLinks(aiResponse);
+        console.log('WikilinkGenerator: Suggested links:', suggestedLinks);
+
         let processedContent = originalInput.content;
         
         processedContent = this.addNewWikilinks(processedContent, suggestedLinks);
         processedContent = this.cleanNestedWikilinks(processedContent);
         
+        console.log('WikilinkGenerator: Wikilinks generated successfully');
+
         return { content: processedContent };
     }
 
@@ -134,7 +147,9 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
                     });
                 }
             });
-    
+
+        console.log('WikilinkGenerator: New wikilinks added');
+
         return this.restoreCodeBlocks(processedContent, codeBlocks);
     }    
 
@@ -142,6 +157,8 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
      * Cleans up nested wikilinks while preserving valid structure
      */
     public cleanNestedWikilinks(content: string): string {
+        console.log('WikilinkGenerator: Cleaning nested wikilinks');
+
         const processedWikilinks = new Set<string>();
         let result = content;
 
@@ -179,6 +196,8 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
                 processedWikilinks.add(match.inner.toLowerCase());
             }
         }
+
+        console.log('WikilinkGenerator: Nested wikilinks cleaned');
 
         return result;
     }
@@ -368,7 +387,7 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
             try {
                 aiResponse = JSON.parse(aiResponse);
             } catch (error) {
-                console.error('Failed to parse AI response as JSON:', error);
+                console.error('WikilinkGenerator: Failed to parse AI response as JSON:', error);
                 return [];
             }
         }
@@ -384,7 +403,7 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
             }
         }
     
-        console.error('Unexpected AI response format:', aiResponse);
+        console.error('WikilinkGenerator: Unexpected AI response format:', aiResponse);
         return [];
     }
 
@@ -424,7 +443,7 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
      * Handles errors in wikilink generation
      */
     protected handleError(error: Error): never {
-        console.error(`Wikilink generation error: ${error.message}`);
+        console.error(`WikilinkGenerator: Generation error: ${error.message}`);
         throw new Error(`Wikilink generation failed: ${error.message}`);
     }
 }

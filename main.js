@@ -1141,6 +1141,7 @@ var OpenRouterAdapter = class {
       const settings = this.settingsService.getSettings();
       const temperature = this.getTemperature(settings);
       const maxTokens = (options == null ? void 0 : options.maxTokens) || this.getMaxTokens(settings);
+      console.log(`OpenRouterAdapter: Sending prompt to AI: ${prompt}`);
       const response = await this.makeApiRequest(
         apiModel,
         prompt,
@@ -1149,10 +1150,12 @@ var OpenRouterAdapter = class {
         options == null ? void 0 : options.rawResponse
       );
       const content = this.extractContentFromResponse(response);
+      console.log(`OpenRouterAdapter: Received response from AI: ${content}`);
       if (options == null ? void 0 : options.rawResponse) {
         return { success: true, data: content };
       }
       const validatedContent = await this.jsonValidationService.validateAndCleanJson(content);
+      console.log(`OpenRouterAdapter: Validated JSON content:`, validatedContent);
       return { success: true, data: validatedContent };
     } catch (error) {
       return this.handleError(error);
@@ -1184,35 +1187,43 @@ var OpenRouterAdapter = class {
    * Make a request to the OpenRouter API
    */
   async makeApiRequest(apiModel, prompt, temperature, maxTokens, rawResponse) {
-    const response = await (0, import_obsidian5.requestUrl)({
-      url: `https://openrouter.ai/api/v1/chat/completions`,
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://github.com/yourusername/obsidian-plugin",
-        // Replace with your plugin's URL
-        "X-Title": "Obsidian Plugin"
-        // Replace with your plugin's name
-      },
-      body: JSON.stringify({
-        model: apiModel,
-        messages: [
-          {
-            role: "system",
-            content: rawResponse ? "You are a helpful assistant." : "You are a helpful assistant that responds in JSON format."
-          },
-          { role: "user", content: prompt }
-        ],
-        temperature,
-        max_tokens: maxTokens,
-        response_format: rawResponse ? void 0 : { type: "json_object" }
-      })
-    });
-    if (response.status !== 200) {
-      throw new Error(`API request failed with status ${response.status}`);
+    var _a, _b, _c, _d;
+    const headers = {
+      "Authorization": `Bearer ${this.apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": window.location.href,
+      // Dynamic referrer
+      "X-Title": "Obsidian GraphWeaver Plugin"
+    };
+    try {
+      const response = await (0, import_obsidian5.requestUrl)({
+        url: "https://openrouter.ai/api/v1/chat/completions",
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          model: apiModel,
+          messages: [
+            {
+              role: "system",
+              content: rawResponse ? "You are a helpful assistant." : "You are a helpful assistant that responds in JSON format."
+            },
+            { role: "user", content: prompt }
+          ],
+          temperature,
+          max_tokens: maxTokens,
+          response_format: rawResponse ? void 0 : { type: "json_object" }
+        })
+      });
+      if (!((_d = (_c = (_b = (_a = response.json) == null ? void 0 : _a.choices) == null ? void 0 : _b[0]) == null ? void 0 : _c.message) == null ? void 0 : _d.content)) {
+        throw new Error("Invalid response format from OpenRouter API");
+      }
+      return response;
+    } catch (error) {
+      if (error.status === 401) {
+        throw new Error("OpenRouter API authentication failed. Please check your API key.");
+      }
+      throw error;
     }
-    return response;
   }
   /**
    * Extract content from API response
@@ -1569,10 +1580,12 @@ var FrontMatterGenerator = class extends BaseGenerator {
         customProperties: input.customProperties || settings.frontMatter.customProperties,
         customTags: input.customTags || settings.tags.customTags.map((tag) => tag.name)
       };
+      console.log("FrontMatterGenerator: Complete input prepared:", completeInput);
       const prompt = this.preparePrompt(completeInput);
       const model = await this.getCurrentModel();
       console.log("FrontMatterGenerator: Sending request to AI");
       const aiResponse = await this.aiAdapter.generateResponse(prompt, model);
+      console.log("FrontMatterGenerator: AI response received:", aiResponse);
       if (!aiResponse.success || !aiResponse.data) {
         console.error("FrontMatterGenerator: AI response was unsuccessful or empty");
         return { content: input.content };
@@ -1627,12 +1640,15 @@ Remember, return only the properly formatted JSON with no words before or after,
    * @returns Formatted output with front matter
    */
   formatOutput(aiResponse, originalInput) {
+    console.log("FrontMatterGenerator: Formatting AI response into front matter");
     const parsedResponse = this.parseAIResponse(aiResponse);
     if (!parsedResponse) {
+      console.error("FrontMatterGenerator: Failed to parse AI response");
       return { content: originalInput.content };
     }
     const frontMatter = this.convertToFrontMatter(parsedResponse);
     const finalContent = this.mergeFrontMatter(originalInput.content, frontMatter);
+    console.log("FrontMatterGenerator: Front matter generated successfully");
     return { content: finalContent };
   }
   /**
@@ -1648,7 +1664,7 @@ Remember, return only the properly formatted JSON with no words before or after,
         return parsed;
       }
     } catch (error) {
-      console.error("Error parsing AI response:", error);
+      console.error("FrontMatterGenerator: Error parsing AI response as JSON:", error);
     }
     return null;
   }
@@ -1746,15 +1762,19 @@ var WikilinkGenerator = class extends BaseGenerator {
    * @returns Promise<WikilinkOutput> with processed content
    */
   async generate(input) {
+    console.log("WikilinkGenerator: Starting generation");
     if (!this.validateInput(input)) {
       throw new Error("Invalid input for wikilink generation");
     }
     try {
       const prompt = this.preparePrompt(input);
       const model = await this.getCurrentModel();
+      console.log("WikilinkGenerator: Sending request to AI with prompt:", prompt);
       const aiResponse = await this.aiAdapter.generateResponse(prompt, model);
+      console.log("WikilinkGenerator: AI response received:", aiResponse);
       return this.formatOutput(aiResponse.data, input);
     } catch (error) {
+      console.error("WikilinkGenerator: Error during generation:", error);
       return this.handleError(error);
     }
   }
@@ -1783,10 +1803,13 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
    * Format the AI response into wikilink output
    */
   formatOutput(aiResponse, originalInput) {
+    console.log("WikilinkGenerator: Formatting AI response into wikilinks");
     const suggestedLinks = this.parseSuggestedLinks(aiResponse);
+    console.log("WikilinkGenerator: Suggested links:", suggestedLinks);
     let processedContent = originalInput.content;
     processedContent = this.addNewWikilinks(processedContent, suggestedLinks);
     processedContent = this.cleanNestedWikilinks(processedContent);
+    console.log("WikilinkGenerator: Wikilinks generated successfully");
     return { content: processedContent };
   }
   /**
@@ -1810,12 +1833,14 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
         });
       }
     });
+    console.log("WikilinkGenerator: New wikilinks added");
     return this.restoreCodeBlocks(processedContent, codeBlocks);
   }
   /**
    * Cleans up nested wikilinks while preserving valid structure
    */
   cleanNestedWikilinks(content) {
+    console.log("WikilinkGenerator: Cleaning nested wikilinks");
     const processedWikilinks = /* @__PURE__ */ new Set();
     let result = content;
     const matches = Array.from(content.matchAll(this.PATTERNS.WIKILINK_REGEX)).map((match) => ({
@@ -1845,6 +1870,7 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
         processedWikilinks.add(match.inner.toLowerCase());
       }
     }
+    console.log("WikilinkGenerator: Nested wikilinks cleaned");
     return result;
   }
   /**
@@ -1996,7 +2022,7 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
       try {
         aiResponse = JSON.parse(aiResponse);
       } catch (error) {
-        console.error("Failed to parse AI response as JSON:", error);
+        console.error("WikilinkGenerator: Failed to parse AI response as JSON:", error);
         return [];
       }
     }
@@ -2009,7 +2035,7 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
         return arrayValues.filter((item) => typeof item === "string");
       }
     }
-    console.error("Unexpected AI response format:", aiResponse);
+    console.error("WikilinkGenerator: Unexpected AI response format:", aiResponse);
     return [];
   }
   /**
@@ -2041,7 +2067,7 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
    * Handles errors in wikilink generation
    */
   handleError(error) {
-    console.error(`Wikilink generation error: ${error.message}`);
+    console.error(`WikilinkGenerator: Generation error: ${error.message}`);
     throw new Error(`Wikilink generation failed: ${error.message}`);
   }
 };
@@ -3126,7 +3152,7 @@ var JsonValidationService = class {
       }
       return false;
     } catch (error) {
-      console.error("JSON Validation Error:", error);
+      console.error("JsonValidationService: JSON Validation Error:", error);
       return false;
     }
   }
@@ -3139,9 +3165,11 @@ var JsonValidationService = class {
     try {
       jsonString = jsonString.trim();
       jsonString = jsonString.replace(/^```json?\s*|\s*```$/g, "");
-      return JSON.parse(jsonString);
+      const parsedJson = JSON.parse(jsonString);
+      console.log("JsonValidationService: Successfully parsed JSON:", parsedJson);
+      return parsedJson;
     } catch (error) {
-      console.error("Error validating JSON:", error);
+      console.error("JsonValidationService: Error validating JSON:", error);
       new import_obsidian10.Notice(`Invalid JSON format: ${error instanceof Error ? error.message : "Unknown error"}`);
       throw new Error("Invalid JSON format");
     }
@@ -3155,13 +3183,16 @@ var JsonValidationService = class {
     try {
       return JSON.parse(str);
     } catch (e) {
+      console.error("JsonValidationService: Initial JSON parse failed:", e);
       try {
         str = str.replace(/(\w+)(?=\s*:)/g, '"$1"');
         str = str.replace(/'/g, '"');
         str = str.replace(/,\s*([\]}])/g, "$1");
-        return JSON.parse(str);
-      } catch (e2) {
-        console.error("Failed to parse JSON:", e2);
+        const fixedJson = JSON.parse(str);
+        console.log("JsonValidationService: Successfully fixed and parsed JSON:", fixedJson);
+        return fixedJson;
+      } catch (fixError) {
+        console.error("JsonValidationService: Failed to fix and parse JSON:", fixError);
         return null;
       }
     }

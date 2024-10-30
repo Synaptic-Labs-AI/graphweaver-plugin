@@ -1,3 +1,5 @@
+// src/adapters/OpenRouterAdapter.ts
+
 import { Notice, requestUrl, RequestUrlResponse } from 'obsidian';
 import { AIProvider, AIResponse, AIAdapter, AIModel, AIModelMap, AIResponseOptions } from '../models/AIModels';
 import { SettingsService } from '../services/SettingsService';
@@ -42,6 +44,9 @@ export class OpenRouterAdapter implements AIAdapter {
             const temperature = this.getTemperature(settings);
             const maxTokens = options?.maxTokens || this.getMaxTokens(settings);
 
+            // Log the prompt being sent
+            console.log(`OpenRouterAdapter: Sending prompt to AI: ${prompt}`);
+
             const response = await this.makeApiRequest(
                 apiModel, 
                 prompt, 
@@ -52,6 +57,9 @@ export class OpenRouterAdapter implements AIAdapter {
 
             const content = this.extractContentFromResponse(response);
 
+            // Log the raw response content
+            console.log(`OpenRouterAdapter: Received response from AI: ${content}`);
+
             // Return raw content if requested
             if (options?.rawResponse) {
                 return { success: true, data: content };
@@ -59,6 +67,10 @@ export class OpenRouterAdapter implements AIAdapter {
 
             // Otherwise validate as JSON
             const validatedContent = await this.jsonValidationService.validateAndCleanJson(content);
+
+            // Log the validated JSON
+            console.log(`OpenRouterAdapter: Validated JSON content:`, validatedContent);
+
             return { success: true, data: validatedContent };
         } catch (error) {
             return this.handleError(error);
@@ -101,37 +113,46 @@ export class OpenRouterAdapter implements AIAdapter {
         maxTokens: number,
         rawResponse?: boolean
     ): Promise<RequestUrlResponse> {
-        const response = await requestUrl({
-            url: `https://openrouter.ai/api/v1/chat/completions`,
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.apiKey}`,
-                'Content-Type': 'application/json',
-                'HTTP-Referer': 'https://github.com/yourusername/obsidian-plugin', // Replace with your plugin's URL
-                'X-Title': 'Obsidian Plugin' // Replace with your plugin's name
-            },
-            body: JSON.stringify({
-                model: apiModel,
-                messages: [
-                    {
-                        role: 'system',
-                        content: rawResponse 
-                            ? 'You are a helpful assistant.' 
-                            : 'You are a helpful assistant that responds in JSON format.'
-                    },
-                    { role: 'user', content: prompt }
-                ],
-                temperature: temperature,
-                max_tokens: maxTokens,
-                response_format: rawResponse ? undefined : { type: 'json_object' }
-            })
-        });
-
-        if (response.status !== 200) {
-            throw new Error(`API request failed with status ${response.status}`);
+        const headers = {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': window.location.href, // Dynamic referrer
+            'X-Title': 'Obsidian GraphWeaver Plugin'
+        };
+    
+        try {
+            const response = await requestUrl({
+                url: 'https://openrouter.ai/api/v1/chat/completions',
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    model: apiModel,
+                    messages: [
+                        {
+                            role: 'system',
+                            content: rawResponse 
+                                ? 'You are a helpful assistant.' 
+                                : 'You are a helpful assistant that responds in JSON format.'
+                        },
+                        { role: 'user', content: prompt }
+                    ],
+                    temperature,
+                    max_tokens: maxTokens,
+                    response_format: rawResponse ? undefined : { type: 'json_object' }
+                })
+            });
+    
+            if (!response.json?.choices?.[0]?.message?.content) {
+                throw new Error('Invalid response format from OpenRouter API');
+            }
+    
+            return response;
+        } catch (error: any) { // Specify any to handle error properties
+            if (error.status === 401) {
+                throw new Error('OpenRouter API authentication failed. Please check your API key.');
+            }
+            throw error;
         }
-
-        return response;
     }
 
     /**

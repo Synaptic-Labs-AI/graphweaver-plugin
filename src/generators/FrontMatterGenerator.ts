@@ -1,4 +1,4 @@
-// FrontMatterGenerator.ts
+// src/generators/FrontMatterGenerator.ts
 
 import { BaseGenerator, BaseGeneratorInput, BaseGeneratorOutput } from './BaseGenerator';
 import { AIAdapter } from '../adapters/AIAdapter';
@@ -56,12 +56,16 @@ export class FrontMatterGenerator extends BaseGenerator<FrontMatterInput, FrontM
                 customTags: input.customTags || settings.tags.customTags.map(tag => tag.name)
             };
 
+            console.log('FrontMatterGenerator: Complete input prepared:', completeInput);
+
             const prompt = this.preparePrompt(completeInput);
             const model = await this.getCurrentModel();
             
             console.log('FrontMatterGenerator: Sending request to AI');
             const aiResponse = await this.aiAdapter.generateResponse(prompt, model);
             
+            console.log('FrontMatterGenerator: AI response received:', aiResponse);
+
             if (!aiResponse.success || !aiResponse.data) {
                 console.error('FrontMatterGenerator: AI response was unsuccessful or empty');
                 return { content: input.content }; // Return original content if AI generation fails
@@ -120,13 +124,18 @@ Remember, return only the properly formatted JSON with no words before or after,
      * @returns Formatted output with front matter
      */
     protected formatOutput(aiResponse: any, originalInput: FrontMatterInput): FrontMatterOutput {
+        console.log('FrontMatterGenerator: Formatting AI response into front matter');
+
         const parsedResponse = this.parseAIResponse(aiResponse);
         if (!parsedResponse) {
+            console.error('FrontMatterGenerator: Failed to parse AI response');
             return { content: originalInput.content };
         }
 
         const frontMatter = this.convertToFrontMatter(parsedResponse);
         const finalContent = this.mergeFrontMatter(originalInput.content, frontMatter);
+
+        console.log('FrontMatterGenerator: Front matter generated successfully');
 
         return { content: finalContent };
     }
@@ -145,7 +154,7 @@ Remember, return only the properly formatted JSON with no words before or after,
                 return parsed;
             }
         } catch (error) {
-            console.error("Error parsing AI response:", error);
+            console.error("FrontMatterGenerator: Error parsing AI response as JSON:", error);
         }
 
         return null;
