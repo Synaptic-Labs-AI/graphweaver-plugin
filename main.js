@@ -1609,29 +1609,30 @@ var FrontMatterGenerator = class extends BaseGenerator {
     ).join("\n")) || "";
     const tagPrompt = ((_b = input.customTags) == null ? void 0 : _b.join(", ")) || "";
     return `
-# MISSION
-Act as an expert analyzer and creator of metadata, with a specialization in ontological organization. Use the custom properties and available tags below to generate JSON formatted text based on the provided schema, using the note content for reference.
-
-# GUIDELINES
-- You must ONLY use the properties provided, taking the description of the property as guidance for generation.
-- Prioritize use of the available tags, but remain flexible in choosing additional tags that would be useful in labelling the note content.
-- Omit all other text including words before or after or backticks, returning ONLY the formatted JSON.
-
-## Custom Properties
-${propertyPrompt}
-
-## Available Tags
-${tagPrompt}
-
-## Note Content
-Below is the content of the note you can use to generate completed JSON schema. Omit it from your generation.
-${input.content}
-
-## JSON Schema:
-${JSON.stringify(schema, null, 2)}
-
-Remember, return only the properly formatted JSON with no words before or after, or backticks.
-`;
+    # MISSION
+    Act as an expert analyzer and creator of metadata, with a specialization in ontological organization for Obsidian Vaults. Generate ONLY front matter fields based on the provided schema and available properties/tags.
+    
+    # GUIDELINES
+    - You must ONLY use the properties provided in the schema
+    - Front matter fields will NOT include the note content itself
+    - Prioritize using available tags, but remain flexible in choosing additional relevant tags
+    - Return ONLY the formatted JSON object with front matter fields
+    - Do NOT include the content field in your response
+    
+    ## Custom Properties
+    ${propertyPrompt}
+    
+    ## Available Tags
+    ${tagPrompt}
+    
+    ## Note Content for Reference (OMIT FROM OUTPUT)
+    ${input.content}
+    
+    ## JSON Schema for Front Matter Fields:
+    ${JSON.stringify(schema, null, 2)}
+    
+    Generate ONLY the front matter fields as JSON. Do not include any other text or the note content.
+    `;
   }
   /**
    * Formats AI response into proper front matter structure
@@ -1645,6 +1646,9 @@ Remember, return only the properly formatted JSON with no words before or after,
     if (!parsedResponse) {
       console.error("FrontMatterGenerator: Failed to parse AI response");
       return { content: originalInput.content };
+    }
+    if ("content" in parsedResponse) {
+      delete parsedResponse.content;
     }
     const frontMatter = this.convertToFrontMatter(parsedResponse);
     const finalContent = this.mergeFrontMatter(originalInput.content, frontMatter);
@@ -2563,12 +2567,9 @@ var JsonSchemaGenerator = class {
         type: "string",
         enum: settings.tags.customTags.map((tag) => tag.name)
       },
-      description: "Select appropriate tags for the document from the provided list"
+      description: "Select appropriate tags from the provided list"
     };
-    schema.properties.content = {
-      type: "string",
-      description: "Main content of the note in Markdown format"
-    };
+    schema.additionalProperties = false;
     return schema;
   }
   getJsonSchemaType(propertyType) {

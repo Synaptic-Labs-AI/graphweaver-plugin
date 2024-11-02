@@ -21,6 +21,7 @@ export class JsonSchemaGenerator {
         return baseSchema;
     }
 
+
     public generateBaseSchema(): object {
         const settings = this.settingsService.getSettings();
         const schema: any = {
@@ -47,14 +48,11 @@ export class JsonSchemaGenerator {
                 type: 'string',
                 enum: settings.tags.customTags.map(tag => tag.name)
             },
-            description: 'Select appropriate tags for the document from the provided list'
+            description: 'Select appropriate tags from the provided list'
         };
 
-        // Add content field for the main body
-        schema.properties.content = {
-            type: 'string',
-            description: 'Main content of the note in Markdown format'
-        };
+        // Explicitly exclude content field
+        schema.additionalProperties = false;
 
         return schema;
     }

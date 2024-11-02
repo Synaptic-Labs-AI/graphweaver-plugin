@@ -742,3 +742,53 @@ input[type="checkbox"].folder-checkbox:indeterminate::after {
         font-size: var(--font-smaller);
     }
 }
+
+/* Enhanced Dropdown Styling */
+.dropdown,
+select {
+    /* Ensure proper sizing */
+    min-height: 2.5em;          /* Increased height for better text visibility */
+    padding: 0.5em 1em;         /* Add comfortable padding around text */
+    line-height: 1.4;           /* Improve line height for better readability */
+    
+    /* Handle text overflow */
+    white-space: normal;        /* Allow text to wrap if needed */
+    text-overflow: ellipsis;    /* Show ellipsis for overflowing text */
+    
+    /* Improved appearance */
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    
+    /* Better positioning */
+    display: flex;
+    align-items: center;
+    
+    /* Ensure proper width */
+    width: 100%;
+    max-width: 100%;
+    
+    /* Smooth transitions */
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+/* Dropdown hover state */
+.dropdown:hover,
+select:hover {
+    border-color: var(--interactive-accent);
+    background-color: var(--background-secondary);
+}
+
+/* Dropdown options styling */
+select option {
+    padding: 0.5em 1em;
+    background-color: var(--background-primary);
+    color: var(--text-normal);
+}
+
+/* Ensure proper spacing in the Knowledge Bloom section */
+.knowledge-bloom-model-selector .dropdown,
+.knowledge-bloom-model-selector select {
+    margin: 0.5em 0;
+    width: 100%;
+}
