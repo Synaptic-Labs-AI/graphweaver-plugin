@@ -1,497 +1,145 @@
-/* =========================================================
-   Graphweaver Plugin Styles - Refactored
-   ========================================================= */
-
-/* Base Styles and Custom Properties */
-.graphweaver-plugin,
-.graphweaver-modal {
-  --gw-spacing: 1rem;
-  --gw-border-radius: 0.5rem;
-  --gw-transition-duration: 0.3s;
-  --gw-font-size-base: 1rem;
-  --gw-font-size-large: 1.2rem;
-  --gw-font-size-small: 0.95rem;
+/* Base Variables and Reset */
+.graphweaver-plugin {
+  --graphweaver-spacing: 1rem;
+  --graphweaver-border-radius: 0.5rem;
+  --graphweaver-transition: 0.3s ease;
+  --graphweaver-font-base: 1rem;
+  --graphweaver-font-large: 1.2rem;
+  --graphweaver-font-small: 0.95rem;
 }
 
-/* 1. Scoped CSS Reset for Plugin Components */
-.graphweaver-plugin,
-.graphweaver-plugin * {
+/* Scoped Reset */
+.workspace-leaf-content[data-type="graphweaver-view"] * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-.graphweaver-modal .modal-content,
-.graphweaver-modal .modal-content * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* Core Components */
+.graphweaver-plugin .gw-container {
+  padding: var(--graphweaver-spacing);
+  background-color: var(--background-primary);
+  border-radius: var(--graphweaver-border-radius);
 }
 
-/* 2. Accordion Styles */
+/* Accordion Component */
 .graphweaver-plugin .gw-accordion {
   border: 1px solid var(--background-modifier-border);
-  border-radius: var(--gw-border-radius);
-  margin-bottom: var(--gw-spacing);
-  background-color: var(--background-primary);
+  border-radius: var(--graphweaver-border-radius);
   overflow: hidden;
-  transition: transform var(--gw-transition-duration) ease, box-shadow var(--gw-transition-duration) ease;
-}
-
-.graphweaver-plugin .gw-accordion:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+  margin-bottom: var(--graphweaver-spacing);
 }
 
 .graphweaver-plugin .gw-accordion-header {
-  padding: var(--gw-spacing);
+  padding: var(--graphweaver-spacing);
   background-color: var(--background-secondary);
   display: flex;
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
-  user-select: none;
-  transition: background-color var(--gw-transition-duration) ease;
-}
-
-.graphweaver-plugin .gw-accordion-header:hover {
-  background-color: var(--background-tertiary);
-}
-
-.graphweaver-plugin .gw-accordion-title-wrapper {
-  display: flex;
-  align-items: center;
-}
-
-.graphweaver-plugin .gw-accordion-title {
-  margin-left: var(--gw-spacing);
-  font-size: var(--gw-font-size-large);
-  font-weight: 600;
-  color: var(--text-normal);
-}
-
-.graphweaver-plugin .gw-accordion-toggle {
-  transition: transform var(--gw-transition-duration) ease;
-}
-
-.graphweaver-plugin .gw-accordion.gw-accordion-open .gw-accordion-toggle {
-  transform: rotate(45deg); /* Rotate icon when open */
 }
 
 .graphweaver-plugin .gw-accordion-content {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height var(--gw-transition-duration) ease;
-}
-
-.graphweaver-plugin .gw-accordion.gw-accordion-open .gw-accordion-content {
-  max-height: 100vh; /* Adjust based on content */
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .graphweaver-plugin .gw-accordion,
-  .graphweaver-plugin .gw-accordion-header,
-  .graphweaver-plugin .gw-accordion-content {
-    transition: none;
-  }
-}
-
-/* 3. Modal Styles */
-
-/* Modal Overlay */
-.graphweaver-modal .modal-overlay {
+  padding: var(--graphweaver-spacing);
   background-color: var(--background-primary);
-  z-index: 999; /* Ensure it sits above other elements */
-  opacity: 1;
-  transition: opacity var(--gw-transition-duration) ease;
 }
 
-/* Modal Container */
-.graphweaver-modal .modal-content {
-  background-color: var(--background-primary);
-  border-radius: var(--gw-border-radius);
-  width: 90%;
-  max-width: 800px;
-  z-index: 1000; /* Above the overlay */
-  overflow: hidden;
-  color: var(--text-normal);
-  padding: 0;
-  margin: auto;
-  position: relative;
-}
-
-/* Modal Header */
-.graphweaver-modal .modal-header {
-  padding: var(--gw-spacing);
-  background-color: var(--background-secondary);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.graphweaver-modal .modal-header-title {
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: var(--text-normal);
-}
-
-.graphweaver-modal .modal-close {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-normal);
-  font-size: 1.6rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color var(--gw-transition-duration) ease;
-}
-
-.graphweaver-modal .modal-close:hover {
-  color: var(--interactive-accent);
-}
-
-.graphweaver-modal .modal-close:focus-visible {
-  outline: 2px solid var(--interactive-accent);
-  outline-offset: 2px;
-}
-
-/* Modal Body */
-.graphweaver-modal .modal-body,
-.graphweaver-modal .modal-scrollable-content {
-  padding: var(--gw-spacing);
-  max-height: 70vh;
-  overflow-y: auto;
-  font-size: var(--gw-font-size-base);
-  line-height: 1.6;
-}
-
-/* Loading State in Modal */
-.graphweaver-modal .loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--gw-spacing);
-}
-
-.graphweaver-modal .loading-text {
-  margin-top: var(--gw-spacing);
-  font-size: var(--gw-font-size-large);
-  color: var(--text-muted);
-}
-
-/* Error State in Modal */
-.graphweaver-modal .error-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: calc(var(--gw-spacing) * 2);
-  color: var(--color-red);
-}
-
-.graphweaver-modal .error-message {
-  margin-top: var(--gw-spacing);
-  font-size: var(--gw-font-size-large);
-  color: var(--color-red);
-}
-
-/* 4. Utility Classes */
-
-/* Alignments */
-.graphweaver-plugin .align-right {
-  text-align: right;
-}
-
-.graphweaver-plugin .align-center {
-  text-align: center;
-}
-
-/* Status Indicators */
-.graphweaver-plugin .status-error {
-  color: var(--color-red);
-}
-
-.graphweaver-plugin .status-success {
-  color: var(--color-green);
-}
-
-.graphweaver-plugin .status-warning {
-  color: var(--color-yellow);
-}
-
-/* 5. Button Styles */
-
-/* Base Button Styles */
-.gw-button {
+/* Button Styles */
+.graphweaver-plugin .gw-button {
+  padding: 0.75rem 1.5rem;
   background-color: var(--interactive-accent);
   color: var(--text-on-accent);
   border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: var(--gw-border-radius);
+  border-radius: var(--graphweaver-border-radius);
   cursor: pointer;
-  font-size: var(--gw-font-size-base);
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color var(--gw-transition-duration) ease, transform 0.2s ease;
+  transition: background-color var(--graphweaver-transition);
 }
 
-.gw-button:hover {
+.graphweaver-plugin .gw-button:hover {
   background-color: var(--interactive-accent-hover);
-  transform: translateY(-2px);
 }
 
-.gw-button:focus-visible {
-  outline: 2px solid var(--interactive-accent);
-  outline-offset: 2px;
-}
-
-/* Modifier Classes */
-.gw-button--secondary {
-  background-color: var(--background-secondary);
+/* Input Fields */
+.graphweaver-plugin .gw-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--graphweaver-border-radius);
+  background-color: var(--background-primary);
   color: var(--text-normal);
 }
 
-.gw-button--secondary:hover {
-  background-color: var(--background-tertiary);
+.graphweaver-plugin .gw-input:focus {
+  border-color: var(--interactive-accent);
+  outline: none;
 }
 
-.gw-button--warning {
-  background-color: var(--color-red);
-  color: var(--text-on-accent);
+/* Modal Styles */
+.modal-container .graphweaver-modal {
+  background-color: var(--background-primary);
+  border-radius: var(--graphweaver-border-radius);
+  padding: var(--graphweaver-spacing);
 }
 
-.gw-button--warning:hover {
-  background-color: var(--color-red-hover);
+.graphweaver-modal .modal-header {
+  padding-bottom: var(--graphweaver-spacing);
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin-bottom: var(--graphweaver-spacing);
 }
 
-/* 6. Table Styles */
-.graphweaver-plugin .history-table {
+.graphweaver-modal .modal-content {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* Table Styles */
+.graphweaver-plugin .gw-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: var(--gw-spacing);
-  font-size: var(--gw-font-size-base);
+  margin: var(--graphweaver-spacing) 0;
 }
 
-.graphweaver-plugin .history-table th,
-.graphweaver-plugin .history-table td {
-  padding: 0.875rem 1rem; /* 14px and 16px converted to rem */
+.graphweaver-plugin .gw-table th,
+.graphweaver-plugin .gw-table td {
+  padding: 0.75rem;
   border: 1px solid var(--background-modifier-border);
-}
-
-.graphweaver-plugin .history-table th {
-  background-color: var(--background-secondary);
   text-align: left;
-  font-weight: 600;
-  color: var(--text-normal);
 }
 
-.graphweaver-plugin .history-table tr:nth-child(even) {
-  background-color: var(--background-tertiary);
-}
-
-.graphweaver-plugin .history-table tr:hover {
-  background-color: var(--background-secondary-hover);
-}
-
-/* 7. Summary Grid */
-.graphweaver-plugin .summary-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: var(--gw-spacing);
-  margin-top: var(--gw-spacing);
-}
-
-.graphweaver-plugin .summary-item {
-  display: flex;
-  flex-direction: column;
-}
-
-.graphweaver-plugin .summary-label {
-  font-weight: 600;
-  color: var(--text-normal);
-  margin-bottom: 0.5rem;
-}
-
-.graphweaver-plugin .summary-value {
-  font-size: var(--gw-font-size-large);
-  color: var(--text-muted);
-}
-
-/* 8. Checkbox Styles */
-.graphweaver-plugin .gw-checkbox {
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-}
-
-/* 9. List Styles */
-.graphweaver-plugin .gw-list {
-  list-style-type: disc;
-  padding-left: calc(var(--gw-spacing) * 1.5);
-  margin-top: var(--gw-spacing);
-}
-
-/* 10. Drag Handle */
-.graphweaver-plugin .gw-drag-handle {
-  cursor: grab;
-  user-select: none;
-  font-size: 1.4rem;
-  color: var(--text-muted);
-  transition: color 0.2s ease;
-}
-
-.graphweaver-plugin .gw-drag-handle:hover {
-  color: var(--interactive-accent);
-}
-
-/* 11. Text Inputs and Textareas */
-.graphweaver-plugin .gw-text-input,
-.graphweaver-plugin .gw-textarea-input {
-  width: 100%;
-  padding: 0.9375rem 1.25rem; /* 15px and 20px converted to rem */
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--gw-border-radius);
+.graphweaver-plugin .gw-table th {
   background-color: var(--background-secondary);
-  color: var(--text-normal);
-  font-size: var(--gw-font-size-base);
-  transition: border-color var(--gw-transition-duration) ease, background-color var(--gw-transition-duration) ease;
 }
 
-.graphweaver-plugin .gw-text-input:focus,
-.graphweaver-plugin .gw-textarea-input:focus {
-  border-color: var(--interactive-accent);
-  background-color: var(--background-tertiary);
-  outline: none;
+/* Utility Classes */
+.graphweaver-plugin .gw-mt {
+  margin-top: var(--graphweaver-spacing);
 }
 
-.graphweaver-plugin .gw-textarea-input {
-  min-height: 100px;
-  resize: vertical;
+.graphweaver-plugin .gw-mb {
+  margin-bottom: var(--graphweaver-spacing);
 }
 
-/* 12. Dropdown */
-.graphweaver-plugin .gw-dropdown {
-  width: 100%;
-  padding: 0.9375rem 1.25rem;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--gw-border-radius);
-  background-color: var(--background-secondary);
-  color: var(--text-normal);
-  font-size: var(--gw-font-size-base);
-  transition: border-color var(--gw-transition-duration) ease, background-color var(--gw-transition-duration) ease;
-  appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg width='14' height='10' viewBox='0 0 14 10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%23aaaaaa' stroke-width='2' fill='none' fill-rule='evenodd'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 1rem center;
-  background-size: 0.65rem;
-}
-
-.graphweaver-plugin .gw-dropdown:focus {
-  border-color: var(--interactive-accent);
-  background-color: var(--background-tertiary);
-  outline: none;
-}
-
-.graphweaver-plugin .gw-dropdown option {
-  color: var(--text-normal);
-}
-
-/* 13. Button Containers */
-.graphweaver-plugin .gw-button-container,
-.graphweaver-modal .gw-button-container,
-.graphweaver-plugin .modal-action-buttons,
-.graphweaver-modal .modal-action-buttons {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--gw-spacing);
-  margin-top: var(--gw-spacing);
-}
-
-/* 14. History Table Container */
-.graphweaver-plugin .history-table-container {
-  overflow-x: auto;
-  margin-top: var(--gw-spacing);
-}
-
-/* 15. Chart Container */
-.graphweaver-plugin .chart-container {
-  position: relative;
-  height: 400px;
-  margin-top: var(--gw-spacing);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--gw-border-radius);
-  padding: var(--gw-spacing);
-  background-color: var(--background-secondary);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-/* 16. Progress Text */
-.graphweaver-plugin .progress-text {
-  margin-top: var(--gw-spacing);
-  font-size: var(--gw-font-size-large);
-  color: var(--text-muted);
-}
-
-/* 17. Empty State */
-.graphweaver-plugin .empty-state {
-  padding: var(--gw-spacing);
-  text-align: center;
-  color: var(--text-muted);
-  font-size: var(--gw-font-size-base);
-}
-
-/* 18. Responsive Design */
-@media (max-width: 768px) {
-  .graphweaver-plugin .summary-grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: var(--gw-spacing);
-  }
-
-  .graphweaver-plugin .gw-accordion-header {
-    padding: 0.75rem 1rem;
-  }
-
-  .gw-button {
-    padding: 0.625rem 1rem;
-    font-size: var(--gw-font-size-small);
-  }
-
-  .graphweaver-plugin .history-table th,
-  .graphweaver-plugin .history-table td {
-    padding: 0.75rem 0.875rem;
-    font-size: var(--gw-font-size-small);
-  }
-
-  .graphweaver-plugin .gw-text-input,
-  .graphweaver-plugin .gw-textarea-input,
-  .graphweaver-plugin .gw-dropdown {
-    padding: 0.75rem 1rem;
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .graphweaver-plugin * {
+      transition: none !important;
   }
 }
 
-/* 19. Accessibility Enhancements */
-
-/* Focus States */
-.graphweaver-plugin .gw-text-input:focus-visible,
-.graphweaver-plugin .gw-textarea-input:focus-visible,
-.graphweaver-plugin .gw-dropdown:focus-visible,
-.graphweaver-plugin .gw-checkbox:focus-visible,
 .graphweaver-plugin .gw-button:focus-visible,
-.graphweaver-plugin .gw-accordion-header:focus-visible {
+.graphweaver-plugin .gw-input:focus-visible {
   outline: 2px solid var(--interactive-accent);
   outline-offset: 2px;
 }
 
-/* High Contrast Adjustments */
-@media (prefers-contrast: more) {
-  .gw-button,
-  .graphweaver-plugin .gw-text-input,
-  .graphweaver-plugin .gw-textarea-input,
-  .graphweaver-plugin .gw-dropdown {
-    border: 1px solid var(--text-normal);
+/* Responsive Design */
+@media (max-width: 768px) {
+  .graphweaver-plugin {
+      --graphweaver-spacing: 0.75rem;
+      --graphweaver-font-base: 0.95rem;
+  }
+  
+  .graphweaver-plugin .gw-button {
+      padding: 0.5rem 1rem;
   }
 }

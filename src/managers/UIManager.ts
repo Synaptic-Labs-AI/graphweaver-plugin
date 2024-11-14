@@ -125,7 +125,7 @@ export class UIManager {
         if (this.isUnloading) return;
 
         this.ribbonIcon = this.plugin.addRibbonIcon(
-            'dice', // Ensure this icon exists or use a valid Obsidian icon name
+            'brain-circuit',
             'GraphWeaver',
             this.eventHandlers.ribbonClick
         );
@@ -208,7 +208,7 @@ export class UIManager {
             },
             { 
                 title: "Batch Process Files", 
-                icon: "folder", 
+                icon: "folder-sync", 
                 callback: () => fileManager.openBatchProcessor() 
             }
         ];
