@@ -1,184 +1,100 @@
-import { PluginSettings, DEFAULT_SETTINGS, KnowledgeBloomSettings } from "../settings/Settings";
-import { EventEmitter } from "events";
-import { Plugin } from "obsidian";
-import { AIProvider } from "../models/AIModels";
-import { Tag } from "../models/PropertyTag";
-import { JsonValidationService } from "./JsonValidationService";
+import { Plugin } from 'obsidian';
+import { CoreService } from './core/CoreService';
+import { ServiceError } from './core/ServiceError';
+import { PluginSettings, KnowledgeBloomSettings } from '../settings/Settings';
+import { SettingsStateManager } from '../managers/SettingsStateManager';
+import { 
+    SettingsEventMap, 
+    NestedSettingKey,
+    NestedSettingValue,
+    ISettingsHandler
+} from '../types/SettingsTypes';
 
-type SettingsKey = keyof PluginSettings;
-type NestedSettingsKey<T extends SettingsKey> = keyof PluginSettings[T];
+export class SettingsService extends CoreService implements ISettingsHandler {
+    private readonly stateManager: SettingsStateManager;
 
-type DeepPartial<T> = {
-    [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
-};
-
-export class SettingsService {
-    public settings: PluginSettings;
-    public emitter: EventEmitter;
-    public plugin: Plugin;
-    public jsonValidationService: JsonValidationService;
-
-    constructor(plugin: Plugin, initialSettings: PluginSettings) {
-        this.plugin = plugin;
-        this.settings = initialSettings;
-        this.emitter = new EventEmitter();
-        this.jsonValidationService = new JsonValidationService(); // Initialize JsonValidationService
+    constructor(plugin: Plugin) {
+        super('settings-service', 'Settings Service');
+        this.stateManager = new SettingsStateManager(plugin);
     }
 
-    public async loadSettings(): Promise<void> {
-        const data = await this.plugin.loadData();
-        this.settings = this.deepMerge(DEFAULT_SETTINGS, data as DeepPartial<PluginSettings>);
+    protected async initializeInternal(): Promise<void> {
+        try {
+            await this.stateManager.initialize();
+        } catch (error) {
+            throw new ServiceError(
+                this.serviceName,
+                'Failed to initialize settings',
+                error instanceof Error ? error : undefined
+            );
+        }
+    }
+
+    protected async destroyInternal(): Promise<void> {
+        await this.stateManager.destroy();
     }
 
     public getSettings(): PluginSettings {
-        return this.settings;
+        return this.stateManager.getSettings();
     }
 
-    public getSetting<K extends SettingsKey>(key: K): PluginSettings[K] {
-        return this.settings[key];
+    public getSettingSection<K extends keyof PluginSettings>(
+        section: K
+    ): PluginSettings[K] {
+        return this.stateManager.getSettingSection(section);
     }
 
-    public getNestedSetting<K extends SettingsKey, NK extends NestedSettingsKey<K>>(
-        key: K,
-        nestedKey: NK
-    ): PluginSettings[K][NK] {
-        return this.settings[key][nestedKey];
+    public getNestedSetting<
+        K extends keyof PluginSettings,
+        N extends NestedSettingKey<K>
+    >(section: K, key: N): NestedSettingValue<K, N> {
+        return this.stateManager.getNestedSetting(section, key);
     }
 
-    public async updateSettings(newSettings: DeepPartial<PluginSettings>): Promise<void> {
-        this.settings = this.deepMerge(this.settings, newSettings);
-        await this.saveSettings();
-        this.emitter.emit('settingsChanged', this.settings);
-    }
-
-    public async updateSetting<K extends SettingsKey>(
-        key: K,
-        value: PluginSettings[K]
+    public async updateNestedSetting<
+        K extends keyof PluginSettings,
+        N extends NestedSettingKey<K>
+    >(
+        section: K,
+        key: N,
+        value: NestedSettingValue<K, N>
     ): Promise<void> {
-        this.settings[key] = value;
-        await this.saveSettings();
-        this.emitter.emit('settingsChanged', { [key]: value });
+        await this.stateManager.updateNestedSetting(section, key, value);
     }
 
-    public async updateNestedSetting<K extends SettingsKey, NK extends NestedSettingsKey<K>>(
-        key: K,
-        nestedKey: NK,
-        value: PluginSettings[K][NK]
-    ): Promise<void> {
-        this.settings[key][nestedKey] = value;
-        await this.saveSettings();
-        this.emitter.emit('settingsChanged', { [key]: { [nestedKey]: value } });
-    }
-
-    public async updateAIProviderSettings(
-        provider: AIProvider,
-        settings: DeepPartial<PluginSettings['aiProvider']>
-    ): Promise<void> {
-        this.settings.aiProvider = this.deepMerge(this.settings.aiProvider, settings);
-        await this.saveSettings();
-        this.emitter.emit('settingsChanged', { aiProvider: this.settings.aiProvider });
-    }
-
-    public getAIProviderSettings(): PluginSettings['aiProvider'] {
-        return this.settings.aiProvider;
-    }
-
-    public async updateLocalLMStudioSettings(
-        settings: DeepPartial<PluginSettings['localLMStudio']>
-    ): Promise<void> {
-        this.settings.localLMStudio = this.deepMerge(this.settings.localLMStudio, settings);
-        await this.saveSettings();
-        this.emitter.emit('settingsChanged', { localLMStudio: this.settings.localLMStudio });
-    }
-
-    public getLocalLMStudioSettings(): PluginSettings['localLMStudio'] {
-        return this.settings.localLMStudio;
-    }
-
-    public getKnowledgeBloomSettings(): KnowledgeBloomSettings {
-        return this.settings.knowledgeBloom;
-    }
-
+    /**
+     * Update specific Knowledge Bloom settings
+     */
     public async updateKnowledgeBloomSettings(
-        settings: DeepPartial<KnowledgeBloomSettings>
+        settings: Partial<KnowledgeBloomSettings>
     ): Promise<void> {
-        this.settings.knowledgeBloom = this.deepMerge(this.settings.knowledgeBloom, settings);
-        await this.saveSettings();
-        this.emitter.emit('settingsChanged', { knowledgeBloom: this.settings.knowledgeBloom });
-    }
-
-    public async updateKnowledgeBloomSetting<K extends keyof KnowledgeBloomSettings>(
-        key: K,
-        value: KnowledgeBloomSettings[K]
-    ): Promise<void> {
-        this.settings.knowledgeBloom[key] = value;
-        await this.saveSettings();
-        this.emitter.emit('settingsChanged', { knowledgeBloom: { [key]: value } });
-    }
-
-    public async updateTags(newTags: Tag[]): Promise<void> {
-        const existingTags = this.settings.tags.customTags || [];
-        const mergedTags = [...existingTags];
-
-        for (const newTag of newTags) {
-            const existingIndex = mergedTags.findIndex(t => t.name === newTag.name);
-            if (existingIndex !== -1) {
-                mergedTags[existingIndex] = { ...mergedTags[existingIndex], ...newTag };
-            } else {
-                mergedTags.push(newTag);
+        const currentSettings = this.getSettings();
+        const updatedSettings = {
+            ...currentSettings,
+            knowledgeBloom: {
+                ...currentSettings.knowledgeBloom,
+                ...settings
             }
-        }
-
-        this.settings.tags.customTags = mergedTags;
-        await this.saveSettings();
-        this.emitter.emit('settingsChanged', { tags: { customTags: mergedTags } });
+        };
+        await this.stateManager.saveSettings;
     }
 
-    public async resetToDefault(): Promise<void> {
-        this.settings = { ...DEFAULT_SETTINGS };
-        await this.saveSettings();
-        this.emitter.emit('settingsReset');
+    /**
+     * Update plugin settings
+     */
+    public async updateSettings(settings: Partial<PluginSettings>): Promise<void> {
+        const currentSettings = this.getSettings();
+        const updatedSettings = {
+            ...currentSettings,
+            ...settings
+        };
+        await this.stateManager.saveSettings;
     }
 
-    public onSettingsChanged(listener: (settings: Partial<PluginSettings>) => void): void {
-        this.emitter.on('settingsChanged', listener);
-    }
-
-    public onSettingsReset(listener: () => void): void {
-        this.emitter.on('settingsReset', listener);
-    }
-
-    public async saveSettings(): Promise<void> {
-        await this.plugin.saveData(this.settings);
-    }
-
-    public deepMerge<T>(target: T, source: DeepPartial<T>): T {
-        if (!this.isObject(target) || !this.isObject(source)) {
-            return source as T;
-        }
-    
-        const output = { ...target };
-        for (const key in source) {
-            if (source.hasOwnProperty(key)) {
-                if (this.isObject(source[key]) && this.isObject((target as any)[key])) {
-                    (output as any)[key] = this.deepMerge(
-                        (target as any)[key],
-                        source[key] as DeepPartial<T[keyof T]>
-                    );
-                } else if (source[key] !== undefined) {
-                    (output as any)[key] = source[key];
-                }
-            }
-        }
-        return output;
-    }
-    
-    public isObject(item: unknown): item is Record<string, unknown> {
-        return item !== null && typeof item === 'object' && !Array.isArray(item);
-    }
-
-    // Getter for JsonValidationService
-    public getJsonValidationService(): JsonValidationService {
-        return this.jsonValidationService;
+    public on<K extends keyof SettingsEventMap>(
+        event: K,
+        listener: SettingsEventMap[K]
+    ): void {
+        this.stateManager.on(event, listener);
     }
 }

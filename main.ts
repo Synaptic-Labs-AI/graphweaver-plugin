@@ -1,372 +1,427 @@
-import { App, Plugin, Notice, Menu, TFile, WorkspaceLeaf } from 'obsidian';
-import { PluginSettings, DEFAULT_SETTINGS } from './src/settings/Settings';
-import { AIService } from './src/services/AIService';
-import { SettingsService } from './src/services/SettingsService';
+// main.ts
+
+import { Plugin, App, Notice } from 'obsidian';
+import { ServiceManager } from './src/managers/ServiceManager';
+import { InitializationManager } from './src/managers/InitializationManager';
+import { EventManager } from './src/managers/EventManager';
+import { ErrorManager } from './src/managers/ErrorManager';
+import { AIService } from './src/services/ai/AIService';
 import { DatabaseService } from './src/services/DatabaseService';
-import { AutoGenerateService } from './src/services/AutoGenerateService';
-import { JsonValidationService } from './src/services/JsonValidationService';
-import { ProcessingStatusBar } from './src/components/status/ProcessingStatusBar';
+import { SettingsService } from './src/services/SettingsService';
+import { FileManager } from './src/managers/FileManager';
+import { PersistentStateManager } from './src/managers/StateManager';
 import { BatchProcessor } from './src/generators/BatchProcessor';
-import { GraphWeaverSettingTab } from './src/settings/GraphWeaverSettingTab';
-import { FileProcessingResult } from './src/models/ProcessingTypes';
+import { JsonValidationService } from './src/services/JsonValidationService';
+import { FileProcessorService } from './src/services/file/FileProcessorService';
+import { FileScannerService } from './src/services/file/FileScannerService';
+import { AIOperationManager } from './src/services/ai/AIOperationManager';
+import { AdapterRegistry } from './src/services/ai/AdapterRegistry';
+import { GeneratorFactory } from './src/services/ai/GeneratorFactory';
+import { MetricsTracker } from './src/services/ai/MetricsTracker';
+import { OperationEventEmitter } from './src/services/ai/OperationEventEmitter';
+import { QueueManagerService } from './src/services/ai/QueueManagerService';
+import { GraphWeaverSettingTab } from 'src/settings/GraphWeaverSettingTab';
+import { UIManager } from 'src/managers/UIManager';
+import { WikilinkTextProcessor } from 'src/services/WikilinkTextProcessor';
 
 /**
- * Main plugin class for GraphWeaver
- * Manages plugin lifecycle and coordinates services
+ * Main plugin class handling initialization and lifecycle management
  */
 export default class GraphWeaverPlugin extends Plugin {
-    public settings: PluginSettings;
-    public settingsService: SettingsService;
-    public aiService: AIService;
-    public databaseService: DatabaseService;
-    public autoGenerateService: AutoGenerateService;
-    public jsonValidationService: JsonValidationService;
-    public batchProcessor: BatchProcessor;
-    public statusBar: ProcessingStatusBar | null = null;
-    public hasProcessedVaultStartup: boolean = false;
+    private initManager: InitializationManager;
+    private serviceManager: ServiceManager;
+    private eventManager: EventManager;
+    private errorManager: ErrorManager;
+    private jsonValidationService: JsonValidationService;
+    private uiManager?: UIManager;
+    private wikilinkProcessor: WikilinkTextProcessor;
 
-    /**
-     * Initialize plugin on load
-     */
+    constructor(app: App, manifest: any) {
+        super(app, manifest);
+        console.log('Initializing GraphWeaver Plugin');
+
+        // Initialize core utilities
+        this.errorManager = new ErrorManager();
+        this.serviceManager = new ServiceManager(this.app);
+        this.eventManager = new EventManager(app);
+        this.jsonValidationService = new JsonValidationService();
+
+        // Initialize manager after core services
+        this.initManager = new InitializationManager(
+            this,
+            this.app,
+            this.serviceManager,
+            this.errorManager
+        );
+    }
+
     async onload(): Promise<void> {
-        console.log('Loading GraphWeaver plugin');
-        
         try {
-            await this.initializeServices();
-            await this.initializeUI();
-            this.addPluginFunctionality();
-            console.log('GraphWeaver plugin loaded successfully');
+            console.log('Loading GraphWeaver Plugin');
+            this.eventManager.register('layout-ready', this.handleLayoutReady.bind(this));
+            this.app.workspace.containerEl.addClass('graphweaver-plugin');
+            await this.registerServices(); // Only registering services here
+
+            // UIManager will be initialized in handleLayoutReady
+
         } catch (error) {
-            console.error('Error loading GraphWeaver plugin:', error);
-            new Notice('Error loading GraphWeaver plugin. Check console for details.');
+            console.error('Failed to load plugin:', error);
+            new Notice('Failed to load GraphWeaver plugin. Check console for details.');
         }
     }
 
     /**
-     * Initialize all plugin services
+     * Register all services in dependency order
      */
-    public async initializeServices(): Promise<void> {
-        await this.loadSettings();
-        
-        this.settingsService = new SettingsService(this, this.settings);
-        this.jsonValidationService = new JsonValidationService();
-        this.databaseService = new DatabaseService();
-        
-        await this.databaseService.load(this.loadData.bind(this));
-        
-        this.aiService = new AIService(
-            this.app,
-            this.settingsService,
-            this.jsonValidationService,
-            this.databaseService
-        );
+    private async registerServices(): Promise<void> {
+        try {
+            console.log('Registering services...');
 
-        this.batchProcessor = new BatchProcessor(
-            this.aiService.getCurrentAdapter(),
-            this.settingsService,
-            this.aiService.frontMatterGenerator,
-            this.aiService.wikilinkGenerator,
-            this.databaseService,
-            this.app
-        );
+            // Level 1: Core Services (no dependencies)
+            this.registerStateManager();
+            this.registerDatabaseService();
+            this.registerFileScannerService();
+            this.registerWikilinkTextProcessor();
 
-        this.autoGenerateService = new AutoGenerateService(
-            this.app,
-            this.app.vault,
-            this.aiService,
-            this.settingsService,
-            this.databaseService
-        );
+            // Level 2: Services dependent on core
+            this.registerSettingsService();
+
+            // Level 3: AI Infrastructure
+            await this.registerAIInfrastructure();
+
+            // Level 4: File Processing
+            await this.registerFileProcessingServices();
+
+            // Level 5: High-level Services
+            await this.registerHighLevelServices();
+
+            // Level 6: Generator Factory
+            // Removed the call to registerGeneratorFactory() as it's already handled in registerAIInfrastructure()
+
+        } catch (error) {
+            console.error('Service registration failed:', error);
+            throw error;
+        }
     }
 
     /**
-     * Initialize plugin UI components
+     * Register core database service
      */
-    private async initializeUI(): Promise<void> {
-        const statusBarEl = this.addStatusBarItem();
-        this.statusBar = new ProcessingStatusBar(
-            this.app,
-            statusBarEl,
-            this.batchProcessor.eventEmitter,
-            this.aiService,
-            this.settingsService,
-            this.databaseService  // Add DatabaseService
-        );
+    private registerDatabaseService(): void {
+        this.serviceManager.registerService({
+            id: 'database',
+            type: 'factory',
+            factory: () => new DatabaseService(
+                async () => {
+                    const data = await this.loadData();
+                    return data?.database || null;
+                },
+                async (data) => {
+                    const currentData = await this.loadData() || {};
+                    await this.saveData({ ...currentData, database: data });
+                }
+            ),
+            dependencies: ['state'], // Added 'state' as a dependency
+        });
     }
 
     /**
-     * Add plugin functionality
+     * Register state management service
      */
-    public addPluginFunctionality(): void {
-        this.addSettingTab(new GraphWeaverSettingTab(this.app, this));
-        this.addRibbonIcon('brain-circuit', 'GraphWeaver', this.showPluginMenu.bind(this));
-        this.addCommands();
-        this.registerEvents();
+    private registerStateManager(): void {
+        this.serviceManager.registerService({
+            id: 'state',
+            type: 'factory',
+            factory: () => new PersistentStateManager(
+                undefined,
+                'graphweaver_state'
+            ),
+        });
     }
 
     /**
-     * Register plugin events
+     * Register settings service
      */
-    public registerEvents(): void {
-        // Only register layout-change event for startup
-        this.registerEvent(
-            this.app.workspace.on('layout-change', this.onLayoutChange.bind(this))
-        );
+    private registerSettingsService(): void {
+        this.serviceManager.registerService({
+            id: 'settings',
+            type: 'factory',
+            factory: () => new SettingsService(this),
+            dependencies: ['database', 'state'],
+        });
     }
 
     /**
-     * Add plugin commands
+     * Register file scanner service
      */
-    public addCommands(): void {
+    private registerFileScannerService(): void {
+        this.serviceManager.registerService({
+            id: 'file-scanner',
+            type: 'factory',
+            factory: () => new FileScannerService(this.app.vault),
+        });
+    }
+
+    /**
+     * Register WikilinkTextProcessor service
+     */
+    private registerWikilinkTextProcessor(): void {
+        this.serviceManager.registerService({
+            id: 'wikilink-text-processor',
+            type: 'factory',
+            factory: () => new WikilinkTextProcessor(),
+        });
+    }
+
+    /**
+     * Register AI infrastructure services
+     */
+    private async registerAIInfrastructure(): Promise<void> {
+        // Register Metrics Tracker
+        this.serviceManager.registerService({
+            id: 'metrics-tracker',
+            type: 'factory',
+            factory: () => new MetricsTracker(),
+        });
+
+        // Register Operation Event Emitter
+        this.serviceManager.registerService({
+            id: 'operation-emitter',
+            type: 'factory',
+            factory: () => new OperationEventEmitter(),
+        });
+
+        // Register Adapter Registry - Moved before generator-factory
+        this.serviceManager.registerService({
+            id: 'adapter-registry',
+            type: 'factory',
+            factory: () => new AdapterRegistry(
+                this.serviceManager.getService<PersistentStateManager>('state'),
+                this.serviceManager.getService<SettingsService>('settings'),
+                this.jsonValidationService
+            ),
+            dependencies: ['state', 'settings'],
+        });
+
+        // Register Generator Factory
+        this.serviceManager.registerService({
+            id: 'generator-factory',
+            type: 'factory',
+            factory: () => new GeneratorFactory(
+                this.app,
+                this.serviceManager.getService<PersistentStateManager>('state'),
+                this.serviceManager.getService<SettingsService>('settings'),
+                this.serviceManager.getService<AdapterRegistry>('adapter-registry'),
+                this.serviceManager.getService<WikilinkTextProcessor>('wikilink-text-processor')
+            ),
+            dependencies: ['state', 'settings', 'adapter-registry', 'wikilink-text-processor'],
+        });
+
+        // Register Queue Manager
+        this.serviceManager.registerService({
+            id: 'queue-manager',
+            type: 'factory',
+            factory: () => {
+                const operationEmitter = this.serviceManager.getService<OperationEventEmitter>('operation-emitter');
+                const metricsTracker = this.serviceManager.getService<MetricsTracker>('metrics-tracker');
+
+                return new QueueManagerService(
+                    async (operation) => {
+                        await operation.execute();
+                        operationEmitter.emitOperationComplete({
+                            type: operation.type,
+                            startTime: Date.now(),
+                            success: true,
+                        });
+                        metricsTracker.trackOperation({
+                            type: operation.type,
+                            startTime: Date.now(),
+                            success: true,
+                        });
+                    }
+                );
+            },
+            dependencies: ['operation-emitter', 'metrics-tracker'],
+        });
+
+        // Register Operation Manager
+        this.serviceManager.registerService({
+            id: 'operation-manager',
+            type: 'factory',
+            factory: () => new AIOperationManager(
+                this.serviceManager.getService<PersistentStateManager>('state'),
+                this.serviceManager.getService<AdapterRegistry>('adapter-registry'),
+                this.serviceManager.getService<GeneratorFactory>('generator-factory')
+            ),
+            dependencies: ['state', 'adapter-registry', 'generator-factory'],
+        });
+
+        // Register AI Service
+        this.serviceManager.registerService({
+            id: 'ai',
+            type: 'factory',
+            factory: () => new AIService(
+                this.app,
+                this.serviceManager.getService<AIOperationManager>('operation-manager'),
+                this.serviceManager.getService<SettingsService>('settings'),
+                this.jsonValidationService,
+                this.serviceManager.getService<DatabaseService>('database'),
+                this.serviceManager.getService<PersistentStateManager>('state'),
+                this.serviceManager.getService<WikilinkTextProcessor>('wikilink-text-processor')
+            ),
+            dependencies: ['operation-manager', 'settings', 'database', 'state', 'wikilink-text-processor'],
+        });
+    }
+
+    /**
+     * Register file processing related services
+     */
+    private async registerFileProcessingServices(): Promise<void> {
+        // Register File Processor
+        this.serviceManager.registerService({
+            id: 'file-processor',
+            type: 'factory',
+            factory: () => new FileProcessorService(
+                this.serviceManager.getService<PersistentStateManager>('state'),
+                this.app,
+                this.serviceManager.getService<AIService>('ai'),
+                this.serviceManager.getService<SettingsService>('settings'),
+                this.serviceManager.getService<DatabaseService>('database'),
+                this.serviceManager.getService<FileScannerService>('file-scanner'),
+                this.serviceManager.getService<GeneratorFactory>('generator-factory') // Inject GeneratorFactory
+            ),
+            dependencies: ['state', 'ai', 'settings', 'database', 'file-scanner', 'generator-factory'], // Add 'generator-factory' dependency
+        });
+
+        // Register Batch Processor
+        this.serviceManager.registerService({
+            id: 'batch-processor',
+            type: 'factory',
+            factory: () => new BatchProcessor(
+                this.app,
+                this.serviceManager.getService<FileProcessorService>('file-processor'),
+                this.serviceManager.getService<AIOperationManager>('operation-manager')
+                    .getOperationExecutor(), // Ensure this method returns an appropriate executor
+                this.serviceManager.getService<GeneratorFactory>('generator-factory')
+            ),
+            dependencies: ['file-processor', 'operation-manager', 'generator-factory'],
+        });
+    }
+
+    /**
+     * Register high-level services
+     */
+    private async registerHighLevelServices(): Promise<void> {
+        // Register File Manager
+        this.serviceManager.registerService({
+            id: 'file',
+            type: 'factory',
+            factory: () => new FileManager(
+                this,
+                this.app,
+                this.serviceManager.getService<PersistentStateManager>('state'),
+                this.serviceManager.getService<SettingsService>('settings'),
+                this.serviceManager.getService<DatabaseService>('database'),
+                this.serviceManager.getService<AIService>('ai'),
+                this.serviceManager.getService<FileProcessorService>('file-processor'),
+                this.serviceManager.getService<GeneratorFactory>('generator-factory'),
+                this.serviceManager.getService<FileScannerService>('file-scanner')
+            ),
+            dependencies: ['state', 'settings', 'database', 'ai', 'file-processor', 'generator-factory', 'file-scanner'],
+        });
+    }
+
+    private async handleLayoutReady(): Promise<void> {
+        try {
+            await this.initManager.initialize(); 
+
+            // Initialize UI Manager
+            this.uiManager = new UIManager(
+                this,
+                this.app,
+                this.serviceManager.getService<DatabaseService>('database')
+            );
+            await this.uiManager.initialize();
+
+            // Register commands and settings (only once!)
+            this.registerCommands();
+            this.addSettingTab(new GraphWeaverSettingTab(this.app, this));
+
+            console.log('GraphWeaver Plugin is now active and ready to use.');
+        } catch (error) {
+            console.error('Failed to initialize plugin:', error);
+            new Notice('Failed to initialize GraphWeaver plugin');
+        }
+    }
+
+    async onunload(): Promise<void> {
+        console.log('Unloading GraphWeaver Plugin');
+        this.app.workspace.containerEl.removeClass('graphweaver-plugin');
+        this.eventManager.cleanup();
+        await this.serviceManager.destroy();
+
+        // Destroy UIManager
+        if (this.uiManager) {
+            await this.uiManager.destroy();
+        }
+    }
+
+    // Public service access methods
+    public getDatabaseService = (): DatabaseService =>
+        this.serviceManager.getService('database');
+
+    public getSettingsService = (): SettingsService =>
+        this.serviceManager.getService('settings');
+
+    public getAIService = (): AIService =>
+        this.serviceManager.getService('ai');
+
+    public getFileManager = (): FileManager =>
+        this.serviceManager.getService('file');
+
+    public getStateManager = (): PersistentStateManager =>
+        this.serviceManager.getService('state');
+
+    public getBatchProcessor = (): BatchProcessor =>
+        this.serviceManager.getService('batch-processor');
+
+    public getOperationManager = (): AIOperationManager =>
+        this.serviceManager.getService('operation-manager');
+
+    public getFileProcessor = (): FileProcessorService =>
+        this.serviceManager.getService('file-processor');
+
+    public getFileScanner = (): FileScannerService =>
+        this.serviceManager.getService('file-scanner');
+
+    /**
+     * Register Obsidian commands (optional if handled by UIManager)
+     */
+    private registerCommands(): void {
+        // If UIManager handles commands, you can remove or keep this
+        // Example of registering a command manually
         this.addCommand({
             id: 'generate-frontmatter',
-            name: 'Generate Frontmatter',
-            callback: this.generateFrontmatter.bind(this),
+            name: 'Generate Front Matter',
+            callback: () => this.getFileManager().generateFrontmatter(),
         });
 
         this.addCommand({
             id: 'generate-wikilinks',
             name: 'Generate Wikilinks',
-            callback: this.generateWikilinks.bind(this),
+            callback: () => this.getFileManager().generateWikilinks(),
         });
 
         this.addCommand({
             id: 'generate-knowledge-bloom',
             name: 'Generate Knowledge Bloom',
-            callback: this.generateKnowledgeBloom.bind(this),
+            callback: () => this.getFileManager().generateKnowledgeBloom(),
         });
 
         this.addCommand({
-            id: 'toggle-auto-generate',
-            name: 'Toggle Auto-Generate',
-            callback: this.toggleAutoGenerate.bind(this),
+            id: 'batch-process-files',
+            name: 'Batch Process Files',
+            callback: () => this.getFileManager().openBatchProcessor(),
         });
-    }
-
-    /**
-     * Handle layout changes - only triggers vault startup processing once
-     */
-    public onLayoutChange(): void {
-        if (this.app.workspace.layoutReady && !this.hasProcessedVaultStartup) {
-            this.onVaultOpen();
-        }
-    }
-
-    /**
-     * Handle vault opening - processes files only on initial startup
-     */
-    public async onVaultOpen(): Promise<void> {
-        if (this.hasProcessedVaultStartup) {
-            return;
-        }
-
-        if (this.settings.frontMatter.autoGenerate) {
-            console.log('Processing vault on startup');
-            await this.autoGenerateService.runAutoGenerate();
-            this.hasProcessedVaultStartup = true;
-        }
-    }
-
-    /**
-     * Show plugin menu
-     */
-    public showPluginMenu(evt: MouseEvent): void {
-        const menu = new Menu();
-        
-        menu.addItem((item) => item
-            .setTitle('Generate Frontmatter')
-            .setIcon('file-plus')
-            .onClick(this.generateFrontmatter.bind(this)));
-        
-        menu.addItem((item) => item
-            .setTitle('Generate Wikilinks')
-            .setIcon('link')
-            .onClick(this.generateWikilinks.bind(this)));
-        
-        menu.addItem((item) => item
-            .setTitle('Generate Knowledge Bloom')
-            .setIcon('flower')
-            .onClick(this.generateKnowledgeBloom.bind(this)));
-    
-        menu.addSeparator();
-    
-        menu.addItem((item) => item
-            .setTitle(this.settings.frontMatter.autoGenerate ? 'Disable Auto-Generate' : 'Enable Auto-Generate')
-            .setIcon(this.settings.frontMatter.autoGenerate ? 'toggle-right' : 'toggle-left')
-            .onClick(this.toggleAutoGenerate.bind(this)));
-        
-        menu.showAtMouseEvent(evt);
-    }
-
-    /**
-     * Toggle auto-generate functionality
-     */
-    public async toggleAutoGenerate(): Promise<void> {
-        this.settings.frontMatter.autoGenerate = !this.settings.frontMatter.autoGenerate;
-        await this.saveSettings();
-        
-        new Notice(
-            this.settings.frontMatter.autoGenerate
-                ? 'Auto-generate enabled'
-                : 'Auto-generate disabled'
-        );
-
-        // Only run auto-generate if it was just enabled and startup hasn't been processed
-        if (this.settings.frontMatter.autoGenerate && !this.hasProcessedVaultStartup) {
-            await this.autoGenerateService.runAutoGenerate();
-            this.hasProcessedVaultStartup = true;
-        }
-    }
-
-    /**
-     * Process a single file
-     */
-    public async processFile(
-        file: TFile,
-        generateFrontMatter: boolean,
-        generateWikilinks: boolean
-    ): Promise<FileProcessingResult> {
-        const result = await this.batchProcessor.generate({
-            files: [file],
-            generateFrontMatter,
-            generateWikilinks
-        });
-        return result.fileResults[0];
-    }
-
-    /**
-     * Generate front matter for active file
-     */
-    public async generateFrontmatter(): Promise<void> {
-        const activeFile = this.app.workspace.getActiveFile();
-        if (!activeFile) {
-            new Notice('No active file. Please open a file to generate frontmatter.');
-            return;
-        }
-
-        try {
-            new Notice('Generating frontmatter...');
-            const result = await this.processFile(activeFile, true, false);
-            
-            if (result.success) {
-                new Notice('Frontmatter generated successfully!');
-            } else if (result.error) {
-                new Notice(`Error: ${result.error}`);
-            }
-        } catch (error) {
-            console.error('Error generating frontmatter:', error);
-            new Notice('Error generating frontmatter. Check console for details.');
-        }
-    }
-
-    /**
-     * Generate wikilinks for active file
-     */
-    public async generateWikilinks(): Promise<void> {
-        const activeFile = this.app.workspace.getActiveFile();
-        if (!activeFile) {
-            new Notice('No active file. Please open a file to generate wikilinks.');
-            return;
-        }
-
-        try {
-            new Notice('Generating wikilinks...');
-            const result = await this.processFile(activeFile, false, true);
-            
-            if (result.success) {
-                new Notice('Wikilinks generated successfully!');
-            } else if (result.error) {
-                new Notice(`Error: ${result.error}`);
-            }
-        } catch (error) {
-            console.error('Error generating wikilinks:', error);
-            new Notice('Error generating wikilinks. Check console for details.');
-        }
-    }
-
-    /**
-     * Generate knowledge bloom for active file
-     */
-    public async generateKnowledgeBloom(): Promise<void> {
-        const activeFile = this.app.workspace.getActiveFile();
-        if (!activeFile) {
-            new Notice('No active file. Please open a file to generate Knowledge Bloom.');
-            return;
-        }
-
-        try {
-            new Notice('Generating Knowledge Bloom...');
-            const result = await this.aiService.generateKnowledgeBloom(activeFile);
-            
-            for (const note of result.generatedNotes) {
-                await this.createOrUpdateNote(note.title, note.content);
-            }
-
-            new Notice(`Generated ${result.generatedNotes.length} new notes!`);
-        } catch (error) {
-            console.error('Error generating Knowledge Bloom:', error);
-            new Notice('Error generating Knowledge Bloom. Check console for details.');
-        }
-    }
-
-    /**
-     * Create or update a note
-     */
-    public async createOrUpdateNote(title: string, content: string): Promise<void> {
-        const filePath = `${title}.md`;
-        const file = this.app.vault.getAbstractFileByPath(filePath);
-        
-        if (file instanceof TFile) {
-            await this.app.vault.modify(file, content);
-        } else {
-            await this.app.vault.create(filePath, content);
-        }
-    }
-
-    /**
-     * Load plugin settings
-     */
-    public async loadSettings(): Promise<void> {
-        const data = await this.loadData();
-        this.settings = { ...DEFAULT_SETTINGS, ...data };
-    }
-
-    /**
-     * Save plugin settings
-     */
-    public async saveSettings(): Promise<void> {
-        await this.saveData(this.settings);
-        await this.settingsService.updateSettings(this.settings);
-    }
-
-    /**
-     * Clean up on plugin unload
-     */
-    async onunload(): Promise<void> {
-        console.log('Unloading GraphWeaver plugin');
-        
-        await this.databaseService.saveData(this.saveData.bind(this));
-        
-        if (this.autoGenerateService) {
-            this.autoGenerateService.destroy();
-        }
-        if (this.statusBar) {
-            this.statusBar.destroy();
-        }
-
-        this.hasProcessedVaultStartup = false;
-    }
-
-    // Public getters for plugin state
-    public getSettings(): PluginSettings {
-        return this.settings;
-    }
-
-    public getSettingsService(): SettingsService {
-        return this.settingsService;
-    }
-
-    public getAIService(): AIService {
-        return this.aiService;
     }
 }

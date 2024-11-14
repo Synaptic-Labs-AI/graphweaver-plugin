@@ -8,14 +8,14 @@ import { JsonValidationService } from '../services/JsonValidationService';
  * Handles communication with OpenAI's API for various models
  */
 export class OpenAIAdapter implements AIAdapter {
-    private apiKey: string;
-    private models: AIModel[];
+    public apiKey: string;
+    public models: AIModel[];
 
     constructor(
-        private settingsService: SettingsService,
-        private jsonValidationService: JsonValidationService
+        public settingsService: SettingsService,
+        public jsonValidationService: JsonValidationService
     ) {
-        const aiProviderSettings = this.settingsService.getSetting('aiProvider');
+        const aiProviderSettings = this.settingsService.getSettingSection('aiProvider');
         this.apiKey = aiProviderSettings.apiKeys[AIProvider.OpenAI] || '';
         this.models = AIModelMap[AIProvider.OpenAI];
     }
@@ -94,7 +94,7 @@ export class OpenAIAdapter implements AIAdapter {
     /**
      * Make a request to the OpenAI API
      */
-    private async makeApiRequest(params: {
+    public async makeApiRequest(params: {
         model: string;
         prompt: string;
         temperature: number;
@@ -142,7 +142,7 @@ export class OpenAIAdapter implements AIAdapter {
     /**
      * Extract content from API response
      */
-    private extractContentFromResponse(response: RequestUrlResponse): string {
+    public extractContentFromResponse(response: RequestUrlResponse): string {
         if (!response.json?.choices?.[0]?.message?.content) {
             throw new Error('Invalid response format from OpenAI API');
         }
@@ -152,7 +152,7 @@ export class OpenAIAdapter implements AIAdapter {
     /**
      * Get temperature setting
      */
-    private getTemperature(settings: any): number {
+    public getTemperature(settings: any): number {
         return (settings.advanced?.temperature >= 0 && settings.advanced?.temperature <= 1)
             ? settings.advanced.temperature
             : 0.7;
@@ -161,14 +161,14 @@ export class OpenAIAdapter implements AIAdapter {
     /**
      * Get max tokens setting
      */
-    private getMaxTokens(settings: any): number {
+    public getMaxTokens(settings: any): number {
         return (settings.advanced?.maxTokens > 0) ? settings.advanced.maxTokens : 1000;
     }
 
     /**
      * Handle errors in API calls
      */
-    private handleError(error: unknown): AIResponse {
+    public handleError(error: unknown): AIResponse {
         console.error('Error in OpenAI API call:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         new Notice(`OpenAI API Error: ${errorMessage}`);

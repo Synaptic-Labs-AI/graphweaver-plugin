@@ -1,43 +1,60 @@
-// src/components/modals/BatchProcessorModal.ts
-
-import { App, Modal, Notice, TFile, TFolder } from "obsidian";
-import { AIService } from "../../services/AIService";
+import { App, Modal, Notice, TFile, TFolder, setIcon, ButtonComponent } from "obsidian";
+import { AIService } from "../../services/ai/AIService";
 import { SettingsService } from "../../services/SettingsService";
+import { AIGenerationService } from "src/services/ai/AIGenerationService";
 
 export class BatchProcessorModal extends Modal {
-    public aiService: AIService;
-    public settingsService: SettingsService;
+    private generationService: AIGenerationService;
 
-    constructor(app: App, aiService: AIService, settingsService: SettingsService) {
+    constructor(
+        app: App,
+        private aiService: AIService,
+        private settingsService: SettingsService
+    ) {
         super(app);
-        this.aiService = aiService;
-        this.settingsService = settingsService;
-    }
-
-    onOpen() {
-        this.renderContent();
-    }
-
-    onClose() {
-        this.contentEl.empty();
+        this.containerEl.addClass('graphweaver-modal');
+        // Get the generation service from AIService
+        this.generationService = this.aiService.getGenerationService();
     }
 
     public renderContent(): void {
         const { contentEl } = this;
         contentEl.empty();
+        contentEl.addClass('status-history-modal');
 
-        contentEl.createEl("h2", { text: "Select Files/Folders to Process" });
+        // Create modal content with proper structure
+        const modalContent = contentEl.createDiv({ cls: 'modal-content' });
 
-        const fileExplorer = contentEl.createDiv({ cls: "file-explorer" });
+        // Create header
+        this.createHeader(modalContent);
 
-        // Start rendering from the contents of the root folder
+        // Create scrollable container
+        const scrollableContent = modalContent.createDiv({ cls: 'modal-scrollable-content' });
+
+        // File explorer
+        const fileExplorer = scrollableContent.createDiv({ 
+            cls: 'gw-accordion history-table-container' 
+        });
+
+        // Render vault structure
         this.renderVaultStructure(fileExplorer);
 
-        // Add confirm and cancel buttons
-        this.createButtons(contentEl);
+        // Create button container
+        const buttonContainer = modalContent.createDiv({ 
+            cls: 'modal-action-buttons gw-button-container' 
+        });
+        this.createButtons(buttonContainer);
     }
 
-    public renderVaultStructure(containerEl: HTMLElement): void {
+    private createHeader(containerEl: HTMLElement): void {
+        const header = containerEl.createDiv({ cls: 'modal-header' });
+        header.createEl('h2', { 
+            text: 'Select Files/Folders to Process',
+            cls: 'modal-header-title'
+        });
+    }
+
+    private renderVaultStructure(containerEl: HTMLElement): void {
         const rootFolder = this.app.vault.getRoot();
         rootFolder.children.forEach((child) => {
             if (child instanceof TFolder) {
@@ -48,11 +65,11 @@ export class BatchProcessorModal extends Modal {
         });
     }
 
-    public renderFolder(containerEl: HTMLElement, folder: TFolder): void {
+    private renderFolder(containerEl: HTMLElement, folder: TFolder): void {
         const folderEl = this.createFolderElement(folder);
         containerEl.appendChild(folderEl);
 
-        const contentEl = folderEl.querySelector('.folder-content') as HTMLElement;
+        const contentEl = folderEl.querySelector('.gw-accordion-content') as HTMLElement;
         folder.children.forEach((child) => {
             if (child instanceof TFolder) {
                 this.renderFolder(contentEl, child);
@@ -62,84 +79,106 @@ export class BatchProcessorModal extends Modal {
         });
     }
 
-    public createFolderElement(folder: TFolder): HTMLElement {
-        const folderEl = document.createElement("div");
-        folderEl.className = "folder";
+    private createFolderElement(folder: TFolder): HTMLElement {
+        const folderEl = document.createElement('div');
+        folderEl.className = 'gw-accordion';
+        folderEl.setAttribute('data-path', folder.path);
 
-        const nameEl = folderEl.createDiv({ cls: "folder-name" });
+        // Create header
+        const headerEl = folderEl.createDiv({ cls: 'gw-accordion-header' });
+        const titleWrapper = headerEl.createDiv({ cls: 'gw-accordion-title-wrapper' });
+
+        // Checkbox
+        const checkbox = titleWrapper.createEl('input', {
+            type: 'checkbox',
+            cls: 'gw-checkbox folder-checkbox'
+        });
 
         // Folder icon
-        nameEl.createSpan({ cls: "icon folder-icon", text: "📁" });
+        const iconEl = titleWrapper.createDiv({ cls: 'gw-accordion-icon' });
+        setIcon(iconEl, 'folder');
 
-        const checkbox = nameEl.createEl("input", { type: "checkbox" });
-        checkbox.className = "folder-checkbox";
+        // Folder name
+        titleWrapper.createSpan({ 
+            text: folder.name,
+            cls: 'gw-accordion-title'
+        });
 
-        nameEl.createSpan({ text: folder.name });
+        // Toggle icon
+        const toggleIcon = headerEl.createDiv({ cls: 'gw-accordion-toggle' });
+        setIcon(toggleIcon, 'chevron-right');
 
-        const contentEl = folderEl.createDiv({ cls: "folder-content" });
+        // Content container
+        const contentEl = folderEl.createDiv({ cls: 'gw-accordion-content' });
 
-        // Store folder path
-        folderEl.setAttribute("data-path", folder.path);
-
-        // Toggle folder open/closed
-        nameEl.addEventListener("click", (e) => {
+        // Toggle handler
+        headerEl.addEventListener('click', (e) => {
             if (e.target !== checkbox) {
-                folderEl.classList.toggle("open");
+                folderEl.classList.toggle('gw-accordion-open');
             }
         });
 
-        // Folder checkbox change handler
-        checkbox.addEventListener("change", () => this.handleFolderCheckboxChange(checkbox));
+        // Checkbox handler
+        checkbox.addEventListener('change', () => this.handleFolderCheckboxChange(checkbox));
 
         return folderEl;
     }
 
-    public createFileElement(file: TFile): HTMLElement {
-        const fileEl = document.createElement("div");
-        fileEl.className = "file";
+    private createFileElement(file: TFile): HTMLElement {
+        const fileEl = document.createElement('div');
+        fileEl.className = 'gw-accordion-item';
+        fileEl.setAttribute('data-path', file.path);
+
+        const contentWrapper = fileEl.createDiv({ cls: 'gw-accordion-item-content' });
+
+        // Checkbox
+        const checkbox = contentWrapper.createEl('input', {
+            type: 'checkbox',
+            cls: 'gw-checkbox file-checkbox'
+        });
 
         // File icon
-        fileEl.createSpan({ cls: "icon file-icon", text: "📄" });
+        const iconEl = contentWrapper.createDiv({ cls: 'gw-accordion-icon' });
+        setIcon(iconEl, 'file-text');
 
-        const checkbox = fileEl.createEl("input", { type: "checkbox" });
-        checkbox.className = "file-checkbox";
+        // File name
+        contentWrapper.createSpan({ 
+            text: file.name,
+            cls: 'gw-accordion-item-title'
+        });
 
-        fileEl.createSpan({ text: file.name });
-
-        // Store file path
-        fileEl.setAttribute("data-path", file.path);
-
-        // File checkbox change handler
-        checkbox.addEventListener("change", () => this.handleFileCheckboxChange(checkbox));
+        // Checkbox handler
+        checkbox.addEventListener('change', () => this.handleFileCheckboxChange(checkbox));
 
         return fileEl;
     }
 
-    public handleFolderCheckboxChange(checkbox: HTMLInputElement): void {
-        const folderEl = checkbox.closest(".folder");
+    private handleFolderCheckboxChange(checkbox: HTMLInputElement): void {
+        const folderEl = checkbox.closest('.gw-accordion');
         if (!folderEl) return;
 
-        // Select/deselect all descendant checkboxes
-        const descendantCheckboxes = folderEl.querySelectorAll("input[type='checkbox']");
+        const descendantCheckboxes = folderEl.querySelectorAll('input[type="checkbox"]');
         descendantCheckboxes.forEach((childCheckbox: HTMLInputElement) => {
             childCheckbox.checked = checkbox.checked;
             childCheckbox.indeterminate = false;
         });
 
-        // Update parent checkboxes
         this.updateParentCheckboxes(checkbox);
     }
 
-    public handleFileCheckboxChange(checkbox: HTMLInputElement): void {
-        // Update parent checkboxes
+    private handleFileCheckboxChange(checkbox: HTMLInputElement): void {
         this.updateParentCheckboxes(checkbox);
     }
 
-    public updateParentCheckboxes(checkbox: HTMLInputElement): void {
-        let parentFolderEl = checkbox.closest(".folder")?.parentElement?.closest(".folder");
+    private updateParentCheckboxes(checkbox: HTMLInputElement): void {
+        let parentFolderEl = checkbox.closest('.gw-accordion')?.parentElement?.closest('.gw-accordion');
+        
         while (parentFolderEl) {
-            const parentCheckbox = parentFolderEl.querySelector(".folder-checkbox") as HTMLInputElement;
-            const childCheckboxes = parentFolderEl.querySelectorAll(":scope > .folder-content .folder > .folder-name > .folder-checkbox, :scope > .folder-content .file > .file-checkbox") as NodeListOf<HTMLInputElement>;
+            const parentCheckbox = parentFolderEl.querySelector('.folder-checkbox') as HTMLInputElement;
+            const childCheckboxes = parentFolderEl.querySelectorAll(
+                ':scope > .gw-accordion-content .gw-accordion > .gw-accordion-header .folder-checkbox, ' +
+                ':scope > .gw-accordion-content .gw-accordion-item .file-checkbox'
+            ) as NodeListOf<HTMLInputElement>;
 
             const allChecked = Array.from(childCheckboxes).every(cb => cb.checked);
             const someChecked = Array.from(childCheckboxes).some(cb => cb.checked);
@@ -147,20 +186,23 @@ export class BatchProcessorModal extends Modal {
             parentCheckbox.checked = allChecked;
             parentCheckbox.indeterminate = !allChecked && someChecked;
 
-            parentFolderEl = parentFolderEl.parentElement?.closest(".folder");
+            parentFolderEl = parentFolderEl.parentElement?.closest('.gw-accordion');
         }
     }
 
-    public createButtons(containerEl: HTMLElement): void {
-        const buttonContainer = containerEl.createDiv({ cls: "button-container" });
-
+    private createButtons(containerEl: HTMLElement): void {
         // Cancel button
-        buttonContainer.createEl("button", { text: "Cancel", cls: "mod-cancel" })
-            .addEventListener("click", () => this.close());
+        new ButtonComponent(containerEl)
+            .setButtonText('Cancel')
+            .setClass('gw-button-secondary')
+            .onClick(() => this.close());
 
         // Confirm button
-        buttonContainer.createEl("button", { text: "Confirm", cls: "mod-cta" })
-            .addEventListener("click", () => this.confirmUpdate());
+        new ButtonComponent(containerEl)
+            .setButtonText('Confirm')
+            .setCta()
+            .setClass('gw-button-primary')
+            .onClick(() => this.confirmUpdate());
     }
 
     public async confirmUpdate(): Promise<void> {
@@ -170,17 +212,24 @@ export class BatchProcessorModal extends Modal {
             return;
         }
 
-        this.close(); // Close modal before processing
+        this.close();
+        
+        const progressModal = new ProcessingProgressModal(this.app, selectedPaths.length);
+        progressModal.open();
 
-        await this.processSelectedFiles(selectedPaths);
+        try {
+            await this.processSelectedFiles(selectedPaths, progressModal);
+        } finally {
+            progressModal.close();
+        }
     }
 
-    public getSelectedPaths(): string[] {
+    private getSelectedPaths(): string[] {
         const selectedPaths: string[] = [];
         const fileCheckboxes = this.contentEl.querySelectorAll(".file-checkbox:checked") as NodeListOf<HTMLInputElement>;
 
         fileCheckboxes.forEach((checkbox) => {
-            const fileEl = checkbox.closest('.file') as HTMLElement;
+            const fileEl = checkbox.closest('.gw-accordion-item') as HTMLElement;
             if (fileEl) {
                 const path = fileEl.getAttribute('data-path');
                 if (path) {
@@ -192,12 +241,9 @@ export class BatchProcessorModal extends Modal {
         return selectedPaths;
     }
 
-    public async processSelectedFiles(selectedPaths: string[]): Promise<void> {
-        const totalFiles = selectedPaths.length;
+    private async processSelectedFiles(selectedPaths: string[], progressModal: ProcessingProgressModal): Promise<void> {
         let updatedCount = 0;
         let errorCount = 0;
-
-        const progressNotice = new Notice(`Processing 0/${totalFiles} files...`, 0);
 
         for (const path of selectedPaths) {
             try {
@@ -205,7 +251,7 @@ export class BatchProcessorModal extends Modal {
                 if (file instanceof TFile) {
                     await this.updateFile(file);
                     updatedCount++;
-                    progressNotice.setMessage(`Processing ${updatedCount}/${totalFiles} files...`);
+                    progressModal.updateProgress(updatedCount);
                 }
             } catch (error) {
                 console.error(`Error updating file ${path}:`, error);
@@ -213,40 +259,49 @@ export class BatchProcessorModal extends Modal {
             }
         }
 
-        progressNotice.hide();
-
         let message = `Updated ${updatedCount} file${updatedCount !== 1 ? 's' : ''} successfully.`;
         if (errorCount > 0) {
             message += ` Encountered errors in ${errorCount} file${errorCount !== 1 ? 's' : ''}.`;
         }
-        new Notice(message, 5000);
+        
+        new Notice(message);
     }
 
-    public async updateFile(file: TFile): Promise<void> {
+    private async updateFile(file: TFile): Promise<void> {
         const content = await this.app.vault.read(file);
         const updatedContent = await this.processContent(content);
         await this.app.vault.modify(file, updatedContent);
     }
 
-    public async processContent(content: string): Promise<string> {
+    private async processContent(content: string): Promise<string> {
         console.log('BatchProcessorModal: Starting content processing');
         let processedContent = content;
-
-        // Always generate front matter in manual process
-        console.log('BatchProcessorModal: Generating front matter');
-        const frontMatter = await this.aiService.generateFrontMatter(processedContent);
-        processedContent = this.addOrUpdateFrontMatter(processedContent, frontMatter);
-
-        const settings = this.settingsService.getSettings();
-        if (settings.advanced.generateWikilinks) {
-            console.log('BatchProcessorModal: Generating wikilinks');
-            processedContent = await this.aiService.generateWikilinks(processedContent);
+    
+        try {
+            // Get the generation service
+            const generationService = this.aiService.getGenerationService();
+    
+            // Always generate front matter in manual process
+            console.log('BatchProcessorModal: Generating front matter');
+            processedContent = await generationService.generateFrontMatter(processedContent);
+            processedContent = this.addOrUpdateFrontMatter(processedContent, processedContent);
+    
+            const settings = this.settingsService.getSettings();
+            if (settings.advanced.generateWikilinks) {
+                console.log('BatchProcessorModal: Generating wikilinks');
+                // Get all existing pages for wikilink generation
+                const existingPages = this.app.vault.getMarkdownFiles().map(file => file.basename);
+                processedContent = await generationService.generateWikilinks(processedContent, existingPages);
+            }
+    
+            return processedContent;
+        } catch (error) {
+            console.error('Error processing content:', error);
+            throw error; // Re-throw to be handled by caller
         }
-
-        return processedContent;
     }
 
-    public addOrUpdateFrontMatter(content: string, newFrontMatter: string): string {
+    private addOrUpdateFrontMatter(content: string, newFrontMatter: string): string {
         const frontMatterRegex = /^---\n[\s\S]*?\n---\n*/;
         if (frontMatterRegex.test(content)) {
             return content.replace(frontMatterRegex, `${newFrontMatter}\n\n`);
@@ -254,36 +309,68 @@ export class BatchProcessorModal extends Modal {
             return `${newFrontMatter}\n\n${content}`;
         }
     }
+
+    onClose() {
+        this.contentEl.empty();
+        this.containerEl.removeClass('graphweaver-modal');
+    }
 }
 
-// Processing Progress Modal
-
-class ProcessingProgressModal extends Modal {
-    public progressBar: HTMLElement;
-    public totalFiles: number;
+export class ProcessingProgressModal extends Modal {
+    private progressBar: HTMLElement;
+    private progressText: HTMLElement;
+    private totalFiles: number;
 
     constructor(app: App, totalFiles: number) {
         super(app);
         this.totalFiles = totalFiles;
+        this.containerEl.addClass('graphweaver-modal');
     }
 
     onOpen() {
-        this.contentEl.empty();
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.addClass('status-history-modal');
 
-        this.contentEl.createEl("h2", { text: "Processing Files" });
+        const modalContent = contentEl.createDiv({ cls: 'modal-content' });
 
-        this.progressBar = this.contentEl.createDiv({ cls: "progress-bar-container" })
-            .createDiv({ cls: "progress-bar" });
+        // Header
+        const header = modalContent.createDiv({ cls: 'modal-header' });
+        header.createEl('h2', { 
+            text: 'Processing Files',
+            cls: 'modal-header-title'
+        });
+
+        // Content
+        const content = modalContent.createDiv({ cls: 'modal-scrollable-content' });
+
+        // Progress container
+        const progressContainer = content.createDiv({ 
+            cls: 'gw-status-bar-progress-container' 
+        });
+
+        // Progress bar
+        this.progressBar = progressContainer.createDiv({ 
+            cls: 'gw-status-bar-progress' 
+        });
+
+        // Progress text
+        this.progressText = content.createDiv({ 
+            cls: 'progress-text',
+            text: `Processing 0/${this.totalFiles} files...`
+        });
 
         this.updateProgress(0);
-    }
-
-    onClose() {
-        this.contentEl.empty();
     }
 
     public updateProgress(current: number): void {
         const percentage = (current / this.totalFiles) * 100;
         this.progressBar.style.width = `${percentage}%`;
+        this.progressText.textContent = `Processing ${current}/${this.totalFiles} files...`;
+    }
+
+    onClose() {
+        this.contentEl.empty();
+        this.containerEl.removeClass('graphweaver-modal');
     }
 }

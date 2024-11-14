@@ -11,7 +11,7 @@ export class AnthropicAdapter implements AIAdapter {
         public settingsService: SettingsService,
         public jsonValidationService: JsonValidationService
     ) {
-        const aiProviderSettings = this.settingsService.getSetting('aiProvider');
+        const aiProviderSettings = this.settingsService.getSettingSection('aiProvider');
         this.apiKey = aiProviderSettings.apiKeys[AIProvider.Anthropic] || '';
         this.models = AIModelMap[AIProvider.Anthropic];
     }

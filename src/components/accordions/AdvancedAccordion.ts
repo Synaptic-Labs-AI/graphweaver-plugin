@@ -1,7 +1,7 @@
 import { App, Setting, ToggleComponent, TextComponent } from "obsidian";
 import { BaseAccordion } from "./BaseAccordion";
 import { SettingsService } from "../../services/SettingsService";
-import { AIService } from "../../services/AIService";
+import { AIService } from "../../services/ai/AIService";
 
 export class AdvancedAccordion extends BaseAccordion {
     constructor(
@@ -10,7 +10,7 @@ export class AdvancedAccordion extends BaseAccordion {
         public settingsService: SettingsService,
         public aiService: AIService
     ) {
-        super(containerEl);
+        super(containerEl, app);
     }
 
     public render(): void {

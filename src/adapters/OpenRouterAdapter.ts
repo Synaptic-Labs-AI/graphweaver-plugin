@@ -17,7 +17,7 @@ export class OpenRouterAdapter implements AIAdapter {
         public settingsService: SettingsService,
         public jsonValidationService: JsonValidationService
     ) {
-        const aiProviderSettings = this.settingsService.getSetting('aiProvider');
+        const aiProviderSettings = this.settingsService.getSettingSection('aiProvider');
         this.apiKey = aiProviderSettings.apiKeys[AIProvider.OpenRouter] || '';
         this.models = AIModelMap[AIProvider.OpenRouter];
     }
@@ -106,7 +106,7 @@ export class OpenRouterAdapter implements AIAdapter {
     /**
      * Make a request to the OpenRouter API
      */
-    private async makeApiRequest(
+    public async makeApiRequest(
         apiModel: string, 
         prompt: string, 
         temperature: number, 
@@ -158,7 +158,7 @@ export class OpenRouterAdapter implements AIAdapter {
     /**
      * Extract content from API response
      */
-    private extractContentFromResponse(response: RequestUrlResponse): string {
+    public extractContentFromResponse(response: RequestUrlResponse): string {
         if (!response.json?.choices?.[0]?.message?.content) {
             throw new Error('Invalid response format from OpenRouter API');
         }
@@ -168,7 +168,7 @@ export class OpenRouterAdapter implements AIAdapter {
     /**
      * Get temperature setting
      */
-    private getTemperature(settings: any): number {
+    public getTemperature(settings: any): number {
         return (settings.advanced?.temperature >= 0 && settings.advanced?.temperature <= 1) 
             ? settings.advanced.temperature 
             : 0.7;
@@ -177,14 +177,14 @@ export class OpenRouterAdapter implements AIAdapter {
     /**
      * Get max tokens setting
      */
-    private getMaxTokens(settings: any): number {
+    public getMaxTokens(settings: any): number {
         return (settings.advanced?.maxTokens > 0) ? settings.advanced.maxTokens : 1000;
     }
 
     /**
      * Handle errors in API calls
      */
-    private handleError(error: unknown): AIResponse {
+    public handleError(error: unknown): AIResponse {
         console.error('Error in OpenRouter API call:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         new Notice(`OpenRouter API Error: ${errorMessage}`);

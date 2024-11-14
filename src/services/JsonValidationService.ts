@@ -1,89 +1,299 @@
-// src/services/JsonValidationService.ts
-
 import { Notice } from 'obsidian';
+import { CoreService } from '../services/core/CoreService';
+import { ServiceError } from '../services/core/ServiceError';
+import { IConfigurableService } from '../services/core/IService';
 
 /**
- * Provides basic JSON validation and cleaning functionality.
- * Uses native JSON parsing instead of complex schema validation.
+ * Configuration options for JSON validation
  */
-export class JsonValidationService {
+export interface JsonValidationConfig {
+    notifyOnError?: boolean;
+    strictMode?: boolean;
+    maxDepth?: number;
+    allowComments?: boolean;
+    fixMalformed?: boolean;
+    debug?: boolean;
+}
+
+/**
+ * Validation result interface
+ */
+export interface ValidationResult<T = any> {
+    valid: boolean;
+    value?: T;
+    error?: string;
+    fixes?: string[];
+}
+
+/**
+ * Enhanced JSON validation service with improved error handling and configuration
+ */
+export class JsonValidationService extends CoreService implements IConfigurableService<JsonValidationConfig> {
+    private config: Required<JsonValidationConfig>;
+    
+    constructor(config: Partial<JsonValidationConfig> = {}) {
+        super('json-validation', 'JSON Validation Service');
+        
+        // Initialize config with defaults
+        this.config = {
+            notifyOnError: true,
+            strictMode: false,
+            maxDepth: 100,
+            allowComments: false,
+            fixMalformed: true,
+            debug: false,
+            ...config
+        };
+    }
+
     /**
-     * Basic validation of JSON data format
-     * @param data The data to validate
-     * @returns True if the data is valid JSON, false otherwise
+     * Initialize validation service
      */
-    public validate(data: any): boolean {
+    protected async initializeInternal(): Promise<void> {
+        if (this.config.debug) {
+            console.log('JsonValidationService: Initialized successfully');
+        }
+    }
+
+    /**
+     * Clean up resources
+     */
+    protected async destroyInternal(): Promise<void> {
+        // Currently no resources to clean up
+        if (this.config.debug) {
+            console.log('JsonValidationService: Cleanup complete');
+        }
+    }
+
+    /**
+     * Configure validation options
+     */
+    public async configure(config: Partial<JsonValidationConfig>): Promise<void> {
+        this.config = {
+            ...this.config,
+            ...config
+        };
+    }
+
+    /**
+     * Validate JSON data with type safety
+     */
+    public validate<T = any>(data: unknown): ValidationResult<T> {
         try {
-            // Check if it's already an object
-            if (typeof data === 'object' && data !== null) {
-                return true;
+            // Check if it's already a valid object
+            if (this.isValidJsonObject(data)) {
+                return {
+                    valid: true,
+                    value: data as T
+                };
             }
             
             // If it's a string, try to parse it
             if (typeof data === 'string') {
-                JSON.parse(data);
-                return true;
+                const parsed = JSON.parse(data);
+                if (this.isValidJsonObject(parsed)) {
+                    return {
+                        valid: true,
+                        value: parsed as T
+                    };
+                }
             }
             
-            return false;
+            throw new Error('Invalid JSON data type');
         } catch (error) {
-            console.error('JsonValidationService: JSON Validation Error:', error);
-            return false;
+            const serviceError = new ServiceError(
+                this.serviceName,
+                'JSON validation failed',
+                error instanceof Error ? error : undefined
+            );
+
+            if (this.config.debug) {
+                console.error(serviceError.getDetails());
+            }
+
+            return {
+                valid: false,
+                error: serviceError.message
+            };
         }
     }
 
     /**
-     * Cleans and validates JSON string input
-     * @param jsonString The JSON string to validate and clean
-     * @returns The parsed JSON object
+     * Clean and validate JSON string with enhanced error handling
      */
-    public validateAndCleanJson(jsonString: string): any {
+    public validateAndCleanJson<T = any>(jsonString: string): ValidationResult<T> {
         try {
-            // Remove whitespace
-            jsonString = jsonString.trim();
+            const cleaned = this.cleanJsonString(jsonString);
+            const fixes: string[] = [];
 
-            // Remove markdown code blocks if present
-            jsonString = jsonString.replace(/^```json?\s*|\s*```$/g, '');
-
-            // Parse and return the JSON
-            const parsedJson = JSON.parse(jsonString);
-            console.log('JsonValidationService: Successfully parsed JSON:', parsedJson);
-            return parsedJson;
-        } catch (error) {
-            console.error('JsonValidationService: Error validating JSON:', error);
-            new Notice(`Invalid JSON format: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            throw new Error('Invalid JSON format');
-        }
-    }
-
-    /**
-     * Attempts to fix and parse potentially malformed JSON
-     * @param str The JSON string to fix and parse
-     * @returns The parsed JSON object or null if parsing fails
-     */
-    public fixAndParseJson(str: string): any | null {
-        try {
-            return JSON.parse(str);
-        } catch (e) {
-            console.error('JsonValidationService: Initial JSON parse failed:', e);
-            // Try to fix common JSON issues
+            // Try to parse the cleaned string
             try {
-                // Fix unquoted keys
-                str = str.replace(/(\w+)(?=\s*:)/g, '"$1"');
-                
-                // Fix single quotes to double quotes
-                str = str.replace(/'/g, '"');
-                
-                // Remove trailing commas
-                str = str.replace(/,\s*([\]}])/g, '$1');
+                const parsed = JSON.parse(cleaned);
+                return {
+                    valid: true,
+                    value: parsed as T,
+                    fixes: fixes.length > 0 ? fixes : undefined
+                };
+            } catch (parseError) {
+                // If fixMalformed is enabled, try to fix and parse
+                if (this.config.fixMalformed) {
+                    const fixResult = this.fixAndParseJson<T>(cleaned);
+                    if (fixResult.valid) {
+                        return fixResult;
+                    }
+                }
 
-                const fixedJson = JSON.parse(str);
-                console.log('JsonValidationService: Successfully fixed and parsed JSON:', fixedJson);
-                return fixedJson;
+                throw parseError;
+            }
+        } catch (error) {
+            const serviceError = new ServiceError(
+                this.serviceName,
+                'JSON validation and cleaning failed',
+                error instanceof Error ? error : undefined
+            );
+
+            if (this.config.debug) {
+                console.error(serviceError.getDetails());
+            }
+
+            if (this.config.notifyOnError) {
+                new Notice(`Invalid JSON format: ${serviceError.message}`);
+            }
+
+            return {
+                valid: false,
+                error: serviceError.message
+            };
+        }
+    }
+
+    /**
+     * Fix and parse potentially malformed JSON
+     */
+    public fixAndParseJson<T = any>(str: string): ValidationResult<T> {
+        const fixes: string[] = [];
+
+        try {
+            // First try regular parsing
+            return {
+                valid: true,
+                value: JSON.parse(str) as T
+            };
+        } catch (initialError) {
+            if (this.config.debug) {
+                console.log('JsonValidationService: Attempting to fix malformed JSON');
+            }
+
+            try {
+                let fixed = str;
+
+                // Fix unquoted keys
+                const unquotedKeysFix = fixed.replace(/(\w+)(?=\s*:)/g, '"$1"');
+                if (unquotedKeysFix !== fixed) {
+                    fixes.push('Added quotes to keys');
+                    fixed = unquotedKeysFix;
+                }
+
+                // Fix single quotes to double quotes
+                const singleQuotesFix = fixed.replace(/'/g, '"');
+                if (singleQuotesFix !== fixed) {
+                    fixes.push('Converted single quotes to double quotes');
+                    fixed = singleQuotesFix;
+                }
+
+                // Remove trailing commas
+                const trailingCommasFix = fixed.replace(/,\s*([\]}])/g, '$1');
+                if (trailingCommasFix !== fixed) {
+                    fixes.push('Removed trailing commas');
+                    fixed = trailingCommasFix;
+                }
+
+                const fixedJson = JSON.parse(fixed) as T;
+
+                if (this.config.debug) {
+                    console.log('JsonValidationService: Successfully fixed and parsed JSON:', {
+                        original: str,
+                        fixed,
+                        fixes
+                    });
+                }
+
+                return {
+                    valid: true,
+                    value: fixedJson,
+                    fixes
+                };
             } catch (fixError) {
-                console.error('JsonValidationService: Failed to fix and parse JSON:', fixError);
-                return null;
+                const serviceError = new ServiceError(
+                    this.serviceName,
+                    'Failed to fix malformed JSON',
+                    {
+                        originalError: fixError instanceof Error ? fixError : undefined,
+                        context: { original: str }
+                    }
+                );
+
+                if (this.config.debug) {
+                    console.error(serviceError.getDetails());
+                }
+
+                return {
+                    valid: false,
+                    error: serviceError.message,
+                    fixes
+                };
             }
         }
+    }
+
+    /**
+     * Clean JSON string by removing whitespace and markdown
+     */
+    private cleanJsonString(str: string): string {
+        let cleaned = str.trim();
+
+        // Remove markdown code blocks
+        cleaned = cleaned.replace(/^```json?\s*|\s*```$/g, '');
+
+        // Remove comments if not allowed
+        if (!this.config.allowComments) {
+            cleaned = cleaned
+                .replace(/\/\*[\s\S]*?\*\//g, '') // Remove multi-line comments
+                .replace(/\/\/.*/g, ''); // Remove single-line comments
+        }
+
+        return cleaned;
+    }
+
+    /**
+     * Check if value is a valid JSON object
+     */
+    private isValidJsonObject(value: unknown): boolean {
+        return (
+            typeof value === 'object' &&
+            value !== null &&
+            !Array.isArray(value)
+        );
+    }
+
+    /**
+     * Validate object against max depth constraint
+     */
+    private validateDepth(obj: any, currentDepth: number = 0): boolean {
+        if (currentDepth > this.config.maxDepth) {
+            return false;
+        }
+
+        if (typeof obj !== 'object' || obj === null) {
+            return true;
+        }
+
+        for (const value of Object.values(obj)) {
+            if (!this.validateDepth(value, currentDepth + 1)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

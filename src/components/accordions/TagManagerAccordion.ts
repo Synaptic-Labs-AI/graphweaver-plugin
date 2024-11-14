@@ -3,7 +3,7 @@ import { Tag } from "../../models/PropertyTag";
 import { EditTagsModal } from "../modals/EditTagsModal";
 import { BaseAccordion } from "./BaseAccordion";
 import { SettingsService } from "../../services/SettingsService";
-import { AIService } from "../../services/AIService";
+import { AIService } from "../../services/ai/AIService";
 
 export class TagManagerAccordion extends BaseAccordion {
     public nameInput: TextComponent;
@@ -15,7 +15,7 @@ export class TagManagerAccordion extends BaseAccordion {
         public settingsService: SettingsService,
         public aiService: AIService
     ) {
-        super(containerEl);
+        super(containerEl, app);
     }
 
     public render(): void {

@@ -1,7 +1,7 @@
 // src/components/accordions/ModelHookupAccordion.ts
 
 import { App, Setting, Notice, DropdownComponent, ButtonComponent } from "obsidian";
-import { AIService } from "../../services/AIService";
+import { AIService } from "../../services/ai/AIService";
 import { SettingsService } from "../../services/SettingsService";
 import { AIProvider, AIModelMap, AIModel } from "../../models/AIModels";
 import { BaseAccordion } from "./BaseAccordion";
@@ -16,7 +16,7 @@ export class ModelHookupAccordion extends BaseAccordion {
         public settingsService: SettingsService,
         public aiService: AIService
     ) {
-        super(containerEl);
+        super(containerEl, app);
     }
 
     public render(): void {
@@ -29,6 +29,33 @@ export class ModelHookupAccordion extends BaseAccordion {
         this.renderProviderSettings();
     }
 
+    public async handleProviderChange(value: AIProvider): Promise<void> {
+        await this.settingsService.updateNestedSetting('aiProvider', 'selected', value);
+        try {
+            await this.aiService.reinitialize();
+            new Notice(`AI Service reinitialized with provider ${value}.`);
+            this.renderProviderSettings();
+        } catch (error) {
+            console.error('Failed to reinitialize AI Service:', error);
+            new Notice(`Failed to reinitialize AI Service: ${(error as Error).message}`);
+        }
+    }
+
+    public async handleTestConnection(provider: AIProvider): Promise<void> {
+        try {
+            const result = await this.aiService.testConnection(provider);
+            if (result) {
+                new Notice(`Successfully connected to ${this.getFormattedProviderName(provider)}`);
+            } else {
+                new Notice(`Failed to connect to ${this.getFormattedProviderName(provider)}. Please check your settings and try again.`);
+            }
+        } catch (error) {
+            console.error('Test connection error:', error);
+            new Notice(`Test connection failed: ${(error as Error).message}`);
+        }
+    }
+
+    // Update the onChange handler and test button to use the new methods
     public createProviderDropdown(containerEl: HTMLElement): void {
         const settings = this.settingsService.getSettings();
         new Setting(containerEl)
@@ -41,9 +68,7 @@ export class ModelHookupAccordion extends BaseAccordion {
                 });
                 dropdown.setValue(settings.aiProvider.selected)
                     .onChange(async (value: AIProvider) => {
-                        await this.settingsService.updateNestedSetting('aiProvider', 'selected', value);
-                        this.aiService.reinitialize();
-                        this.renderProviderSettings();
+                        await this.handleProviderChange(value);
                     });
             });
     }

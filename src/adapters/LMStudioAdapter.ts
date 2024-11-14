@@ -166,7 +166,7 @@ export class LMStudioAdapter implements AIAdapter {
     }
 
     public updateSettings(): void {
-        const localLMStudioSettings = this.settingsService.getSetting('localLMStudio');
+        const localLMStudioSettings = this.settingsService.getSettingSection('localLMStudio');
         this.model = localLMStudioSettings.modelName;
         this.port = localLMStudioSettings.port.toString();
     }

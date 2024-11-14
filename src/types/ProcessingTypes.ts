@@ -1,18 +1,24 @@
 /**
  * Represents the current state of file processing
  */
-export type ProcessingState = 'idle' | 'running' | 'paused' | 'error';
-
+export enum ProcessingState {
+    IDLE = 'idle',
+    RUNNING = 'running',
+    PAUSED = 'paused',
+    ERROR = 'error'
+}
 /**
  * Represents a file's processing status
  */
-export interface FileProcessingStatus {
-    path: string;
+export interface ProcessingStatus {
     state: ProcessingState;
-    lastAttempted?: number;
-    lastProcessed?: number;
-    error?: string;
-    retryCount: number;
+    filesQueued: number;
+    filesProcessed: number;
+    filesRemaining: number;
+    currentFile?: string;
+    startTime?: number;
+    estimatedTimeRemaining?: number;
+    errors: ProcessingError[];
 }
 
 /**
@@ -94,9 +100,15 @@ export interface ProcessingEvent {
     error: ProcessingError;
     progress: ProcessingStatus;
     fileStart: { file: string };
-    fileComplete: { file: string; result: FileProcessingResult };
-    chunkStart: { chunk: FileChunk };
-    chunkComplete: { chunk: FileChunk };
+    fileComplete: { result: FileProcessingResult };
+    chunkStart: FileChunk;
+    chunkComplete: FileChunk;
+    stateChanged: { // Add this new event type
+        state: ProcessingState;
+        currentFile?: string | null;
+        progress?: number;
+        status?: ProcessingStatus;
+    };
 }
 
 /**
@@ -149,15 +161,26 @@ export interface ProcessingStats {
 }
 
 /**
+ * Represents the progress of batch processing.
+ */
+export interface BatchProgress {
+    currentBatch: number;
+    totalBatches: number;
+    filesProcessed: number;
+    totalFiles: number;
+    currentFile: string | null;
+}
+
+/**
  * Processing result for a single file
  */
 export interface FileProcessingResult {
-    path: string;
     success: boolean;
-    error?: string;
-    processingTime: number;
+    path: string;
     frontMatterGenerated: boolean;
     wikilinksGenerated: boolean;
+    processingTime: number;
+    error?: string;
 }
 
 /**

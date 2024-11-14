@@ -1,3 +1,5 @@
+// src/settings/Settings.ts
+
 import { AIProvider } from "../models/AIModels";
 import { PropertyTag, Tag } from "../models/PropertyTag";
 
@@ -32,6 +34,10 @@ export interface PluginSettings {
         generateWikilinks: boolean;
         minWordCount: number;
         maxLinksPerNote: number;
+        batchSize: number;
+        delayBetweenChunks: number;  // Added
+        maxRetries: number;          // Added
+        maxConcurrentProcessing: number;  // Added
     };
     ontology: {
         lastGenerated: string;
@@ -64,7 +70,11 @@ export const DEFAULT_SETTINGS: PluginSettings = {
         temperature: 0.3,
         generateWikilinks: false,
         minWordCount: 5,
-        maxLinksPerNote: 10
+        maxLinksPerNote: 10,
+        batchSize: 10,
+        delayBetweenChunks: 1000,  // Added with default value
+        maxRetries: 3,             // Added with default value
+        maxConcurrentProcessing: 3  // Added with default value
     },
     ontology: {
         lastGenerated: ''

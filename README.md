@@ -1,3 +1,48 @@
+Component Files:
+
+src/components/modals/*.ts
+
+Add event handler cleanup
+Update lifecycle methods
+
+
+
+
+Type Definition Files:
+
+src/types/ServiceTypes.ts
+
+Add event handler interfaces
+Update service interfaces
+
+
+src/types/ProcessingTypes.ts
+
+Add event-related types
+
+
+
+
+Utility Classes:
+
+src/generators/BaseGenerator.ts
+
+Add event handling
+Update cleanup methods
+
+
+
+
+
+Specific Changes Needed:
+
+Event Handler Management:
+
+Add EventHandlers interface to each class
+Store handler references
+Implement proper cleanup
+
+
 # GraphWeaver Plugin for Obsidian
 
 GraphWeaver is an AI-powered plugin for Obsidian that enhances your note-taking experience by automating metadata generation, creating connections between notes, and helping you build a comprehensive knowledge structure.

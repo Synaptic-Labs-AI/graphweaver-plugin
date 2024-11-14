@@ -1,6 +1,6 @@
 import { App, Setting, ToggleComponent, ButtonComponent } from "obsidian";
 import { BaseAccordion } from "./BaseAccordion";
-import { AIService } from "../../services/AIService";
+import { AIService } from "../../services/ai/AIService";
 import { SettingsService } from "../../services/SettingsService";
 import { BatchProcessorModal } from "../modals/BatchProcessorModal";
 
@@ -11,7 +11,7 @@ export class BatchProcessorAccordion extends BaseAccordion {
         public settingsService: SettingsService,
         public aiService: AIService
     ) {
-        super(containerEl);
+        super(containerEl, app);
     }
 
     public render(): void {

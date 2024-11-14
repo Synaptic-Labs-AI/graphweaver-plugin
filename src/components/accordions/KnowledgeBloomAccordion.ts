@@ -1,7 +1,19 @@
+// src/components/accordions/KnowledgeBloomAccordion.ts
+
 import { App, Setting, TextAreaComponent, ButtonComponent, Notice, DropdownComponent, TFile } from "obsidian";
 import { BaseAccordion } from "./BaseAccordion";
-import { SettingsService } from "../../services/SettingsService";
-import { AIService } from "../../services/AIService";
+import { SettingsService } from "../../services/SettingsService"; 
+import { AIService } from "../../services/ai/AIService";
+import { AIModel, AIProvider } from "src/models/AIModels";
+import { KnowledgeBloomSettings } from "src/settings/Settings";
+
+// Add type for response
+interface KnowledgeBloomResponse {
+    generatedNotes: Array<{
+        title: string;
+        content: string;
+    }>;
+}
 
 export class KnowledgeBloomAccordion extends BaseAccordion {
     public userPromptInput: TextAreaComponent;
@@ -13,7 +25,7 @@ export class KnowledgeBloomAccordion extends BaseAccordion {
         public settingsService: SettingsService,
         public aiService: AIService
     ) {
-        super(containerEl);
+        super(containerEl, app);
     }
 
     public render(): void {
@@ -44,6 +56,26 @@ export class KnowledgeBloomAccordion extends BaseAccordion {
         });
     }
 
+    /**
+     * Handle changes to the AI model selection.
+     * Updates the selected model in settings and reinitializes the AI service.
+     * @param value The new AI model selected.
+     */
+    public async handleModelChange(value: string): Promise<void> {
+        await this.settingsService.updateKnowledgeBloomSettings({ selectedModel: value });
+        try {
+            await this.aiService.reinitialize(); // Reinitialize AIService with new model
+            new Notice('AI Service reinitialized with the new model.');
+        } catch (error) {
+            console.error('Failed to reinitialize AI Service:', error);
+            new Notice(`Failed to reinitialize AI Service: ${(error as Error).message}`);
+        }
+    }
+
+    /**
+     * Create the AI Model Selector dropdown.
+     * @param containerEl The container element to append the dropdown to.
+     */
     public createModelSelector(containerEl: HTMLElement): void {
         const selectorEl = containerEl.createDiv({ cls: "knowledge-bloom-model-selector" });
         new Setting(selectorEl)
@@ -53,35 +85,49 @@ export class KnowledgeBloomAccordion extends BaseAccordion {
                 this.modelSelector = dropdown;
                 this.updateModelOptions();
                 dropdown.onChange(async (value) => {
-                    await this.settingsService.updateKnowledgeBloomSetting('selectedModel', value);
-                    this.aiService.reinitialize(); // Reinitialize AIService with new model
+                    await this.handleModelChange(value);
                 });
             });
     }
 
+    /**
+     * Update the options in the AI Model Selector based on available models.
+     * Fixed to use correct method and type annotations
+     */
     public updateModelOptions(): void {
         const currentProvider = this.aiService.getCurrentProvider();
-        const models = this.aiService.getAvailableModels(currentProvider);
-        const currentModel = this.settingsService.getKnowledgeBloomSettings().selectedModel;
-
-        // Clear existing options by setting innerHTML to empty
+        // Use getAvailableModels instead
+        const models = this.aiService.getAdapterRegistry().getAllAvailableModels();
+        const settings = this.settingsService.getSettings();
+        const currentModel = settings.knowledgeBloom?.selectedModel;
+    
+        // Clear existing options
         this.modelSelector.selectEl.innerHTML = '';
-
-        // Add new options
-        models.forEach(model => {
-            this.modelSelector.addOption(model, model);
+    
+        // Add new options with proper type annotation
+        models.forEach((modelInfo: { provider: AIProvider; model: AIModel }) => {
+            this.modelSelector.addOption(modelInfo.model.apiName, modelInfo.model.name);
         });
-
+    
         // Set current value or default
-        if (currentModel && models.includes(currentModel)) {
+        if (currentModel && models.some((modelInfo) => modelInfo.model.apiName === currentModel)) {
             this.modelSelector.setValue(currentModel);
         } else if (models.length > 0) {
-            this.modelSelector.setValue(models[0]);
-            // Update settings if no model was previously selected
-            this.settingsService.updateKnowledgeBloomSetting('selectedModel', models[0]);
+            const defaultModelApiName = models[0].model.apiName;
+            this.modelSelector.setValue(defaultModelApiName);
+            this.settingsService.updateSettings({
+                knowledgeBloom: {
+                    ...settings.knowledgeBloom,
+                    selectedModel: defaultModelApiName
+                }
+            });
         }
     }
 
+    /**
+     * Create the user prompt input area.
+     * @param containerEl The container element to append the input to.
+     */
     public createUserPromptInput(containerEl: HTMLElement): void {
         const promptEl = containerEl.createDiv({ cls: "knowledge-bloom-prompt" });
         new Setting(promptEl)
@@ -95,6 +141,10 @@ export class KnowledgeBloomAccordion extends BaseAccordion {
             });
     }
 
+    /**
+     * Create the generate button.
+     * @param containerEl The container element to append the button to.
+     */
     public createGenerateButton(containerEl: HTMLElement): void {
         const buttonEl = containerEl.createDiv({ cls: "knowledge-bloom-generate-button" });
         new Setting(buttonEl)
@@ -106,6 +156,10 @@ export class KnowledgeBloomAccordion extends BaseAccordion {
             });
     }
 
+    /**
+     * Handle the generate button click event.
+     * Updated to use correct parameter passing
+     */
     public async handleGenerateKnowledgeBloom(button: ButtonComponent): Promise<void> {
         const activeFile = this.app.workspace.getActiveFile();
         if (!activeFile) {
@@ -118,19 +172,12 @@ export class KnowledgeBloomAccordion extends BaseAccordion {
         
         try {
             const userPrompt = this.userPromptInput.getValue();
-            const result = await this.aiService.generateKnowledgeBloom(activeFile, userPrompt);
+            // Get the generation service from AIService and use it
+            const generationService = this.aiService.getGenerationService();
+            const result = await generationService.generateKnowledgeBloom(activeFile, userPrompt);
             
             if (result.generatedNotes.length > 0) {
-                // Create or update the generated notes in Obsidian
-                for (const note of result.generatedNotes) {
-                    const filePath = `${note.title}.md`;
-                    const existingFile = this.app.vault.getAbstractFileByPath(filePath);
-                    if (existingFile && existingFile instanceof TFile) {
-                        await this.app.vault.modify(existingFile, note.content);
-                    } else {
-                        await this.app.vault.create(filePath, note.content);
-                    }
-                }
+                await this.createGeneratedNotes(result.generatedNotes);
                 new Notice(`Generated ${result.generatedNotes.length} new notes!`);
             } else {
                 new Notice("No new notes were generated.");
@@ -143,4 +190,19 @@ export class KnowledgeBloomAccordion extends BaseAccordion {
             button.setButtonText("Generate Knowledge Bloom");
         }
     }
-}
+    
+    /**
+     * Helper method to create or update generated notes
+     */
+    private async createGeneratedNotes(notes: Array<{title: string; content: string}>): Promise<void> {
+        for (const note of notes) {
+            const filePath = `${note.title}.md`;
+            const existingFile = this.app.vault.getAbstractFileByPath(filePath);
+            if (existingFile instanceof TFile) {
+                await this.app.vault.modify(existingFile, note.content);
+            } else {
+                await this.app.vault.create(filePath, note.content);
+            }
+            }
+        }
+    }

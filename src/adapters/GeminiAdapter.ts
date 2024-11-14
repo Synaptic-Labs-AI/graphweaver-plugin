@@ -9,14 +9,14 @@ import { JsonValidationService } from '../services/JsonValidationService';
  * Note: Gemini has a different API structure from other providers
  */
 export class GeminiAdapter implements AIAdapter {
-    private apiKey: string;
-    private models: AIModel[];
+    public apiKey: string;
+    public models: AIModel[];
 
     constructor(
-        private settingsService: SettingsService,
-        private jsonValidationService: JsonValidationService
+        public settingsService: SettingsService,
+        public jsonValidationService: JsonValidationService
     ) {
-        const aiProviderSettings = this.settingsService.getSetting('aiProvider');
+        const aiProviderSettings = this.settingsService.getSettingSection('aiProvider');
         this.apiKey = aiProviderSettings.apiKeys[AIProvider.Google] || '';
         this.models = AIModelMap[AIProvider.Google];
     }
@@ -103,7 +103,7 @@ export class GeminiAdapter implements AIAdapter {
     /**
      * Make a request to the Gemini API
      */
-    private async makeApiRequest(params: {
+    public async makeApiRequest(params: {
         model: string;
         prompt: string;
         temperature: number;
@@ -158,7 +158,7 @@ export class GeminiAdapter implements AIAdapter {
     /**
      * Extract content from Gemini API response
      */
-    private extractContentFromResponse(response: RequestUrlResponse): string {
+    public extractContentFromResponse(response: RequestUrlResponse): string {
         if (!response.json?.candidates?.[0]?.content?.parts?.[0]?.text) {
             throw new Error('Invalid response format from Gemini API');
         }
@@ -169,7 +169,7 @@ export class GeminiAdapter implements AIAdapter {
     /**
      * Get temperature setting
      */
-    private getTemperature(settings: any): number {
+    public getTemperature(settings: any): number {
         return (settings.advanced?.temperature >= 0 && settings.advanced?.temperature <= 1)
             ? settings.advanced.temperature
             : 0.7;
@@ -178,14 +178,14 @@ export class GeminiAdapter implements AIAdapter {
     /**
      * Get max tokens setting
      */
-    private getMaxTokens(settings: any): number {
+    public getMaxTokens(settings: any): number {
         return (settings.advanced?.maxTokens > 0) ? settings.advanced.maxTokens : 1000;
     }
 
     /**
      * Handle errors in API calls
      */
-    private handleError(error: unknown): AIResponse {
+    public handleError(error: unknown): AIResponse {
         console.error('Error in Gemini API call:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         new Notice(`Gemini API Error: ${errorMessage}`);

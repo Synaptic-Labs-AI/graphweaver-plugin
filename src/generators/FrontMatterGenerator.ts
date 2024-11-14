@@ -1,7 +1,7 @@
 // src/generators/FrontMatterGenerator.ts
 
 import { BaseGenerator, BaseGeneratorInput, BaseGeneratorOutput } from './BaseGenerator';
-import { AIAdapter } from '../adapters/AIAdapter';
+import { AIAdapter, AIProvider } from 'src/models/AIModels';
 import { SettingsService } from '../services/SettingsService';
 import { JsonSchemaGenerator } from './JsonSchemaGenerator';
 import { PropertyTag } from '../models/PropertyTag';
@@ -36,6 +36,28 @@ export class FrontMatterGenerator extends BaseGenerator<FrontMatterInput, FrontM
     ) {
         super(aiAdapter, settingsService);
         this.jsonSchemaGenerator = jsonSchemaGenerator;
+    }
+
+    /**
+     * Initialize the FrontMatterGenerator.
+     * Currently, no specific initialization is required.
+     * Override this method if specific initialization steps are needed.
+     */
+    public async initialize(): Promise<void> {
+        // No initialization steps required currently.
+        // Add any necessary initialization logic here in the future.
+        console.log('FrontMatterGenerator: Initialized.');
+    }
+
+    /**
+     * Destroy the FrontMatterGenerator.
+     * Currently, no specific cleanup is required.
+     * Override this method if specific cleanup steps are needed.
+     */
+    public async destroy(): Promise<void> {
+        // No cleanup steps required currently.
+        // Add any necessary cleanup logic here in the future.
+        console.log('FrontMatterGenerator: Destroyed.');
     }
 
     /**
@@ -92,30 +114,30 @@ export class FrontMatterGenerator extends BaseGenerator<FrontMatterInput, FrontM
         const tagPrompt = input.customTags?.join(', ') || '';
     
         return `
-    # MISSION
-    Act as an expert analyzer and creator of metadata, with a specialization in ontological organization for Obsidian Vaults. Generate ONLY front matter fields based on the provided schema and available properties/tags.
-    
-    # GUIDELINES
-    - You must ONLY use the properties provided in the schema
-    - Front matter fields will NOT include the note content itself
-    - Prioritize using available tags, but remain flexible in choosing additional relevant tags
-    - Return ONLY the formatted JSON object with front matter fields
-    - Do NOT include the content field in your response
-    
-    ## Custom Properties
-    ${propertyPrompt}
-    
-    ## Available Tags
-    ${tagPrompt}
-    
-    ## Note Content for Reference (OMIT FROM OUTPUT)
-    ${input.content}
-    
-    ## JSON Schema for Front Matter Fields:
-    ${JSON.stringify(schema, null, 2)}
-    
-    Generate ONLY the front matter fields as JSON. Do not include any other text or the note content.
-    `;
+# MISSION
+Act as an expert analyzer and creator of metadata, with a specialization in ontological organization for Obsidian Vaults. Generate ONLY front matter fields based on the provided schema and available properties/tags.
+
+# GUIDELINES
+- You must ONLY use the properties provided in the schema
+- Front matter fields will NOT include the note content itself
+- Prioritize using available tags, but remain flexible in choosing additional relevant tags
+- Return ONLY the formatted JSON object with front matter fields
+- Do NOT include the content field in your response
+
+## Custom Properties
+${propertyPrompt}
+
+## Available Tags
+${tagPrompt}
+
+## Note Content for Reference (OMIT FROM OUTPUT)
+${input.content}
+
+## JSON Schema for Front Matter Fields:
+${JSON.stringify(schema, null, 2)}
+
+Generate ONLY the front matter fields as JSON. Do not include any other text or the note content.
+`;
     }
 
     /**
@@ -215,7 +237,7 @@ export class FrontMatterGenerator extends BaseGenerator<FrontMatterInput, FrontM
      */
     protected async getCurrentModel(): Promise<string> {
         const settings = this.getSettings();
-        const providerType = this.aiAdapter.getProviderType();
+        const providerType: AIProvider = this.aiAdapter.getProviderType();
         const modelApiName = settings.aiProvider?.selectedModels?.[providerType];
         
         if (!modelApiName) {

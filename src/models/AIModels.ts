@@ -134,6 +134,11 @@ export interface AIAdapter {
      * @param modelName Model name to look up
      */
     getApiModelName(modelName: string): string | undefined;
+
+        /**
+     * Clean up adapter resources
+     */
+        destroy?(): Promise<void>;
 }
 
 /**

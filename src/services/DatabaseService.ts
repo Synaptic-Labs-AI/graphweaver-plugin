@@ -1,14 +1,28 @@
-import { TFile } from 'obsidian';
-import { 
-    ProcessingState,
+// src/services/DatabaseService.ts
+
+import { CoreService } from './core/CoreService';
+import { ServiceError } from './core/ServiceError';
+import { IConfigurableService } from './core/IService';
+import {
     ProcessingStats,
     ProcessingError,
     FileProcessingResult,
     PersistentProcessingState
-} from '../models/ProcessingTypes';
+} from '../types/ProcessingTypes';
+import { TFile } from 'obsidian';
 
 /**
- * Interface for database records
+ * Configuration options for DatabaseService
+ */
+export interface DatabaseConfig {
+    maxHistoryLength?: number;
+    pruneThreshold?: number;
+    processingCooldown?: number;
+    saveDebounce?: number;
+}
+
+/**
+ * Database record structure
  */
 interface DatabaseRecord {
     processedFiles: ProcessedFile[];
@@ -19,7 +33,7 @@ interface DatabaseRecord {
 }
 
 /**
- * Interface for processed file records
+ * Processed file record
  */
 interface ProcessedFile {
     path: string;
@@ -33,116 +47,174 @@ interface ProcessedFile {
 }
 
 /**
- * Interface for timestamped processing stats
+ * Timestamped processing stats
  */
 interface TimestampedProcessingStats extends ProcessingStats {
     timestamp: number;
 }
 
 /**
- * Enhanced database service for managing processing state and history
- * Handles persistent storage of processing results and statistics
+ * Enhanced DatabaseService that extends CoreService
+ * Manages processing state and history with improved error handling
  */
-export class DatabaseService {
-    private data: DatabaseRecord;
-    private readonly MAX_HISTORY_LENGTH = 100;
-    private readonly PRUNE_THRESHOLD = 1000;
+export class DatabaseService extends CoreService implements IConfigurableService<DatabaseConfig> {
     private readonly MONTH_IN_MS = 30 * 24 * 60 * 60 * 1000;
+    private config: Required<DatabaseConfig>;
+    private data: DatabaseRecord;
+    private processedFiles: Set<string>;
+    private recentlyProcessed: Map<string, number>;
+    private processingQueue: Set<string>;
+    private saveTimeout: NodeJS.Timeout | null = null;
 
-    constructor(private saveCallback?: (data: any) => Promise<void>) {
-        this.data = this.getDefaultData();
+    /**
+     * Constructor now accepts both loadCallback and saveCallback
+     * @param loadCallback Function to load data
+     * @param saveCallback Function to save data
+     * @param config Configuration options
+     */
+    constructor(
+        private loadCallback?: () => Promise<any>,
+        private saveCallback?: (data: any) => Promise<void>,
+        config: Partial<DatabaseConfig> = {}
+    ) {
+        super('database-service', 'Database Service');
+        
+        // Initialize configuration
+        this.config = {
+            maxHistoryLength: 100,
+            pruneThreshold: 1000,
+            processingCooldown: 5000,
+            saveDebounce: 1000,
+            ...config
+        };
+
+        // Initialize data structures
+        this.processedFiles = new Set<string>();
+        this.recentlyProcessed = new Map();
+        this.processingQueue = new Set();
     }
 
     /**
-     * Save data with callback and timestamp
+     * Initialize database service by loading data
      */
-    private async save(): Promise<void> {
+    public async initializeInternal(): Promise<void> {
+        await this.load();
+    }
+
+    /**
+     * Load data using the provided loadCallback
+     */
+    public async load(callback?: () => Promise<any>): Promise<void> {
         try {
-            this.data.lastUpdated = Date.now();
-            if (this.saveCallback) {
-                await this.saveCallback(this.data);
+            const loadFn = callback || this.loadCallback;
+            if (!loadFn) {
+                throw new ServiceError(
+                    this.serviceName,
+                    'No load callback provided',
+                    undefined
+                );
             }
-            console.log('DatabaseService: Data saved successfully');
-        } catch (error) {
-            console.error('DatabaseService: Error saving data:', error);
-            throw error;
-        }
-    }
 
-    /**
-     * Save data with external callback
-     */
-    public async saveData(callback?: (data: any) => Promise<void>): Promise<void> {
-        try {
-            this.data.lastUpdated = Date.now();
-            if (callback) {
-                await callback(this.data);
-            }
-            console.log('DatabaseService: Data saved successfully');
-        } catch (error) {
-            console.error('DatabaseService: Error saving data:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Load database from persistent storage
-     */
-    public async load(loadData: () => Promise<any>): Promise<void> {
-        try {
-            const savedData = await loadData();
+            const savedData = await loadFn();
             if (savedData) {
                 this.data = this.migrateDataIfNeeded(savedData);
                 await this.pruneOldRecordsIfNeeded();
+            } else {
+                this.data = this.getDefaultData();
             }
-            console.log('DatabaseService: Data loaded successfully');
+
         } catch (error) {
-            console.error('DatabaseService: Error loading data:', error);
-            this.data = this.getDefaultData();
+            throw new ServiceError(
+                this.serviceName,
+                'Failed to load data',
+                error instanceof Error ? error : undefined
+            );
         }
     }
 
     /**
-     * Get default database structure
+     * Save data using the provided saveCallback with debounce
      */
-    private getDefaultData(): DatabaseRecord {
-        return {
-            processedFiles: [],
-            processingState: {
-                lastProcessedFiles: [],
-                queuedFiles: [],
-                errors: [],
-                isPaused: false,
-                currentChunkIndex: 0
-            },
-            processingStats: [],
-            errors: [],
-            lastUpdated: Date.now()
+    public async save(): Promise<void> {
+        try {
+            if (this.saveTimeout) {
+                clearTimeout(this.saveTimeout);
+            }
+
+            this.saveTimeout = setTimeout(async () => {
+                this.data.lastUpdated = Date.now();
+                if (this.saveCallback) {
+                    await this.saveCallback(this.data);
+                } else {
+                    console.warn('DatabaseService: No save callback provided');
+                }
+            }, this.config.saveDebounce);
+        } catch (error) {
+            throw new ServiceError(
+                this.serviceName,
+                'Failed to save data',
+                error instanceof Error ? error : undefined
+            );
+        }
+    }
+
+    /**
+     * Clean up database resources
+     */
+    protected async destroyInternal(): Promise<void> {
+        if (this.saveTimeout) {
+            clearTimeout(this.saveTimeout);
+        }
+        this.recentlyProcessed.clear();
+        this.processingQueue.clear();
+    }
+
+    /**
+     * Configure the service
+     */
+    public async configure(config: Partial<DatabaseConfig>): Promise<void> {
+        this.config = {
+            ...this.config,
+            ...config
         };
     }
 
     /**
-     * Migrate data structure if needed
+     * Track file as being processed
      */
-    private migrateDataIfNeeded(savedData: any): DatabaseRecord {
-        // First spread default data to ensure all base properties exist
-        const migratedData = {
-            ...this.getDefaultData(),
-            ...savedData
-        };
-    
-        // Ensure processingStats have timestamps
-        migratedData.processingStats = (savedData.processingStats || []).map((stat: ProcessingStats) => ({
-            ...stat,
-            // Use endTime if available, otherwise fallback to startTime
-            timestamp: stat.endTime || stat.startTime || Date.now()
-        }));
-    
-        return migratedData;
+    public trackFileProcessing(filePath: string): void {
+        this.recentlyProcessed.set(filePath, Date.now());
+        this.processingQueue.add(filePath);
+
+        setTimeout(() => {
+            this.recentlyProcessed.delete(filePath);
+            this.processingQueue.delete(filePath);
+        }, this.config.processingCooldown);
     }
 
     /**
-     * Mark file as processed with result
+     * Check if file needs processing
+     */
+    public needsProcessing(file: TFile): boolean {
+        if (this.processingQueue.has(file.path)) {
+            return false;
+        }
+
+        const lastProcessTime = this.recentlyProcessed.get(file.path);
+        if (lastProcessTime && (Date.now() - lastProcessTime) < this.config.processingCooldown) {
+            return false;
+        }
+
+        const processedRecord = this.data.processedFiles.find(f => f.path === file.path);
+        if (!processedRecord) {
+            return true;
+        }
+
+        return file.stat.mtime > processedRecord.lastProcessed || !!processedRecord.error;
+    }
+
+    /**
+     * Mark file as processed
      */
     public async markFileAsProcessed(file: TFile, result: FileProcessingResult): Promise<void> {
         const existingIndex = this.data.processedFiles.findIndex(f => f.path === file.path);
@@ -163,62 +235,50 @@ export class DatabaseService {
             this.data.processedFiles.push(processedFile);
         }
 
+        this.trackFileProcessing(file.path);
         await this.save();
     }
 
     /**
-     * Check if file needs processing
-     */
-    public needsProcessing(file: TFile): boolean {
-        const processedFile = this.data.processedFiles.find(f => f.path === file.path);
-        if (!processedFile) return true;
-
-        const needsUpdate = file.stat.mtime > processedFile.lastProcessed;
-        const hasError = !!processedFile.error;
-
-        return needsUpdate || hasError;
-    }
-
-    /**
-     * Add processing statistics with validation
+     * Add processing stats
      */
     public async addProcessingStats(stats: ProcessingStats): Promise<void> {
-        const timestamp = Date.now();
         const validatedStats: TimestampedProcessingStats = {
             totalFiles: stats.totalFiles || 0,
             processedFiles: stats.processedFiles || 0,
             errorFiles: stats.errorFiles || 0,
             skippedFiles: stats.skippedFiles || 0,
-            startTime: stats.startTime || timestamp,
-            endTime: stats.endTime || timestamp,
+            startTime: stats.startTime || Date.now(),
+            endTime: stats.endTime || Date.now(),
             averageProcessingTime: stats.averageProcessingTime || 0,
-            timestamp: timestamp
+            timestamp: Date.now()
         };
 
         this.data.processingStats.unshift(validatedStats);
-        if (this.data.processingStats.length > this.MAX_HISTORY_LENGTH) {
-            this.data.processingStats = this.data.processingStats.slice(0, this.MAX_HISTORY_LENGTH);
+        
+        if (this.data.processingStats.length > this.config.maxHistoryLength) {
+            this.data.processingStats = this.data.processingStats.slice(0, this.config.maxHistoryLength);
         }
 
         await this.save();
     }
 
     /**
-     * Get processing statistics with fallback
+     * Get processing stats with optional time filter
      */
     public getProcessingStats(days?: number): ProcessingStats[] {
-        const stats = this.data.processingStats || [];
-        
-        if (days) {
-            const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
-            return stats.filter(stat => (stat.timestamp || stat.startTime) > cutoff);
+        if (!days) {
+            return this.data.processingStats;
         }
-        
-        return stats;
+
+        const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
+        return this.data.processingStats.filter(
+            stat => (stat.timestamp || stat.startTime) > cutoff
+        );
     }
 
     /**
-     * Get summary of processing statistics
+     * Get processing stats summary
      */
     public getProcessingStatsSummary(): {
         totalProcessed: number;
@@ -242,114 +302,79 @@ export class DatabaseService {
         const totalErrors = stats.reduce((sum, stat) => sum + stat.errorFiles, 0);
         const averageTime = stats.reduce((sum, stat) => sum + stat.averageProcessingTime, 0) / stats.length;
         const successRate = totalProcessed > 0 ? ((totalProcessed - totalErrors) / totalProcessed) * 100 : 100;
-        const lastProcessed = stats[0].timestamp;
 
         return {
             totalProcessed,
             totalErrors,
             averageTime,
             successRate,
-            lastProcessed
+            lastProcessed: stats[0].timestamp
         };
     }
 
     /**
-     * Get recent errors
-     */
-    public getRecentErrors(limit: number = 10): ProcessingError[] {
-        return this.data.errors.slice(0, limit);
-    }
-
-    /**
-     * Add processing error
-     */
-    public async addError(error: ProcessingError): Promise<void> {
-        this.data.errors.unshift(error);
-        await this.save();
-    }
-
-    /**
-     * Get persistent processing state
-     */
-    public async loadProcessingState(): Promise<PersistentProcessingState> {
-        return this.data.processingState;
-    }
-
-    /**
-     * Save persistent processing state
-     */
-    public async saveProcessingState(state: PersistentProcessingState): Promise<void> {
-        this.data.processingState = state;
-        await this.save();
-    }
-
-    /**
-     * Reset processing state to default
-     */
-    public async resetProcessingState(): Promise<void> {
-        this.data.processingState = this.getDefaultData().processingState;
-        await this.save();
-    }
-
-    /**
-     * Prune old records if threshold exceeded
+     * Prune old records if needed
      */
     private async pruneOldRecordsIfNeeded(): Promise<void> {
-        if (this.data.processedFiles.length <= this.PRUNE_THRESHOLD) {
+        if (this.data.processedFiles.length <= this.config.pruneThreshold) {
             return;
         }
 
         const cutoff = Date.now() - this.MONTH_IN_MS;
         
-        this.data.processedFiles = this.data.processedFiles.filter(file => 
-            file.lastProcessed > cutoff || file.error
+        this.data.processedFiles = this.data.processedFiles.filter(
+            file => file.lastProcessed > cutoff || file.error
         );
         
-        this.data.errors = this.data.errors.filter(error => 
-            error.timestamp > cutoff
+        this.data.errors = this.data.errors.filter(
+            error => error.timestamp > cutoff
         );
 
         await this.save();
     }
 
     /**
-     * Get stats for specific file
+     * Get default data structure
      */
-    public getFileStats(filePath: string): ProcessedFile | undefined {
-        return this.data.processedFiles.find(f => f.path === filePath);
-    }
-
-    /**
-     * Get summary of file processing history
-     */
-    public getFileProcessingSummary(): {
-        totalFiles: number;
-        processedToday: number;
-        errorCount: number;
-        averageProcessingTime: number;
-    } {
-        const today = new Date().setHours(0, 0, 0, 0);
-        const files = this.data.processedFiles;
-        
+    private getDefaultData(): DatabaseRecord {
         return {
-            totalFiles: files.length,
-            processedToday: files.filter(f => f.lastProcessed > today).length,
-            errorCount: files.filter(f => f.error).length,
-            averageProcessingTime: this.calculateAverageProcessingTime()
+            processedFiles: [],
+            processingState: {
+                lastProcessedFiles: [],
+                queuedFiles: [],
+                errors: [],
+                isPaused: false,
+                currentChunkIndex: 0
+            },
+            processingStats: [],
+            errors: [],
+            lastUpdated: Date.now()
         };
     }
 
     /**
-     * Calculate average processing time
+     * Migrate data if needed
      */
-    private calculateAverageProcessingTime(): number {
-        const recentFiles = this.data.processedFiles
-            .filter(f => !f.error)
-            .slice(0, 100);
+    private migrateDataIfNeeded(savedData: any): DatabaseRecord {
+        const migratedData: DatabaseRecord = {
+            ...this.getDefaultData(),
+            ...savedData
+        };
+    
+        migratedData.processingStats = (savedData.processingStats || []).map(
+            (stat: ProcessingStats) => ({
+                ...stat,
+                timestamp: stat.endTime || stat.startTime || Date.now()
+            })
+        );
+    
+        return migratedData;
+    }
 
-        if (recentFiles.length === 0) return 0;
-
-        const totalTime = recentFiles.reduce((sum, file) => sum + file.processingTime, 0);
-        return totalTime / recentFiles.length;
+    /**
+     * Optional: Getter for the entire config if needed elsewhere
+     */
+    public getConfig(): Readonly<Required<DatabaseConfig>> {
+        return this.config;
     }
 }

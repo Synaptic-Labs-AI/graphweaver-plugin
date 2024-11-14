@@ -1,794 +1,497 @@
-/* General Accordion Styles */
-.gw-accordion {
-    background-color: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 8px;
-    margin-bottom: 16px;
-    overflow: hidden;
+/* =========================================================
+   Graphweaver Plugin Styles - Refactored
+   ========================================================= */
+
+/* Base Styles and Custom Properties */
+.graphweaver-plugin,
+.graphweaver-modal {
+  --gw-spacing: 1rem;
+  --gw-border-radius: 0.5rem;
+  --gw-transition-duration: 0.3s;
+  --gw-font-size-base: 1rem;
+  --gw-font-size-large: 1.2rem;
+  --gw-font-size-small: 0.95rem;
 }
 
-.gw-accordion-header {
-    background-color: var(--background-secondary-alt);
-    padding: 12px 16px;
-    cursor: pointer;
-    font-weight: 600;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: background-color 0.2s ease;
+/* 1. Scoped CSS Reset for Plugin Components */
+.graphweaver-plugin,
+.graphweaver-plugin * {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-.gw-accordion-header:hover {
-    background-color: var(--background-modifier-hover);
+.graphweaver-modal .modal-content,
+.graphweaver-modal .modal-content * {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-.gw-accordion-title-wrapper {
-    display: flex;
-    align-items: center;
-    flex-grow: 1;
+/* 2. Accordion Styles */
+.graphweaver-plugin .gw-accordion {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--gw-border-radius);
+  margin-bottom: var(--gw-spacing);
+  background-color: var(--background-primary);
+  overflow: hidden;
+  transition: transform var(--gw-transition-duration) ease, box-shadow var(--gw-transition-duration) ease;
 }
 
-.gw-accordion-title {
-    margin-right: auto;
+.graphweaver-plugin .gw-accordion:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
 }
 
-.gw-accordion-toggle {
-    font-size: 0.8em;
-    transition: transform 0.2s ease;
-    margin-left: 8px;
+.graphweaver-plugin .gw-accordion-header {
+  padding: var(--gw-spacing);
+  background-color: var(--background-secondary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--gw-transition-duration) ease;
 }
 
-.gw-accordion-description {
-    padding: 8px 16px;
-    font-size: 0.9em;
-    color: var(--text-muted);
-    background-color: var(--background-secondary);
-    border-top: 1px solid var(--background-modifier-border);
+.graphweaver-plugin .gw-accordion-header:hover {
+  background-color: var(--background-tertiary);
 }
 
-.gw-accordion-content {
-    padding: 16px;
+.graphweaver-plugin .gw-accordion-title-wrapper {
+  display: flex;
+  align-items: center;
 }
 
-.gw-accordion.gw-accordion-open .gw-accordion-toggle {
-    transform: rotate(180deg);
+.graphweaver-plugin .gw-accordion-title {
+  margin-left: var(--gw-spacing);
+  font-size: var(--gw-font-size-large);
+  font-weight: 600;
+  color: var(--text-normal);
 }
 
-/* Property Manager Styles */
-.gw-property-editor {
-    margin-bottom: 20px;
+.graphweaver-plugin .gw-accordion-toggle {
+  transition: transform var(--gw-transition-duration) ease;
 }
 
-.gw-property-editor .setting-item {
-    border-top: none;
-    padding: 8px 0;
+.graphweaver-plugin .gw-accordion.gw-accordion-open .gw-accordion-toggle {
+  transform: rotate(45deg); /* Rotate icon when open */
 }
 
-.gw-property-editor input[type="text"],
-.gw-property-editor textarea,
-.gw-property-editor select {
-    width: 100%;
-    background-color: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-    color: var(--text-normal);
-    padding: 8px;
-    border-radius: 4px;
+.graphweaver-plugin .gw-accordion-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height var(--gw-transition-duration) ease;
 }
 
-/* Button Styles */
-.gw-button-container {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
+.graphweaver-plugin .gw-accordion.gw-accordion-open .gw-accordion-content {
+  max-height: 100vh; /* Adjust based on content */
 }
 
-.gw-button-container .setting-item {
-    border-top: none;
-    padding: 0;
-    justify-content: flex-end;
+@media (prefers-reduced-motion: reduce) {
+  .graphweaver-plugin .gw-accordion,
+  .graphweaver-plugin .gw-accordion-header,
+  .graphweaver-plugin .gw-accordion-content {
+    transition: none;
+  }
 }
 
-.gw-button-container .setting-item-control {
-    display: flex;
-    gap: 10px;
+/* 3. Modal Styles */
+
+/* Modal Overlay */
+.graphweaver-modal .modal-overlay {
+  background-color: var(--background-primary);
+  z-index: 999; /* Ensure it sits above other elements */
+  opacity: 1;
+  transition: opacity var(--gw-transition-duration) ease;
 }
 
-/* Edit Properties Modal Styles */
-.gw-select-all-container {
-    display: flex;
-    align-items: center;
-    margin-bottom: 10px;
-    padding: 0 8px;
+/* Modal Container */
+.graphweaver-modal .modal-content {
+  background-color: var(--background-primary);
+  border-radius: var(--gw-border-radius);
+  width: 90%;
+  max-width: 800px;
+  z-index: 1000; /* Above the overlay */
+  overflow: hidden;
+  color: var(--text-normal);
+  padding: 0;
+  margin: auto;
+  position: relative;
 }
 
-.gw-select-all-container input[type="checkbox"] {
-    margin-right: 8px;
+/* Modal Header */
+.graphweaver-modal .modal-header {
+  padding: var(--gw-spacing);
+  background-color: var(--background-secondary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.gw-modal-property-list {
-    max-height: 400px;
-    overflow-y: auto;
-    margin-bottom: 20px;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 4px;
+.graphweaver-modal .modal-header-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text-normal);
 }
 
-.gw-modal-property-table {
-    width: 100%;
-    border-collapse: collapse;
+.graphweaver-modal .modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-normal);
+  font-size: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--gw-transition-duration) ease;
 }
 
-.gw-modal-property-table th,
-.gw-modal-property-table td {
-    padding: 8px;
-    border: 1px solid var(--background-modifier-border);
+.graphweaver-modal .modal-close:hover {
+  color: var(--interactive-accent);
 }
 
-.gw-modal-property-table th {
-    background-color: var(--background-secondary-alt);
-    font-weight: bold;
-    text-align: left;
+.graphweaver-modal .modal-close:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
 }
 
-.gw-modal-property-table input[type="text"],
-.gw-modal-property-table select {
-    width: 100%;
-    background-color: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-    color: var(--text-normal);
-    padding: 4px;
-    border-radius: 4px;
+/* Modal Body */
+.graphweaver-modal .modal-body,
+.graphweaver-modal .modal-scrollable-content {
+  padding: var(--gw-spacing);
+  max-height: 70vh;
+  overflow-y: auto;
+  font-size: var(--gw-font-size-base);
+  line-height: 1.6;
 }
 
-.gw-modal-property-table tr {
-    cursor: move;
+/* Loading State in Modal */
+.graphweaver-modal .loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--gw-spacing);
 }
 
-.gw-drag-handle {
-    cursor: move;
-    user-select: none;
-    text-align: center;
+.graphweaver-modal .loading-text {
+  margin-top: var(--gw-spacing);
+  font-size: var(--gw-font-size-large);
+  color: var(--text-muted);
 }
 
-.gw-modal-property-table tr:hover {
-    background-color: var(--background-secondary);
+/* Error State in Modal */
+.graphweaver-modal .error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--gw-spacing) * 2);
+  color: var(--color-red);
 }
 
-.gw-modal-button-container {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
+.graphweaver-modal .error-message {
+  margin-top: var(--gw-spacing);
+  font-size: var(--gw-font-size-large);
+  color: var(--color-red);
 }
 
-.gw-modal-button-container .setting-item {
-    border-top: none;
-    padding: 0;
-    justify-content: flex-end;
+/* 4. Utility Classes */
+
+/* Alignments */
+.graphweaver-plugin .align-right {
+  text-align: right;
 }
 
-.gw-modal-button-container .setting-item-control {
-    display: flex;
-    gap: 10px;
+.graphweaver-plugin .align-center {
+  text-align: center;
 }
 
-/* Responsive adjustments */
+/* Status Indicators */
+.graphweaver-plugin .status-error {
+  color: var(--color-red);
+}
+
+.graphweaver-plugin .status-success {
+  color: var(--color-green);
+}
+
+.graphweaver-plugin .status-warning {
+  color: var(--color-yellow);
+}
+
+/* 5. Button Styles */
+
+/* Base Button Styles */
+.gw-button {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--gw-border-radius);
+  cursor: pointer;
+  font-size: var(--gw-font-size-base);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--gw-transition-duration) ease, transform 0.2s ease;
+}
+
+.gw-button:hover {
+  background-color: var(--interactive-accent-hover);
+  transform: translateY(-2px);
+}
+
+.gw-button:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+/* Modifier Classes */
+.gw-button--secondary {
+  background-color: var(--background-secondary);
+  color: var(--text-normal);
+}
+
+.gw-button--secondary:hover {
+  background-color: var(--background-tertiary);
+}
+
+.gw-button--warning {
+  background-color: var(--color-red);
+  color: var(--text-on-accent);
+}
+
+.gw-button--warning:hover {
+  background-color: var(--color-red-hover);
+}
+
+/* 6. Table Styles */
+.graphweaver-plugin .history-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: var(--gw-spacing);
+  font-size: var(--gw-font-size-base);
+}
+
+.graphweaver-plugin .history-table th,
+.graphweaver-plugin .history-table td {
+  padding: 0.875rem 1rem; /* 14px and 16px converted to rem */
+  border: 1px solid var(--background-modifier-border);
+}
+
+.graphweaver-plugin .history-table th {
+  background-color: var(--background-secondary);
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.graphweaver-plugin .history-table tr:nth-child(even) {
+  background-color: var(--background-tertiary);
+}
+
+.graphweaver-plugin .history-table tr:hover {
+  background-color: var(--background-secondary-hover);
+}
+
+/* 7. Summary Grid */
+.graphweaver-plugin .summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--gw-spacing);
+  margin-top: var(--gw-spacing);
+}
+
+.graphweaver-plugin .summary-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.graphweaver-plugin .summary-label {
+  font-weight: 600;
+  color: var(--text-normal);
+  margin-bottom: 0.5rem;
+}
+
+.graphweaver-plugin .summary-value {
+  font-size: var(--gw-font-size-large);
+  color: var(--text-muted);
+}
+
+/* 8. Checkbox Styles */
+.graphweaver-plugin .gw-checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+/* 9. List Styles */
+.graphweaver-plugin .gw-list {
+  list-style-type: disc;
+  padding-left: calc(var(--gw-spacing) * 1.5);
+  margin-top: var(--gw-spacing);
+}
+
+/* 10. Drag Handle */
+.graphweaver-plugin .gw-drag-handle {
+  cursor: grab;
+  user-select: none;
+  font-size: 1.4rem;
+  color: var(--text-muted);
+  transition: color 0.2s ease;
+}
+
+.graphweaver-plugin .gw-drag-handle:hover {
+  color: var(--interactive-accent);
+}
+
+/* 11. Text Inputs and Textareas */
+.graphweaver-plugin .gw-text-input,
+.graphweaver-plugin .gw-textarea-input {
+  width: 100%;
+  padding: 0.9375rem 1.25rem; /* 15px and 20px converted to rem */
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--gw-border-radius);
+  background-color: var(--background-secondary);
+  color: var(--text-normal);
+  font-size: var(--gw-font-size-base);
+  transition: border-color var(--gw-transition-duration) ease, background-color var(--gw-transition-duration) ease;
+}
+
+.graphweaver-plugin .gw-text-input:focus,
+.graphweaver-plugin .gw-textarea-input:focus {
+  border-color: var(--interactive-accent);
+  background-color: var(--background-tertiary);
+  outline: none;
+}
+
+.graphweaver-plugin .gw-textarea-input {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* 12. Dropdown */
+.graphweaver-plugin .gw-dropdown {
+  width: 100%;
+  padding: 0.9375rem 1.25rem;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--gw-border-radius);
+  background-color: var(--background-secondary);
+  color: var(--text-normal);
+  font-size: var(--gw-font-size-base);
+  transition: border-color var(--gw-transition-duration) ease, background-color var(--gw-transition-duration) ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg width='14' height='10' viewBox='0 0 14 10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%23aaaaaa' stroke-width='2' fill='none' fill-rule='evenodd'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 0.65rem;
+}
+
+.graphweaver-plugin .gw-dropdown:focus {
+  border-color: var(--interactive-accent);
+  background-color: var(--background-tertiary);
+  outline: none;
+}
+
+.graphweaver-plugin .gw-dropdown option {
+  color: var(--text-normal);
+}
+
+/* 13. Button Containers */
+.graphweaver-plugin .gw-button-container,
+.graphweaver-modal .gw-button-container,
+.graphweaver-plugin .modal-action-buttons,
+.graphweaver-modal .modal-action-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--gw-spacing);
+  margin-top: var(--gw-spacing);
+}
+
+/* 14. History Table Container */
+.graphweaver-plugin .history-table-container {
+  overflow-x: auto;
+  margin-top: var(--gw-spacing);
+}
+
+/* 15. Chart Container */
+.graphweaver-plugin .chart-container {
+  position: relative;
+  height: 400px;
+  margin-top: var(--gw-spacing);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--gw-border-radius);
+  padding: var(--gw-spacing);
+  background-color: var(--background-secondary);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* 16. Progress Text */
+.graphweaver-plugin .progress-text {
+  margin-top: var(--gw-spacing);
+  font-size: var(--gw-font-size-large);
+  color: var(--text-muted);
+}
+
+/* 17. Empty State */
+.graphweaver-plugin .empty-state {
+  padding: var(--gw-spacing);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--gw-font-size-base);
+}
+
+/* 18. Responsive Design */
 @media (max-width: 768px) {
-    .gw-modal-property-table {
-        font-size: 0.9em;
-    }
-
-    .gw-modal-property-table input[type="text"],
-    .gw-modal-property-table select {
-        padding: 2px;
-    }
-}
-
-/* Tag Manager Styles */
-.gw-tag-editor {
-    margin-bottom: 20px;
-}
-
-.gw-tag-editor .setting-item {
-    border-top: none;
-    padding: 8px 0;
-}
-
-.gw-tag-editor input[type="text"],
-.gw-tag-editor textarea {
-    width: 100%;
-    background-color: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-    color: var(--text-normal);
-    padding: 8px;
-    border-radius: 4px;
-}
-
-/* Edit Tags Modal Styles */
-.gw-modal-tag-list {
-    max-height: 400px;
-    overflow-y: auto;
-    margin-bottom: 20px;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 4px;
-}
-
-.gw-modal-tag-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.gw-modal-tag-table th,
-.gw-modal-tag-table td {
-    padding: 8px;
-    border: 1px solid var(--background-modifier-border);
-}
-
-.gw-modal-tag-table th {
-    background-color: var(--background-secondary-alt);
-    font-weight: bold;
-    text-align: left;
-}
-
-.gw-modal-tag-table input[type="text"],
-.gw-modal-tag-table textarea {
-    width: 100%;
-    background-color: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-    color: var(--text-normal);
-    padding: 4px;
-    border-radius: 4px;
-}
-
-.ontology-generator-modal {
-    padding: 20px;
-}
-
-.ontology-generator-modal h2 {
-    margin-bottom: 20px;
-    color: var(--text-normal);
-}
-
-.ontology-generator-modal .loading-container,
-.ontology-generator-modal .content-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-}
-
-.ontology-generator-modal .spinner {
-    border: 4px solid var(--background-modifier-border);
-    border-top: 4px solid var(--interactive-accent);
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    animation: spin 1s linear infinite;
-    margin-bottom: 20px;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.ontology-generator-modal .vault-stats {
-    background-color: var(--background-secondary);
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 20px;
-    width: 100%;
-}
-
-.ontology-generator-modal .vault-stats h3 {
-    margin-top: 0;
-    margin-bottom: 10px;
-    color: var(--text-normal);
-}
-
-.ontology-generator-modal .vault-stats ul {
-    list-style-type: none;
-    padding: 0;
-    margin: 0;
-}
-
-.ontology-generator-modal .vault-stats li {
-    margin-bottom: 5px;
-}
-
-.ontology-generator-modal .setting-item {
-    border-top: none;
-    padding: 0;
-    margin-bottom: 20px;
-}
-
-.ontology-generator-modal .dropdown {
-    width: 100%;
-}
-
-.ontology-generator-modal .button-container {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    width: 100%;
-}
-
-.ontology-generator-modal .error-message {
-    color: var(--text-error);
-    font-weight: bold;
-}
-
-/* styles.css */
-
-/* File Explorer Styles */
-.file-explorer {
-    max-height: 400px;
-    overflow-y: auto;
-    margin-top: 10px;
-    border: 1px solid var(--color-border);
-    padding: 10px;
-    border-radius: 4px;
-    background-color: var(--background-secondary);
-}
-
-/* Folder Styles */
-.folder {
-    margin-left: 10px;
-}
-
-.folder-name {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    user-select: none;
-}
-
-.folder-checkbox {
-    margin-right: 5px;
-}
-
-.folder-content {
-    margin-left: 20px;
-    display: none;
-}
-
-.folder.open .folder-content {
-    display: block;
-}
-
-/* File Styles */
-.file {
-    display: flex;
-    align-items: center;
-    margin-left: 20px;
-}
-
-.file-checkbox {
-    margin-right: 5px;
-}
-
-/* Icon Styles */
-.icon {
-    margin-right: 5px;
-    font-size: 1em; /* Adjust as needed */
-}
-
-/* Button Container Styles */
-.button-container {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 20px;
-}
-
-.button-container button {
-    margin-left: 10px;
-}
-
-/* Progress Bar Styles */
-.progress-bar-container {
-    width: 100%;
-    background-color: var(--background-secondary);
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    overflow: hidden;
-    height: 20px;
-    margin-top: 20px;
-}
-
-.progress-bar {
-    height: 100%;
-    width: 0%;
-    background-color: var(--interactive-accent);
-    transition: width 0.3s ease;
-}
-
-/* Modal Header Styles */
-.modal-content h2 {
-    margin-bottom: 15px;
-}
-
-/* Button Styles */
-.mod-cancel {
-    background-color: var(--interactive-negative);
-    color: var(--interactive-normal);
-    border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.mod-cta {
-    background-color: var(--interactive-positive);
-    color: var(--text-normal);
-    border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.mod-cancel:hover {
-    background-color: var(--interactive-negative-hover);
-}
-
-.mod-cta:hover {
-    background-color: var(--interactive-positive-hover);
-}
-
-/* Indeterminate Checkbox Style */
-input[type="checkbox"].folder-checkbox:indeterminate {
-    background-color: transparent;
-    position: relative;
-}
-
-input[type="checkbox"].folder-checkbox:indeterminate::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 10px;
-    height: 2px;
-    background-color: currentColor;
-    transform: translate(-50%, -50%);
-}
-
-/* Knowledge Bloom Accordion Styles */
-.knowledge-bloom-description {
-    background-color: var(--background-secondary);
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 20px;
-}
-
-.knowledge-bloom-model-selector {
-    margin-bottom: 20px;
-}
-
-.knowledge-bloom-model-selector .dropdown {
-    width: 100%;
-    background-color: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-    color: var(--text-normal);
-    padding: 8px;
-    border-radius: 4px;
-}
-
-.knowledge-bloom-description p {
-    margin-bottom: 10px;
-    color: var(--text-normal);
-}
-
-.knowledge-bloom-description ul {
-    list-style-type: disc;
-    padding-left: 20px;
-    margin-top: 10px;
-}
-
-.knowledge-bloom-description li {
-    margin-bottom: 5px;
-    color: var(--text-muted);
-}
-
-.knowledge-bloom-prompt {
-    margin-bottom: 20px;
-}
-
-.knowledge-bloom-prompt textarea {
-    width: 100%;
-    min-height: 100px;
-    background-color: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-    color: var(--text-normal);
-    padding: 8px;
-    border-radius: 4px;
-    resize: vertical;
-}
-
-.knowledge-bloom-generate-button {
-    display: flex;
-    justify-content: flex-end;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .knowledge-bloom-description {
-        font-size: 0.9em;
-    }
-
-    .knowledge-bloom-prompt textarea {
-        min-height: 80px;
-    }
-}
-
-/* Status Bar Core Styles */
-.processing-status-bar {
-    display: flex;
-    align-items: center;
-    gap: var(--size-2-4);
-    padding: var(--size-2-2) var(--size-2-3);
-    border-radius: var(--radius-s);
-    transition: all 0.2s var(--motion-smooth);
-    color: var(--text-muted);
-    cursor: pointer;
-}
-
-.processing-status-bar:hover {
-    color: var(--text-normal);
-    background-color: var(--background-modifier-hover);
-}
-
-.processing-status-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 18px;
-    height: 18px;
-    border-radius: var(--radius-s);
-    transition: transform 0.3s var(--motion-smooth);
-}
-
-/* Status States with Modern Colors */
-.status-idle .processing-status-icon {
-    color: var(--color-green);
-}
-
-.status-running .processing-status-icon {
-    color: var(--color-yellow);
-    animation: spin 1.5s var(--motion-smooth) infinite;
-}
-
-.status-error .processing-status-icon {
-    color: var(--color-red);
-    animation: pulse 2s var(--motion-smooth) infinite;
-}
-
-/* Modern Modal Styles */
-.status-history-modal {
-    --modal-padding: var(--size-4-6);
-    
-    max-width: min(600px, 90vw);
-    max-height: min(80vh, 800px);
-    border-radius: var(--radius-l);
-    background-color: var(--background-primary);
-    box-shadow: var(--shadow-l);
-    overflow: hidden;
-    animation: modalEnter 0.3s var(--motion-smooth);
-}
-
-.status-history-modal h2 {
-    margin: 0;
-    padding: var(--modal-padding);
-    font-size: var(--font-ui-large);
-    font-weight: var(--font-semibold);
-    color: var(--text-normal);
-    border-bottom: 1px solid var(--background-modifier-border);
-    background-color: var(--background-secondary);
-}
-
-/* Enhanced Status Display */
-.status-display {
-    padding: var(--modal-padding);
-    display: grid;
-    gap: var(--size-4-4);
-}
-
-.status-metric {
-    display: flex;
-    align-items: center;
-    gap: var(--size-4-2);
-    padding: var(--size-4-2);
-    background-color: var(--background-secondary);
-    border-radius: var(--radius-m);
-    transition: transform 0.2s var(--motion-smooth);
-}
-
-.status-metric:hover {
-    transform: translateY(-2px);
-    background-color: var(--background-secondary-alt);
-}
-
-/* Modern Table Styles */
-.history-table {
-    width: 100%;
-    border-spacing: 0;
-    margin: var(--size-4-2) 0;
-}
-
-.history-table th {
-    padding: var(--size-4-2);
-    font-weight: var(--font-semibold);
-    text-align: left;
-    color: var(--text-muted);
-    border-bottom: 2px solid var(--background-modifier-border);
-    position: sticky;
-    top: 0;
-    background-color: var(--background-primary);
-    z-index: 1;
-}
-
-.history-table td {
-    padding: var(--size-4-2);
-    border-bottom: 1px solid var(--background-modifier-border);
-    color: var(--text-normal);
-}
-
-.history-table tr {
-    transition: all 0.2s var(--motion-smooth);
-}
-
-.history-table tr:hover td {
-    background-color: var(--background-secondary);
-}
-
-/* Status Badges with Smooth Gradients */
-.status-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: var(--size-2-2) var(--size-4-2);
-    border-radius: var(--radius-pill);
-    font-size: var(--font-smaller);
-    font-weight: var(--font-medium);
-    letter-spacing: 0.5px;
-}
-
-.status-badge-success {
-    background: linear-gradient(135deg, var(--color-green), color-mix(in srgb, var(--color-green) 80%, black));
-    color: white;
-}
-
-.status-badge-running {
-    background: linear-gradient(135deg, var(--color-yellow), color-mix(in srgb, var(--color-yellow) 80%, black));
-    color: var(--text-on-accent);
-}
-
-.status-badge-error {
-    background: linear-gradient(135deg, var(--color-red), color-mix(in srgb, var(--color-red) 80%, black));
-    color: white;
-}
-
-/* Smooth Animations */
-@keyframes modalEnter {
-    from {
-        opacity: 0;
-        transform: scale(0.95) translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-}
-
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
-}
-
-/* Empty States */
-.empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: var(--size-4-6);
-    color: var(--text-muted);
-    text-align: center;
-}
-
-.empty-state-icon {
-    font-size: var(--font-ui-large);
-    margin-bottom: var(--size-4-2);
-    opacity: 0.5;
-}
-
-/* Scrollbar Styling */
-.status-history-modal ::-webkit-scrollbar {
-    width: 8px;
-}
-
-.status-history-modal ::-webkit-scrollbar-track {
-    background: var(--background-primary);
-}
-
-.status-history-modal ::-webkit-scrollbar-thumb {
-    background: var(--background-modifier-border);
-    border-radius: var(--radius-s);
-    border: 2px solid var(--background-primary);
-}
-
-.status-history-modal ::-webkit-scrollbar-thumb:hover {
-    background: var(--background-modifier-border-hover);
-}
-
-/* Mobile Responsiveness */
-@media (max-width: 768px) {
-    .status-history-modal {
-        --modal-padding: var(--size-4-4);
-    }
-    
-    .status-metric {
-        padding: var(--size-4-2);
-    }
-    
-    .history-table th,
-    .history-table td {
-        padding: var(--size-2-3);
-        font-size: var(--font-smaller);
-    }
-}
-
-/* Enhanced Dropdown Styling */
-.dropdown,
-select {
-    /* Ensure proper sizing */
-    min-height: 2.5em;          /* Increased height for better text visibility */
-    padding: 0.5em 1em;         /* Add comfortable padding around text */
-    line-height: 1.4;           /* Improve line height for better readability */
-    
-    /* Handle text overflow */
-    white-space: normal;        /* Allow text to wrap if needed */
-    text-overflow: ellipsis;    /* Show ellipsis for overflowing text */
-    
-    /* Improved appearance */
-    background-color: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 4px;
-    
-    /* Better positioning */
-    display: flex;
-    align-items: center;
-    
-    /* Ensure proper width */
-    width: 100%;
-    max-width: 100%;
-    
-    /* Smooth transitions */
-    transition: border-color 0.2s ease, background-color 0.2s ease;
-}
-
-/* Dropdown hover state */
-.dropdown:hover,
-select:hover {
-    border-color: var(--interactive-accent);
-    background-color: var(--background-secondary);
-}
-
-/* Dropdown options styling */
-select option {
-    padding: 0.5em 1em;
-    background-color: var(--background-primary);
-    color: var(--text-normal);
-}
-
-/* Ensure proper spacing in the Knowledge Bloom section */
-.knowledge-bloom-model-selector .dropdown,
-.knowledge-bloom-model-selector select {
-    margin: 0.5em 0;
-    width: 100%;
+  .graphweaver-plugin .summary-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: var(--gw-spacing);
+  }
+
+  .graphweaver-plugin .gw-accordion-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .gw-button {
+    padding: 0.625rem 1rem;
+    font-size: var(--gw-font-size-small);
+  }
+
+  .graphweaver-plugin .history-table th,
+  .graphweaver-plugin .history-table td {
+    padding: 0.75rem 0.875rem;
+    font-size: var(--gw-font-size-small);
+  }
+
+  .graphweaver-plugin .gw-text-input,
+  .graphweaver-plugin .gw-textarea-input,
+  .graphweaver-plugin .gw-dropdown {
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* 19. Accessibility Enhancements */
+
+/* Focus States */
+.graphweaver-plugin .gw-text-input:focus-visible,
+.graphweaver-plugin .gw-textarea-input:focus-visible,
+.graphweaver-plugin .gw-dropdown:focus-visible,
+.graphweaver-plugin .gw-checkbox:focus-visible,
+.graphweaver-plugin .gw-button:focus-visible,
+.graphweaver-plugin .gw-accordion-header:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+/* High Contrast Adjustments */
+@media (prefers-contrast: more) {
+  .gw-button,
+  .graphweaver-plugin .gw-text-input,
+  .graphweaver-plugin .gw-textarea-input,
+  .graphweaver-plugin .gw-dropdown {
+    border: 1px solid var(--text-normal);
+  }
 }

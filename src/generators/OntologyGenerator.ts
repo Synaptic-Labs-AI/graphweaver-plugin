@@ -1,30 +1,10 @@
 // src/generators/OntologyGenerator.ts
 
 import { BaseGenerator } from './BaseGenerator';
-import { AIAdapter } from '../adapters/AIAdapter';
+import { AIAdapter } from 'src/models/AIModels';
 import { SettingsService } from '../services/SettingsService';
-import { TFile, TFolder } from 'obsidian';
-import { AIProvider } from '../models/AIModels';
 import { Tag } from '../models/PropertyTag';
-
-/**
- * Input interface for ontology generation.
- */
-export interface OntologyInput {
-    files: TFile[];
-    folders: TFolder[];
-    tags: string[];
-    provider: AIProvider;
-    modelApiName: string;
-    userContext?: string; // Optional field based on OntologyGeneratorModal.ts
-}
-
-/**
- * Output interface for ontology generation.
- */
-export interface OntologyResult {
-    suggestedTags: Tag[];
-}
+import { OntologyInput, OntologyResult } from '../models/OntologyTypes';
 
 /**
  * Generator class responsible for creating ontologies based on provided input.
@@ -50,6 +30,7 @@ export class OntologyGenerator extends BaseGenerator<OntologyInput, OntologyResu
             return this.formatOutput(aiResponse.data);
         } catch (error) {
             this.handleError(error as Error);
+            throw error; // Ensure the error is re-thrown after handling
         }
     }
 
@@ -187,23 +168,10 @@ Suggest enough tags to form a comprehensive ontology for this knowledge base.
     protected validateInput(input: OntologyInput): boolean {
         return Array.isArray(input.files) && 
                Array.isArray(input.folders) && 
-               Array.isArray(input.tags);
-    }
-
-    /**
-     * Retrieves the current model selection for ontology generation.
-     * @returns Promise resolving to the selected model identifier.
-     */
-    protected async getCurrentModel(): Promise<string> {
-        const settings = this.settingsService.getSettings();
-        const providerType = this.aiAdapter.getProviderType();
-        const selectedModel = settings.aiProvider?.selectedModels?.[providerType];
-
-        if (!selectedModel) {
-            throw new Error(`No model selected for provider type: ${providerType}`);
-        }
-
-        return selectedModel;
+               Array.isArray(input.tags) &&
+               typeof input.provider === 'string' &&
+               typeof input.modelApiName === 'string' &&
+               typeof input.userContext === 'string';
     }
 
     /**
