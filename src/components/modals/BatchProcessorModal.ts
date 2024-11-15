@@ -274,7 +274,6 @@ export class BatchProcessorModal extends Modal {
     }
 
     private async processContent(content: string): Promise<string> {
-        console.log('BatchProcessorModal: Starting content processing');
         let processedContent = content;
     
         try {
@@ -282,13 +281,11 @@ export class BatchProcessorModal extends Modal {
             const generationService = this.aiService.getGenerationService();
     
             // Always generate front matter in manual process
-            console.log('BatchProcessorModal: Generating front matter');
             processedContent = await generationService.generateFrontMatter(processedContent);
             processedContent = this.addOrUpdateFrontMatter(processedContent, processedContent);
     
             const settings = this.settingsService.getSettings();
             if (settings.advanced.generateWikilinks) {
-                console.log('BatchProcessorModal: Generating wikilinks');
                 // Get all existing pages for wikilink generation
                 const existingPages = this.app.vault.getMarkdownFiles().map(file => file.basename);
                 processedContent = await generationService.generateWikilinks(processedContent, existingPages);

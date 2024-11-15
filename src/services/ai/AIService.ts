@@ -1,4 +1,4 @@
-import { App, Notice } from 'obsidian';
+import { App } from 'obsidian';
 import { CoreService } from '../core/CoreService';
 import { ServiceError } from '../core/ServiceError';
 import { PersistentStateManager } from '../../managers/StateManager';
@@ -152,7 +152,6 @@ export class AIService extends CoreService
             await this.initialize();
             
             if (this.config.enableNotifications) {
-                new Notice('AI Service reinitialized successfully!');
             }
         } catch (error) {
             throw new ServiceError(

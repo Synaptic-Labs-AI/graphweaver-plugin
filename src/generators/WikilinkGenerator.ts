@@ -65,7 +65,6 @@ export class WikilinkGenerator extends BaseGenerator<WikilinkInput, WikilinkOutp
      */
     public async initialize(): Promise<void> {
         await this.textProcessor.initialize();
-        console.log('WikilinkGenerator: Initialized.');
     }
 
     /**
@@ -73,7 +72,6 @@ export class WikilinkGenerator extends BaseGenerator<WikilinkInput, WikilinkOutp
      */
     public async destroy(): Promise<void> {
         this.textProcessor.destroy();
-        console.log('WikilinkGenerator: Destroyed.');
     }
 
     /**
@@ -81,18 +79,14 @@ export class WikilinkGenerator extends BaseGenerator<WikilinkInput, WikilinkOutp
      */
     public async generate(input: WikilinkInput): Promise<WikilinkOutput> {
         try {
-            console.log('WikilinkGenerator: Starting generation for input.');
             if (!this.validateInput(input)) {
                 throw new Error('Invalid input for wikilink generation');
             }
 
             // Prepare prompt and get AI response
             const prompt = this.preparePrompt(input);
-            console.log('WikilinkGenerator: Prepared prompt:', prompt);
             const model = await this.getCurrentModel();
-            console.log('WikilinkGenerator: Using model:', model);
             const aiResponse = await this.aiAdapter.generateResponse(prompt, model) as AIResponse;
-            console.log('WikilinkGenerator: Received AI response:', aiResponse);
 
             // Extract the actual AI response value
             let aiResponseValue: AISuggestionsResponse;
@@ -104,7 +98,6 @@ export class WikilinkGenerator extends BaseGenerator<WikilinkInput, WikilinkOutp
 
             // Format output using text processor
             const output = this.formatOutput(aiResponseValue, input);
-            console.log('WikilinkGenerator: Formatted output:', output);
             return output;
         } catch (error) {
             console.error('WikilinkGenerator: Error during generation:', error);
@@ -147,11 +140,9 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
     protected formatOutput(aiResponse: AISuggestionsResponse, originalInput: WikilinkInput): WikilinkOutput {
         // Parse suggested links from AI response
         const suggestedLinks = this.parseSuggestedLinks(aiResponse);
-        console.log('WikilinkGenerator: Suggested Links:', suggestedLinks);
 
         // Get existing wikilinks from content
         const existingLinks = this.extractExistingWikilinks(originalInput.content);
-        console.log('WikilinkGenerator: Existing Wikilinks:', Array.from(existingLinks));
 
         // Process content using text processor
         let processedContent = originalInput.content;

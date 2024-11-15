@@ -90,7 +90,6 @@ export abstract class BaseGenerator<
     public async initialize(): Promise<void> {
         // Default implementation does nothing.
         // Derived classes can override this method to perform specific initialization tasks.
-        console.log(`${this.constructor.name}: Initialization complete.`);
     }
 
     /**
@@ -100,7 +99,6 @@ export abstract class BaseGenerator<
     public async destroy(): Promise<void> {
         // Default implementation does nothing.
         // Derived classes can override this method to perform specific cleanup tasks.
-        console.log(`${this.constructor.name}: Destruction complete.`);
     }
 
     /**

@@ -1,4 +1,4 @@
-import { App, Setting, TextComponent, TextAreaComponent, ButtonComponent, Notice } from "obsidian";
+import { App, Setting, TextComponent, TextAreaComponent, Notice } from "obsidian";
 import { Tag } from "../../models/PropertyTag";
 import { EditTagsModal } from "../modals/EditTagsModal";
 import { BaseAccordion } from "./BaseAccordion";

@@ -1,4 +1,4 @@
-import { App, Setting, TextComponent, TextAreaComponent, DropdownComponent, ButtonComponent, Notice } from "obsidian";
+import { App, Setting, TextComponent, TextAreaComponent, DropdownComponent, Notice } from "obsidian";
 import { PropertyTag, PropertyType } from "../../models/PropertyTag";
 import { EditPropertiesModal } from "../modals/EditPropertiesModal";
 import { BaseAccordion } from "./BaseAccordion";

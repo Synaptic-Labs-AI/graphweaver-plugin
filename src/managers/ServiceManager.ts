@@ -47,7 +47,6 @@ export class ServiceManager {
 
         try {
             this.registry.register(config);
-            console.log(`ServiceManager: Registered service ${config.id}`);
         } catch (error) {
             this.handleError(`Failed to register service ${config.id}`, error);
             throw error;
@@ -79,7 +78,6 @@ export class ServiceManager {
             await this.registry.initializeServices();
             this.state = ServiceState.Ready;
             this.error = null;
-            console.log('ServiceManager: All services initialized successfully');
         } catch (error) {
             this.state = ServiceState.Error;
             this.handleError('Service initialization failed', error);
@@ -107,7 +105,6 @@ export class ServiceManager {
             }
     
             const service = this.registry.getService<T>(id);
-            console.log(`ServiceManager: Retrieved service ${id}`);
             return service;
         } catch (error) {
             this.handleError(`Failed to get service ${id}`, error);
@@ -127,7 +124,6 @@ export class ServiceManager {
         try {
             await this.registry.destroyServices();
             this.state = ServiceState.Destroyed;
-            console.log('ServiceManager: All services destroyed successfully');
         } catch (error) {
             this.handleError('Service cleanup failed', error);
             throw error;

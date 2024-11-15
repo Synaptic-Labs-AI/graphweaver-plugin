@@ -1,4 +1,3 @@
-import { Notice } from 'obsidian';
 import { CoreService } from '../services/core/CoreService';
 import { ServiceError } from '../services/core/ServiceError';
 import { IConfigurableService } from '../services/core/IService';
@@ -51,7 +50,6 @@ export class JsonValidationService extends CoreService implements IConfigurableS
      */
     protected async initializeInternal(): Promise<void> {
         if (this.config.debug) {
-            console.log('JsonValidationService: Initialized successfully');
         }
     }
 
@@ -61,7 +59,6 @@ export class JsonValidationService extends CoreService implements IConfigurableS
     protected async destroyInternal(): Promise<void> {
         // Currently no resources to clean up
         if (this.config.debug) {
-            console.log('JsonValidationService: Cleanup complete');
         }
     }
 
@@ -157,7 +154,6 @@ export class JsonValidationService extends CoreService implements IConfigurableS
             }
 
             if (this.config.notifyOnError) {
-                new Notice(`Invalid JSON format: ${serviceError.message}`);
             }
 
             return {
@@ -181,7 +177,6 @@ export class JsonValidationService extends CoreService implements IConfigurableS
             };
         } catch (initialError) {
             if (this.config.debug) {
-                console.log('JsonValidationService: Attempting to fix malformed JSON');
             }
 
             try {
@@ -209,14 +204,6 @@ export class JsonValidationService extends CoreService implements IConfigurableS
                 }
 
                 const fixedJson = JSON.parse(fixed) as T;
-
-                if (this.config.debug) {
-                    console.log('JsonValidationService: Successfully fixed and parsed JSON:', {
-                        original: str,
-                        fixed,
-                        fixes
-                    });
-                }
 
                 return {
                     valid: true,

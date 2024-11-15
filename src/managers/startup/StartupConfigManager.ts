@@ -60,7 +60,6 @@ export class StartupConfigManager {
      */
     public debugLog(message: string): void {
         if (this.config.debug) {
-            console.log(`StartupGenerate: ${message}`);
         }
     }
 

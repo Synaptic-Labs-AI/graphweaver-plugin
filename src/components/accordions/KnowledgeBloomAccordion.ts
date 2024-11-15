@@ -5,15 +5,6 @@ import { BaseAccordion } from "./BaseAccordion";
 import { SettingsService } from "../../services/SettingsService"; 
 import { AIService } from "../../services/ai/AIService";
 import { AIModel, AIProvider } from "src/models/AIModels";
-import { KnowledgeBloomSettings } from "src/settings/Settings";
-
-// Add type for response
-interface KnowledgeBloomResponse {
-    generatedNotes: Array<{
-        title: string;
-        content: string;
-    }>;
-}
 
 export class KnowledgeBloomAccordion extends BaseAccordion {
     public userPromptInput: TextAreaComponent;

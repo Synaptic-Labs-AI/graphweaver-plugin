@@ -1,6 +1,6 @@
 // src/managers/DatabaseManager.ts
 
-import { App, TFile } from 'obsidian';
+import { App } from 'obsidian';
 import { DatabaseService } from '../services/DatabaseService';
 import { ServiceError } from '../services/core/ServiceError';
 
@@ -32,7 +32,6 @@ export class DatabaseManager {
     public async initialize(): Promise<void> {
         try {
             await this.databaseService.initializeInternal();
-            console.log('DatabaseManager: Initialized successfully');
         } catch (error) {
             console.error('DatabaseManager: Failed to initialize DatabaseService', error);
             throw new ServiceError(

@@ -2,7 +2,6 @@
 
 import { App, TFile } from 'obsidian';
 import { CoreService } from '../services/core/CoreService';
-import { ServiceError } from '../services/core/ServiceError';
 import { EventEmitter } from 'events';
 import { FileProcessorService } from '../services/file/FileProcessorService';
 import { OperationExecutor } from '../services/ai/OperationExecutor';

@@ -21,28 +21,6 @@ export class JsonSchemaGenerator extends BaseGenerator<BaseGeneratorInput, BaseG
     }
 
     /**
-     * Initialize the JsonSchemaGenerator.
-     * Currently, no specific initialization is required.
-     * Override this method if specific initialization steps are needed.
-     */
-    public async initialize(): Promise<void> {
-        // No initialization steps required currently.
-        // Add any necessary initialization logic here in the future.
-        console.log('JsonSchemaGenerator: Initialized.');
-    }
-
-    /**
-     * Destroy the JsonSchemaGenerator.
-     * Currently, no specific cleanup is required.
-     * Override this method if specific cleanup steps are needed.
-     */
-    public async destroy(): Promise<void> {
-        // No cleanup steps required currently.
-        // Add any necessary cleanup logic here in the future.
-        console.log('JsonSchemaGenerator: Destroyed.');
-    }
-
-    /**
      * Generates a base JSON schema based on settings.
      * Handles lazy initialization of settings to avoid circular dependencies.
      */
@@ -114,7 +92,6 @@ export class JsonSchemaGenerator extends BaseGenerator<BaseGeneratorInput, BaseG
     public resetCache(): void {
         this.cachedSchema = null;
         this.settingsInitialized = false;
-        console.log('JsonSchemaGenerator: Cache reset.');
     }
 
     /**

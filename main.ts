@@ -38,7 +38,6 @@ export default class GraphWeaverPlugin extends Plugin {
 
     constructor(app: App, manifest: any) {
         super(app, manifest);
-        console.log('Initializing GraphWeaver Plugin');
 
         // Initialize core utilities
         this.errorManager = new ErrorManager();
@@ -57,7 +56,6 @@ export default class GraphWeaverPlugin extends Plugin {
 
     async onload(): Promise<void> {
         try {
-            console.log('Loading GraphWeaver Plugin');
             this.eventManager.register('layout-ready', this.handleLayoutReady.bind(this));
             this.app.workspace.containerEl.addClass('graphweaver-plugin');
             await this.registerServices(); // Only registering services here
@@ -66,7 +64,6 @@ export default class GraphWeaverPlugin extends Plugin {
 
         } catch (error) {
             console.error('Failed to load plugin:', error);
-            new Notice('Failed to load GraphWeaver plugin. Check console for details.');
         }
     }
 
@@ -75,7 +72,6 @@ export default class GraphWeaverPlugin extends Plugin {
      */
     private async registerServices(): Promise<void> {
         try {
-            console.log('Registering services...');
 
             // Level 1: Core Services (no dependencies)
             this.registerStateManager();
@@ -347,15 +343,12 @@ export default class GraphWeaverPlugin extends Plugin {
             this.registerCommands();
             this.addSettingTab(new GraphWeaverSettingTab(this.app, this));
 
-            console.log('GraphWeaver Plugin is now active and ready to use.');
         } catch (error) {
             console.error('Failed to initialize plugin:', error);
-            new Notice('Failed to initialize GraphWeaver plugin');
         }
     }
 
     async onunload(): Promise<void> {
-        console.log('Unloading GraphWeaver Plugin');
         this.app.workspace.containerEl.removeClass('graphweaver-plugin');
         this.eventManager.cleanup();
         await this.serviceManager.destroy();

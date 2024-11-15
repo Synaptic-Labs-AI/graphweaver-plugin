@@ -93,7 +93,6 @@ export class StateManager extends EventEmitter implements IService {
             await this.initializeInternal();
             this.serviceState = ServiceState.Ready;
             if (this.options.debug) {
-                console.log(`${this.serviceName}: Initialized successfully`);
             }
         } catch (error) {
             this.serviceState = ServiceState.Error;
@@ -129,7 +128,6 @@ export class StateManager extends EventEmitter implements IService {
             this.removeAllListeners();
             this.serviceState = ServiceState.Destroyed;
             if (this.options.debug) {
-                console.log(`${this.serviceName}: Destroyed successfully`);
             }
         } catch (error) {
             this.serviceState = ServiceState.Error;
@@ -170,7 +168,6 @@ export class StateManager extends EventEmitter implements IService {
     protected setupEventHandlers(): void {
         this.eventHandlers[StateEventType.StateChanged] = (key: keyof PluginState, value: any) => {
             if (this.options.debug) {
-                console.log(`State changed: ${String(key)}`, value);
             }
         };
 
@@ -383,7 +380,6 @@ export class PersistentStateManager extends StateManager {
                 try {
                     await StatePersistence.saveState(this.storageKey, this.state);
                     if (this.options.debug) {
-                        console.log(`PersistentStateManager: State persisted to ${this.storageKey}`);
                     }
                 } catch (error) {
                     console.error('Error persisting state:', error);
@@ -421,7 +417,6 @@ export class PersistentStateManager extends StateManager {
             await StatePersistence.clearState(this.storageKey);
             this.reset();
             if (this.options.debug) {
-                console.log(`PersistentStateManager: Cleared persisted state from ${this.storageKey}`);
             }
         } catch (error) {
             console.error('Error clearing persisted state:', error);

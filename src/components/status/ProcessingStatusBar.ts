@@ -233,7 +233,6 @@ export class ProcessingStatusBar {
             ).open();
         } catch (error) {
             console.error('Error opening history modal:', error);
-            new Notice('An error occurred while opening the history modal.');
         }
     }
 

@@ -4,7 +4,6 @@ import { AIResponse } from '../../models/AIModels';
 import { PersistentStateManager } from '../../managers/StateManager';
 import { AdapterRegistry } from './AdapterRegistry';
 import { GeneratorFactory, GeneratorType } from './GeneratorFactory';
-import { Notice } from 'obsidian';
 import { FrontMatterGenerator } from 'src/generators/FrontMatterGenerator';
 import { IService } from '../core/IService';
 import { ServiceState } from '../../state/ServiceState';
@@ -83,7 +82,6 @@ export class AIOperationManager implements IService {
 
         this.eventEmitter.on('operationError', (error, status) => {
             console.error(`Operation error (${status.type}):`, error);
-            new Notice(`AI Operation Error: ${error.message}`);
             this.updateState();
         });
     }

@@ -37,7 +37,6 @@ export class FileProcessorService implements IService {
             this.serviceState = ServiceState.Initializing;
             // Initialize any required properties or listeners here
             this.serviceState = ServiceState.Ready;
-            console.log('FileProcessorService: Initialized.');
         } catch (error) {
             this.serviceError = error instanceof Error ? 
                 new ServiceError(this.serviceName, error.message) : null;
@@ -50,7 +49,6 @@ export class FileProcessorService implements IService {
     public async destroy(): Promise<void> {
         // Clean up resources, listeners, etc.
         this.serviceState = ServiceState.Destroyed;
-        console.log('FileProcessorService: Destroyed.');
     }
 
     public isReady(): boolean {
@@ -133,14 +131,12 @@ created: ${new Date().toISOString()}
 `;
         const content = await this.app.vault.read(file);
         await this.app.vault.modify(file, frontMatter + content);
-        console.log(`FileProcessorService: Front matter generated for ${file.path}`);
     }
 
     /**
      * Generate wikilinks using WikilinkGenerator
      */
     private async generateWikilinks(file: TFile): Promise<{ success: boolean }> {
-        console.log(`FileProcessorService: Generating wikilinks for ${file.path}`);
         try {
             const content = await this.app.vault.read(file);
             const existingPages = this.getExistingPageNames();
@@ -159,7 +155,6 @@ created: ${new Date().toISOString()}
             // Update the file with the new content containing wikilinks
             await this.app.vault.modify(file, result.content);
 
-            console.log(`FileProcessorService: Wikilinks generated for ${file.path}`);
             return { success: true };
         } catch (error) {
             console.error(`FileProcessorService: Error generating wikilinks for ${file.path}:`, error);
@@ -203,7 +198,6 @@ created: ${new Date().toISOString()}
             error: undefined
         });
         new Notice(`Successfully processed ${file.basename}`);
-        console.log(`FileProcessorService: Successfully processed ${file.path}`);
     }
 
     /**

@@ -98,7 +98,6 @@ export class GeneratorFactory implements IService {
             this.serviceState = ServiceState.Initializing;
             await this.initializeEssentialGenerators();
             this.serviceState = ServiceState.Ready;
-            console.log('GeneratorFactory: Initialized and ready.');
         } catch (error) {
             this.serviceState = ServiceState.Error;
             this.serviceError = ServiceError.from(
@@ -131,7 +130,6 @@ export class GeneratorFactory implements IService {
             await frontMatterGen.initialize();
             this.updateState(GeneratorType.FrontMatter, GeneratorState.Ready);
 
-            console.log('GeneratorFactory: Essential generators initialized successfully');
         } catch (error) {
             throw new ServiceError(
                 this.serviceName,
@@ -159,7 +157,6 @@ export class GeneratorFactory implements IService {
             this.serviceState = ServiceState.Destroying;
             await this.cleanup();
             this.serviceState = ServiceState.Destroyed;
-            console.log('GeneratorFactory: Destroyed.');
         } catch (error) {
             this.serviceState = ServiceState.Error;
             this.serviceError = ServiceError.from(
@@ -167,7 +164,6 @@ export class GeneratorFactory implements IService {
                 error,
                 { context: 'Service destroy failed' }
             );
-            console.error('GeneratorFactory: Destroy failed:', error);
             throw this.serviceError;
         }
     }

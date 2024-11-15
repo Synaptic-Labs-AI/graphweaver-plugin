@@ -40,7 +40,6 @@ export class FileManager implements IService {
             this.app.vault.on('create', this.handleFileModify.bind(this));
             this.app.vault.on('modify', this.handleFileModify.bind(this));
             this.serviceState = ServiceState.Ready;
-            console.log('FileManager: Initialized.');
         } catch (error) {
             this.serviceError = error instanceof Error ? 
                 new ServiceError(this.serviceName, error.message) : null;
@@ -54,7 +53,6 @@ export class FileManager implements IService {
         this.unloading = true;
         this.serviceState = ServiceState.Destroyed;
         // Remove event listeners if any
-        console.log('FileManager: Destroyed.');
     }
 
     public isReady(): boolean {
@@ -83,7 +81,6 @@ export class FileManager implements IService {
                     generateFrontMatter: true
                 });
                 new Notice(`Generated front matter for ${file.basename}`);
-                console.log(`FileManager: Generated front matter for ${file.path}`);
             }
         } catch (error) {
             console.error('FileManager: Error handling file modification:', error);
@@ -108,7 +105,6 @@ export class FileManager implements IService {
 
             if (result.success) {
                 new Notice('Frontmatter generated successfully!');
-                console.log(`FileManager: Frontmatter generated for ${activeFile.path}`);
             } else if (result.error) {
                 new Notice(`Error: ${result.error}`);
                 console.error(`FileManager: Error generating frontmatter for ${activeFile.path}:`, result.error);
@@ -136,7 +132,6 @@ export class FileManager implements IService {
 
             if (result.success) {
                 new Notice('Wikilinks generated successfully!');
-                console.log(`FileManager: Wikilinks generated for ${activeFile.path}`);
             } else if (result.error) {
                 new Notice(`Error: ${result.error}`);
                 console.error(`FileManager: Error generating wikilinks for ${activeFile.path}:`, result.error);
@@ -173,7 +168,6 @@ export class FileManager implements IService {
             }
 
             new Notice(`Generated ${result.generatedNotes.length} new notes!`);
-            console.log(`FileManager: Generated ${result.generatedNotes.length} new notes for ${activeFile.path}`);
         } catch (error) {
             console.error('FileManager: Error generating Knowledge Bloom:', error);
             new Notice('Failed to generate Knowledge Bloom');

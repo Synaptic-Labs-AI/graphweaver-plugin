@@ -1,51 +1,218 @@
-/* Base Variables and Reset */
-.graphweaver-plugin {
+/* styles.css */
+
+/* Base Variables */
+:host {
   --graphweaver-spacing: 1rem;
   --graphweaver-border-radius: 0.5rem;
   --graphweaver-transition: 0.3s ease;
   --graphweaver-font-base: 1rem;
   --graphweaver-font-large: 1.2rem;
   --graphweaver-font-small: 0.95rem;
+
+  --background-primary: #1e1e1e;
+  --background-secondary: #2d2d2d;
+  --background-modifier-border: #3c3c3c;
+  --background-modifier-hover: #3c3c3c;
+  --interactive-accent: #007acc;
+  --interactive-accent-hover: #005a9e;
+  --text-normal: #ffffff;
+  --text-muted: #aaaaaa;
+  --text-error: #ff5555;
+  --text-on-accent: #ffffff;
+
+  --card-background: var(--background-secondary);
+  --card-border: var(--background-modifier-border);
+  --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: block;
+  color: var(--text-normal);
 }
 
 /* Scoped Reset */
-.workspace-leaf-content[data-type="graphweaver-view"] * {
+* {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-/* Core Components */
-.graphweaver-plugin .gw-container {
-  padding: var(--graphweaver-spacing);
-  background-color: var(--background-primary);
-  border-radius: var(--graphweaver-border-radius);
+/* Modal Content Wrapper */
+.shadow-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-/* Accordion Component */
-.graphweaver-plugin .gw-accordion {
+/* Vault Statistics Container */
+/* 🎨 Stats Cards Base Container */
+.status-summary {
+  padding: 2rem 1rem;
+  margin-bottom: 2rem;
+}
+
+/* 🎭 Grid Layout for Stats */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* 🃏 Individual Stat Card */
+.summary-item {
+  background-color: var(--background-secondary);
   border: 1px solid var(--background-modifier-border);
-  border-radius: var(--graphweaver-border-radius);
-  overflow: hidden;
-  margin-bottom: var(--graphweaver-spacing);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.graphweaver-plugin .gw-accordion-header {
-  padding: var(--graphweaver-spacing);
+/* ✨ Hover Animation */
+.summary-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 🎯 Icon Styling */
+.summary-icon {
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.summary-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+/* 📊 Value Display */
+.summary-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-normal);
+  margin-bottom: 0.5rem;
+  line-height: 1;
+}
+
+/* 🏷️ Label Styling */
+.summary-label {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+
+/* 📱 Responsive Design */
+@media (max-width: 768px) {
+  .summary-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .summary-grid {
+      grid-template-columns: 1fr;
+  }
+  
+  .summary-item {
+      padding: 1.25rem;
+  }
+}
+
+/* Accordion Container */
+.gw-accordion {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  background-color: var(--background-primary);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+/* Accordion Header */
+.gw-accordion-header {
+  padding: 16px 24px;  /* Increased padding */
   background-color: var(--background-secondary);
   display: flex;
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
+  user-select: none;
+  transition: background-color 0.3s ease;
 }
 
-.graphweaver-plugin .gw-accordion-content {
-  padding: var(--graphweaver-spacing);
-  background-color: var(--background-primary);
+/* Accordion Title */
+.gw-accordion-title {
+  font-size: 1.1rem;  /* Larger font size */
+  font-weight: 600;
+  color: var(--text-normal);
+  line-height: 1.4;
+}
+
+/* Accordion Toggle Icon */
+.gw-accordion-toggle {
+  font-size: 18px;  /* Larger icon */
+  color: var(--text-muted);
+  margin-left: 16px;
+  transition: transform 0.3s ease;
+}
+
+/* Accordion Content */
+.gw-accordion-content {
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding: 0 24px;  /* Match header padding */
+  transition: height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+}
+
+/* Open State */
+.gw-accordion.gw-accordion-open {
+  margin-bottom: 16px;  /* More space between open accordions */
+}
+
+.gw-accordion.gw-accordion-open .gw-accordion-content {
+  height: auto;
+  opacity: 1;
+  padding: 20px 24px;
+}
+
+.gw-accordion.gw-accordion-open .gw-accordion-toggle {
+  transform: rotate(90deg);
+}
+
+/* Hover States */
+.gw-accordion-header:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+/* Focus States */
+.gw-accordion-header:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: -2px;
+}
+
+/* Settings Items within Accordion */
+.gw-setting-item {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.gw-setting-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
 /* Button Styles */
-.graphweaver-plugin .gw-button {
+.gw-button {
   padding: 0.75rem 1.5rem;
   background-color: var(--interactive-accent);
   color: var(--text-on-accent);
@@ -53,14 +220,33 @@
   border-radius: var(--graphweaver-border-radius);
   cursor: pointer;
   transition: background-color var(--graphweaver-transition);
+  font-size: var(--graphweaver-font-base);
 }
 
-.graphweaver-plugin .gw-button:hover {
+.gw-button:hover {
   background-color: var(--interactive-accent-hover);
 }
 
+/* Secondary Button Styles */
+.gw-button-secondary {
+  background-color: var(--background-secondary);
+  color: var(--text-normal);
+}
+
+.gw-button-secondary:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+/* Button Container */
+.gw-button-container {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: var(--graphweaver-spacing);
+}
+
 /* Input Fields */
-.graphweaver-plugin .gw-input {
+.gw-input {
   width: 100%;
   padding: 0.75rem;
   border: 1px solid var(--background-modifier-border);
@@ -69,77 +255,78 @@
   color: var(--text-normal);
 }
 
-.graphweaver-plugin .gw-input:focus {
+.gw-input:focus {
   border-color: var(--interactive-accent);
   outline: none;
 }
 
-/* Modal Styles */
-.modal-container .graphweaver-modal {
-  background-color: var(--background-primary);
+/* Loading and Error States */
+.loading-container.status-running,
+.error-container.status-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
   border-radius: var(--graphweaver-border-radius);
-  padding: var(--graphweaver-spacing);
-}
-
-.graphweaver-modal .modal-header {
-  padding-bottom: var(--graphweaver-spacing);
-  border-bottom: 1px solid var(--background-modifier-border);
-  margin-bottom: var(--graphweaver-spacing);
-}
-
-.graphweaver-modal .modal-content {
-  max-height: 70vh;
-  overflow-y: auto;
-}
-
-/* Table Styles */
-.graphweaver-plugin .gw-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: var(--graphweaver-spacing) 0;
-}
-
-.graphweaver-plugin .gw-table th,
-.graphweaver-plugin .gw-table td {
-  padding: 0.75rem;
-  border: 1px solid var(--background-modifier-border);
-  text-align: left;
-}
-
-.graphweaver-plugin .gw-table th {
   background-color: var(--background-secondary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* Utility Classes */
-.graphweaver-plugin .gw-mt {
-  margin-top: var(--graphweaver-spacing);
+.loading-container.status-running {
+  color: var(--text-normal);
 }
 
-.graphweaver-plugin .gw-mb {
-  margin-bottom: var(--graphweaver-spacing);
+.error-container.status-error {
+  color: var(--text-error);
 }
 
-/* Accessibility */
-@media (prefers-reduced-motion: reduce) {
-  .graphweaver-plugin * {
-      transition: none !important;
-  }
+.error-container.status-error .gw-status-bar-icon {
+  color: var(--text-error);
 }
 
-.graphweaver-plugin .gw-button:focus-visible,
-.graphweaver-plugin .gw-input:focus-visible {
-  outline: 2px solid var(--interactive-accent);
-  outline-offset: 2px;
+.loading-text,
+.error-message {
+  font-size: var(--graphweaver-font-base);
 }
 
-/* Responsive Design */
+/* Icon Styling */
+.gw-status-bar-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Responsive Design Adjustments */
+
+/* Medium Screens */
 @media (max-width: 768px) {
-  .graphweaver-plugin {
-      --graphweaver-spacing: 0.75rem;
-      --graphweaver-font-base: 0.95rem;
+  .summary-grid {
+      gap: 16px;
   }
-  
-  .graphweaver-plugin .gw-button {
-      padding: 0.5rem 1rem;
+
+  .summary-item {
+      width: 100px;
+      padding: 1rem 1.5rem;
+  }
+
+  .summary-value {
+      font-size: 2rem;
+  }
+}
+
+/* Small Screens */
+@media (max-width: 480px) {
+  .summary-grid {
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+  }
+
+  .summary-item {
+      width: 100%;
+      max-width: 300px;
+  }
+
+  .summary-value {
+      font-size: 1.75rem;
   }
 }

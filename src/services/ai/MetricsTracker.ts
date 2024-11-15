@@ -1,4 +1,3 @@
-import { CoreService } from '../core/CoreService';
 import { OperationType, OperationStatus, OperationMetrics } from 'src/types/OperationTypes';
 import { IService } from '../core/IService';
 import { ServiceState } from '../../state/ServiceState';

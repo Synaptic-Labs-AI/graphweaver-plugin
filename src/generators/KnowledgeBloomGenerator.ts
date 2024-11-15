@@ -54,7 +54,6 @@ export class KnowledgeBloomGenerator extends BaseGenerator<KnowledgeBloomInput, 
      */
     public async generate(input: KnowledgeBloomInput): Promise<KnowledgeBloomOutput> {
         this.currentInput = input;
-        console.log('🌸 KnowledgeBloomGenerator: Starting generation process');
         
         try {
             if (!this.validateInput(input)) {
@@ -63,7 +62,6 @@ export class KnowledgeBloomGenerator extends BaseGenerator<KnowledgeBloomInput, 
 
             // First, process and extract wikilinks
             const wikilinks = await this.extractWikilinks(input.sourceFile);
-            console.log(`🌸 KnowledgeBloomGenerator: Found ${wikilinks.length} unique wikilinks`);
 
             if (wikilinks.length === 0) {
                 throw new Error('No wikilinks found in the source file.');
@@ -80,7 +78,6 @@ export class KnowledgeBloomGenerator extends BaseGenerator<KnowledgeBloomInput, 
 
             await Promise.allSettled(generationPromises);
             
-            console.log(`🌸 KnowledgeBloomGenerator: Successfully generated ${output.generatedNotes.length} notes`);
             return output;
             
         } catch (error) {
@@ -96,7 +93,6 @@ export class KnowledgeBloomGenerator extends BaseGenerator<KnowledgeBloomInput, 
     public async extractWikilinks(file: TFile): Promise<string[]> {
         try {
             const content = await this.app.vault.read(file);
-            console.log('🔍 KnowledgeBloomGenerator: Processing content for wikilinks');
 
             // First, process the content to generate wikilinks
             const existingWikilinks = new Set<string>();
@@ -111,7 +107,6 @@ export class KnowledgeBloomGenerator extends BaseGenerator<KnowledgeBloomInput, 
 
             // Extract the wikilinks using the processor's methods
             const links = this.wikilinkProcessor.extractExistingWikilinks(processedContent);
-            console.log(`🔍 KnowledgeBloomGenerator: Found ${links.length} wikilinks`);
             
             // Update the source file with processed content
             await this.app.vault.modify(file, processedContent);
@@ -155,7 +150,6 @@ Return ONLY the array of strings, nothing else.
                     .filter(item => typeof item === 'string');
             }
 
-            console.log(`🎯 KnowledgeBloomGenerator: Generated ${suggestions.length} suggested links`);
             return suggestions;
 
         } catch (error) {
@@ -175,7 +169,6 @@ Return ONLY the array of strings, nothing else.
     ): Promise<void> {
         try {
             if (this.doesNoteExist(link, folderPath)) {
-                console.log(`📝 KnowledgeBloomGenerator: Note for "${link}" already exists. Skipping.`);
                 return;
             }
 
@@ -188,7 +181,6 @@ Return ONLY the array of strings, nothing else.
             await this.app.vault.create(newFilePath, finalContent);
 
             output.generatedNotes.push({ title: link, content: finalContent });
-            console.log(`✨ KnowledgeBloomGenerator: Successfully generated note for "${link}".`);
         } catch (error) {
             console.error(`❌ Error processing wikilink "${link}":`, error);
             new Notice(`Failed to generate note for "${link}": ${(error as Error).message}`);
@@ -320,7 +312,6 @@ ${input.userPrompt ? `## Additional Context:\n${input.userPrompt}` : ''}
      */
     protected validateInput(input: KnowledgeBloomInput): boolean {
         const isValid = input?.sourceFile instanceof TFile;
-        console.log(`🔍 KnowledgeBloomGenerator: Input validation result: ${isValid}`);
         return isValid;
     }
 

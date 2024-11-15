@@ -5523,11 +5523,11 @@ var require_lodash = __commonJS({
 });
 
 // src/components/accordions/BaseAccordion.ts
-var import_obsidian18, BaseAccordion;
+var import_obsidian14, BaseAccordion;
 var init_BaseAccordion = __esm({
   "src/components/accordions/BaseAccordion.ts"() {
-    import_obsidian18 = require("obsidian");
-    BaseAccordion = class extends import_obsidian18.Component {
+    import_obsidian14 = require("obsidian");
+    BaseAccordion = class extends import_obsidian14.Component {
       // Store app instance separately
       constructor(containerEl, app) {
         super();
@@ -5637,6 +5637,23 @@ var init_BaseAccordion = __esm({
         this.accordionEl.setAttribute("aria-expanded", this.isOpen.toString());
         this.headerEl.setAttribute("aria-expanded", this.isOpen.toString());
         this.contentEl.setAttribute("aria-hidden", (!this.isOpen).toString());
+        const contentHeight = this.contentEl.scrollHeight;
+        if (this.isOpen) {
+          this.contentEl.style.height = "0px";
+          requestAnimationFrame(() => {
+            this.contentEl.style.height = `${contentHeight}px`;
+            this.contentEl.addEventListener("transitionend", () => {
+              if (this.isOpen) {
+                this.contentEl.style.height = "auto";
+              }
+            }, { once: true });
+          });
+        } else {
+          this.contentEl.style.height = `${contentHeight}px`;
+          requestAnimationFrame(() => {
+            this.contentEl.style.height = "0px";
+          });
+        }
         this.accordionEl.classList.toggle("gw-accordion-open", this.isOpen);
         this.updateToggleIcon();
         this.appInstance.workspace.trigger("accordion-state-changed", {
@@ -5651,7 +5668,7 @@ var init_BaseAccordion = __esm({
         if (!this.toggleIcon)
           return;
         this.toggleIcon.empty();
-        (0, import_obsidian18.setIcon)(this.toggleIcon, this.isOpen ? "chevron-down" : "chevron-right");
+        (0, import_obsidian14.setIcon)(this.toggleIcon, this.isOpen ? "chevron-down" : "chevron-right");
       }
       /**
        * Create a setting item with proper styling
@@ -5660,7 +5677,7 @@ var init_BaseAccordion = __esm({
         if (!name || !desc) {
           throw new Error("Name and description are required for setting items");
         }
-        const setting = new import_obsidian18.Setting(this.contentEl);
+        const setting = new import_obsidian14.Setting(this.contentEl);
         setting.setName(name).setDesc(desc);
         setting.settingEl.addClass("setting-item", "gw-setting-item");
         setting.nameEl.addClass("setting-item-name");
@@ -20032,13 +20049,13 @@ var StatusHistoryModal_exports = {};
 __export(StatusHistoryModal_exports, {
   default: () => StatusHistoryModal
 });
-var import_obsidian31, StatusHistoryModal, HistoryAccordion;
+var import_obsidian27, StatusHistoryModal, HistoryAccordion;
 var init_StatusHistoryModal = __esm({
   "src/components/modals/StatusHistoryModal.ts"() {
-    import_obsidian31 = require("obsidian");
+    import_obsidian27 = require("obsidian");
     init_BaseAccordion();
     init_auto();
-    StatusHistoryModal = class extends import_obsidian31.Modal {
+    StatusHistoryModal = class extends import_obsidian27.Modal {
       constructor(app, currentStatus, recentStats) {
         super(app);
         this.currentStatus = currentStatus;
@@ -20065,7 +20082,7 @@ var init_StatusHistoryModal = __esm({
           cls: "modal-header-title"
         });
         const closeButton = header.createEl("button", { cls: "modal-close" });
-        (0, import_obsidian31.setIcon)(closeButton, "cross");
+        (0, import_obsidian27.setIcon)(closeButton, "cross");
         closeButton.addEventListener("click", () => this.close());
       }
       createSummaryStats(containerEl) {
@@ -20302,7 +20319,7 @@ __export(main_exports, {
   default: () => GraphWeaverPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian34 = require("obsidian");
+var import_obsidian30 = require("obsidian");
 
 // src/services/core/ServiceError.ts
 var ServiceError = class extends Error {
@@ -20507,7 +20524,6 @@ var ServiceRegistry = class {
         constructor: config.type === "constructor" ? config.constructor : void 0
       };
       this.services.set(config.id, registration);
-      console.log(`ServiceRegistry: Service ${config.id} registered`);
     } catch (error) {
       throw ServiceError.from("ServiceRegistry", error, {
         operation: "register",
@@ -20546,7 +20562,6 @@ var ServiceRegistry = class {
           failedServices: errors
         });
       }
-      console.log("ServiceRegistry: All services initialized successfully");
     } finally {
       this.isInitializing = false;
     }
@@ -20577,7 +20592,6 @@ var ServiceRegistry = class {
       await registration.instance.initialize();
       registration.status = "initialized" /* Initialized */;
       registration.error = void 0;
-      console.log(`ServiceRegistry: Service ${id} initialized`);
     } catch (error) {
       registration.status = "error" /* Error */;
       registration.error = ServiceError.from("ServiceRegistry", error);
@@ -20612,7 +20626,6 @@ var ServiceRegistry = class {
           await registration.instance.destroy();
           registration.status = "registered" /* Registered */;
           registration.instance = null;
-          console.log(`ServiceRegistry: Service ${id} destroyed`);
         } catch (error) {
           errors.push({
             id,
@@ -20629,7 +20642,6 @@ var ServiceRegistry = class {
         failedServices: errors
       });
     }
-    console.log("ServiceRegistry: All services destroyed successfully");
   }
   /**
    * Get the current initialization status of services
@@ -20697,7 +20709,6 @@ var ServiceManager = class {
     }
     try {
       this.registry.register(config);
-      console.log(`ServiceManager: Registered service ${config.id}`);
     } catch (error) {
       this.handleError(`Failed to register service ${config.id}`, error);
       throw error;
@@ -20725,7 +20736,6 @@ var ServiceManager = class {
       await this.registry.initializeServices();
       this.state = "ready" /* Ready */;
       this.error = null;
-      console.log("ServiceManager: All services initialized successfully");
     } catch (error) {
       this.state = "error" /* Error */;
       this.handleError("Service initialization failed", error);
@@ -20747,7 +20757,6 @@ var ServiceManager = class {
         throw new ServiceError("ServiceManager", `Service ${id} is not initialized`);
       }
       const service = this.registry.getService(id);
-      console.log(`ServiceManager: Retrieved service ${id}`);
       return service;
     } catch (error) {
       this.handleError(`Failed to get service ${id}`, error);
@@ -20765,7 +20774,6 @@ var ServiceManager = class {
     try {
       await this.registry.destroyServices();
       this.state = "destroyed" /* Destroyed */;
-      console.log("ServiceManager: All services destroyed successfully");
     } catch (error) {
       this.handleError("Service cleanup failed", error);
       throw error;
@@ -20821,7 +20829,6 @@ var ServiceManager = class {
 };
 
 // src/managers/InitializationManager.ts
-var import_obsidian = require("obsidian");
 var InitializationManager = class {
   constructor(plugin, app, serviceManager, errorManager) {
     this.plugin = plugin;
@@ -20835,11 +20842,8 @@ var InitializationManager = class {
   async initialize() {
     try {
       await this.serviceManager.initializeServices();
-      console.log("Initialization completed successfully");
-      new import_obsidian.Notice("GraphWeaver Plugin Initialized Successfully!");
     } catch (error) {
       this.errorManager.handleError("Initialization failed:", error);
-      new import_obsidian.Notice("GraphWeaver Plugin failed to initialize. Check console for details.");
       throw error;
     }
   }
@@ -20934,7 +20938,7 @@ var EventManager = class {
 };
 
 // src/managers/ErrorManager.ts
-var import_obsidian2 = require("obsidian");
+var import_obsidian = require("obsidian");
 var ErrorManager = class {
   /**
    * Handle errors consistently across the plugin
@@ -20942,7 +20946,7 @@ var ErrorManager = class {
   handleError(context, error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error(context, error);
-    new import_obsidian2.Notice(`${context} ${errorMessage}`);
+    new import_obsidian.Notice(`${context} ${errorMessage}`);
   }
   /**
    * Wrap async operations with consistent error handling
@@ -20956,9 +20960,6 @@ var ErrorManager = class {
     }
   }
 };
-
-// src/services/ai/AIService.ts
-var import_obsidian11 = require("obsidian");
 
 // src/services/core/CoreService.ts
 var CoreService = class {
@@ -21040,7 +21041,7 @@ var OperationType = /* @__PURE__ */ ((OperationType2) => {
 })(OperationType || {});
 
 // src/services/ai/AIStateHandler.ts
-var import_obsidian3 = require("obsidian");
+var import_obsidian2 = require("obsidian");
 var AIStateHandler = class {
   constructor(stateManager) {
     this.stateManager = stateManager;
@@ -21239,7 +21240,7 @@ var AIStateHandler = class {
       "errorOccurred" /* ErrorOccurred */,
       metadata
     );
-    new import_obsidian3.Notice(`AI Error: ${error.message}`);
+    new import_obsidian2.Notice(`AI Error: ${error.message}`);
   }
   /**
    * Get state history
@@ -21311,14 +21312,12 @@ var BaseGenerator = class {
    * Derived classes can override this method if specific initialization is needed.
    */
   async initialize() {
-    console.log(`${this.constructor.name}: Initialization complete.`);
   }
   /**
    * Destroy the generator.
    * Derived classes can override this method to clean up resources.
    */
   async destroy() {
-    console.log(`${this.constructor.name}: Destruction complete.`);
   }
   /**
    * Get the current model for this generator.
@@ -21389,28 +21388,11 @@ var FrontMatterGenerator = class extends BaseGenerator {
     this.jsonSchemaGenerator = jsonSchemaGenerator;
   }
   /**
-   * Initialize the FrontMatterGenerator.
-   * Currently, no specific initialization is required.
-   * Override this method if specific initialization steps are needed.
-   */
-  async initialize() {
-    console.log("FrontMatterGenerator: Initialized.");
-  }
-  /**
-   * Destroy the FrontMatterGenerator.
-   * Currently, no specific cleanup is required.
-   * Override this method if specific cleanup steps are needed.
-   */
-  async destroy() {
-    console.log("FrontMatterGenerator: Destroyed.");
-  }
-  /**
    * Generates front matter for the provided content
    * @param input The input containing content and optional properties
    * @returns Promise resolving to content with front matter
    */
   async generate(input) {
-    console.log("FrontMatterGenerator: Starting generation");
     try {
       const settings = this.getSettings();
       const completeInput = {
@@ -21418,14 +21400,10 @@ var FrontMatterGenerator = class extends BaseGenerator {
         customProperties: input.customProperties || settings.frontMatter.customProperties,
         customTags: input.customTags || settings.tags.customTags.map((tag) => tag.name)
       };
-      console.log("FrontMatterGenerator: Complete input prepared:", completeInput);
       const prompt = this.preparePrompt(completeInput);
       const model = await this.getCurrentModel();
-      console.log("FrontMatterGenerator: Sending request to AI");
       const aiResponse = await this.aiAdapter.generateResponse(prompt, model);
-      console.log("FrontMatterGenerator: AI response received:", aiResponse);
       if (!aiResponse.success || !aiResponse.data) {
-        console.error("FrontMatterGenerator: AI response was unsuccessful or empty");
         return { content: input.content };
       }
       return this.formatOutput(aiResponse.data, completeInput);
@@ -21479,7 +21457,6 @@ Generate ONLY the front matter fields as JSON. Do not include any other text or 
    * @returns Formatted output with front matter
    */
   formatOutput(aiResponse, originalInput) {
-    console.log("FrontMatterGenerator: Formatting AI response into front matter");
     const parsedResponse = this.parseAIResponse(aiResponse);
     if (!parsedResponse) {
       console.error("FrontMatterGenerator: Failed to parse AI response");
@@ -21490,7 +21467,6 @@ Generate ONLY the front matter fields as JSON. Do not include any other text or 
     }
     const frontMatter = this.convertToFrontMatter(parsedResponse);
     const finalContent = this.mergeFrontMatter(originalInput.content, frontMatter);
-    console.log("FrontMatterGenerator: Front matter generated successfully");
     return { content: finalContent };
   }
   /**
@@ -21624,16 +21600,13 @@ var WikilinkTextProcessor = class extends CoreService {
     super("wikilink-processor", "Wikilink Text Processor");
   }
   async initializeInternal() {
-    console.log("WikilinkTextProcessor: Initialized.");
   }
   async destroyInternal() {
-    console.log("WikilinkTextProcessor: Destroyed.");
   }
   /**
    * Add wikilinks to the content based on suggested links
    */
   addWikilinks(content, suggestedLinks, existingWikilinks) {
-    console.log("WikilinkTextProcessor: Adding wikilinks.");
     const codeBlocks = /* @__PURE__ */ new Map();
     let processedContent = this.protectCodeBlocks(content, codeBlocks);
     suggestedLinks.filter((link) => this.isValidWikilinkText(link)).sort((a, b) => b.length - a.length).forEach((phrase) => {
@@ -21653,14 +21626,12 @@ var WikilinkTextProcessor = class extends CoreService {
       }
     });
     const finalContent = this.restoreCodeBlocks(processedContent, codeBlocks);
-    console.log("WikilinkTextProcessor: Wikilinks added.");
     return finalContent;
   }
   /**
    * Clean nested wikilinks while preserving structure
    */
   cleanNestedWikilinks(content) {
-    console.log("WikilinkTextProcessor: Cleaning nested wikilinks.");
     const processedLinks = /* @__PURE__ */ new Set();
     let result = content;
     const matches = Array.from(content.matchAll(WikilinkPatterns.WIKILINK_REGEX)).map((match) => ({
@@ -21690,7 +21661,6 @@ var WikilinkTextProcessor = class extends CoreService {
         processedLinks.add(match.inner.toLowerCase());
       }
     }
-    console.log("WikilinkTextProcessor: Nested wikilinks cleaned.");
     return result;
   }
   /**
@@ -21829,30 +21799,24 @@ var WikilinkGenerator = class extends BaseGenerator {
    */
   async initialize() {
     await this.textProcessor.initialize();
-    console.log("WikilinkGenerator: Initialized.");
   }
   /**
    * Clean up resources
    */
   async destroy() {
     this.textProcessor.destroy();
-    console.log("WikilinkGenerator: Destroyed.");
   }
   /**
    * Generate wikilinks for the provided content
    */
   async generate(input) {
     try {
-      console.log("WikilinkGenerator: Starting generation for input.");
       if (!this.validateInput(input)) {
         throw new Error("Invalid input for wikilink generation");
       }
       const prompt = this.preparePrompt(input);
-      console.log("WikilinkGenerator: Prepared prompt:", prompt);
       const model = await this.getCurrentModel();
-      console.log("WikilinkGenerator: Using model:", model);
       const aiResponse = await this.aiAdapter.generateResponse(prompt, model);
-      console.log("WikilinkGenerator: Received AI response:", aiResponse);
       let aiResponseValue;
       if (aiResponse && aiResponse.success && aiResponse.data && aiResponse.data.value) {
         aiResponseValue = aiResponse.data.value;
@@ -21860,7 +21824,6 @@ var WikilinkGenerator = class extends BaseGenerator {
         throw new Error("Invalid AI response format");
       }
       const output = this.formatOutput(aiResponseValue, input);
-      console.log("WikilinkGenerator: Formatted output:", output);
       return output;
     } catch (error) {
       console.error("WikilinkGenerator: Error during generation:", error);
@@ -21897,9 +21860,7 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
    */
   formatOutput(aiResponse, originalInput) {
     const suggestedLinks = this.parseSuggestedLinks(aiResponse);
-    console.log("WikilinkGenerator: Suggested Links:", suggestedLinks);
     const existingLinks = this.extractExistingWikilinks(originalInput.content);
-    console.log("WikilinkGenerator: Existing Wikilinks:", Array.from(existingLinks));
     let processedContent = originalInput.content;
     processedContent = this.textProcessor.addWikilinks(
       processedContent,
@@ -22111,22 +22072,6 @@ var JsonSchemaGenerator = class extends BaseGenerator {
     this.cachedSchema = null;
   }
   /**
-   * Initialize the JsonSchemaGenerator.
-   * Currently, no specific initialization is required.
-   * Override this method if specific initialization steps are needed.
-   */
-  async initialize() {
-    console.log("JsonSchemaGenerator: Initialized.");
-  }
-  /**
-   * Destroy the JsonSchemaGenerator.
-   * Currently, no specific cleanup is required.
-   * Override this method if specific cleanup steps are needed.
-   */
-  async destroy() {
-    console.log("JsonSchemaGenerator: Destroyed.");
-  }
-  /**
    * Generates a base JSON schema based on settings.
    * Handles lazy initialization of settings to avoid circular dependencies.
    */
@@ -22193,7 +22138,6 @@ var JsonSchemaGenerator = class extends BaseGenerator {
   resetCache() {
     this.cachedSchema = null;
     this.settingsInitialized = false;
-    console.log("JsonSchemaGenerator: Cache reset.");
   }
   /**
    * Overrides the preparePrompt method.
@@ -22212,7 +22156,7 @@ var JsonSchemaGenerator = class extends BaseGenerator {
 };
 
 // src/generators/KnowledgeBloomGenerator.ts
-var import_obsidian4 = require("obsidian");
+var import_obsidian3 = require("obsidian");
 var KnowledgeBloomGenerator = class extends BaseGenerator {
   constructor(aiAdapter, settingsService, app, frontMatterGenerator, wikilinkProcessor) {
     super(aiAdapter, settingsService);
@@ -22228,13 +22172,11 @@ var KnowledgeBloomGenerator = class extends BaseGenerator {
    */
   async generate(input) {
     this.currentInput = input;
-    console.log("\u{1F338} KnowledgeBloomGenerator: Starting generation process");
     try {
       if (!this.validateInput(input)) {
         throw new Error("Invalid input for Knowledge Bloom generation");
       }
       const wikilinks = await this.extractWikilinks(input.sourceFile);
-      console.log(`\u{1F338} KnowledgeBloomGenerator: Found ${wikilinks.length} unique wikilinks`);
       if (wikilinks.length === 0) {
         throw new Error("No wikilinks found in the source file.");
       }
@@ -22244,7 +22186,6 @@ var KnowledgeBloomGenerator = class extends BaseGenerator {
         (link) => this.processWikilink(link, folderPath, input, output)
       );
       await Promise.allSettled(generationPromises);
-      console.log(`\u{1F338} KnowledgeBloomGenerator: Successfully generated ${output.generatedNotes.length} notes`);
       return output;
     } catch (error) {
       return this.handleError(error);
@@ -22258,7 +22199,6 @@ var KnowledgeBloomGenerator = class extends BaseGenerator {
   async extractWikilinks(file) {
     try {
       const content = await this.app.vault.read(file);
-      console.log("\u{1F50D} KnowledgeBloomGenerator: Processing content for wikilinks");
       const existingWikilinks = /* @__PURE__ */ new Set();
       const suggestedLinks = await this.generateSuggestedLinks(content);
       const processedContent = this.wikilinkProcessor.addWikilinks(
@@ -22267,7 +22207,6 @@ var KnowledgeBloomGenerator = class extends BaseGenerator {
         existingWikilinks
       );
       const links = this.wikilinkProcessor.extractExistingWikilinks(processedContent);
-      console.log(`\u{1F50D} KnowledgeBloomGenerator: Found ${links.length} wikilinks`);
       await this.app.vault.modify(file, processedContent);
       return Array.from(new Set(links));
     } catch (error) {
@@ -22301,7 +22240,6 @@ Return ONLY the array of strings, nothing else.
       } else if (typeof response.data === "object" && response.data !== null) {
         suggestions = Object.values(response.data).filter((item) => typeof item === "string");
       }
-      console.log(`\u{1F3AF} KnowledgeBloomGenerator: Generated ${suggestions.length} suggested links`);
       return suggestions;
     } catch (error) {
       console.error("\u274C Error generating suggested links:", error);
@@ -22314,7 +22252,6 @@ Return ONLY the array of strings, nothing else.
   async processWikilink(link, folderPath, input, output) {
     try {
       if (this.doesNoteExist(link, folderPath)) {
-        console.log(`\u{1F4DD} KnowledgeBloomGenerator: Note for "${link}" already exists. Skipping.`);
         return;
       }
       const markdownContent = await this.generateMarkdownContent(link, input);
@@ -22322,10 +22259,9 @@ Return ONLY the array of strings, nothing else.
       const newFilePath = `${folderPath}/${link}.md`;
       await this.app.vault.create(newFilePath, finalContent);
       output.generatedNotes.push({ title: link, content: finalContent });
-      console.log(`\u2728 KnowledgeBloomGenerator: Successfully generated note for "${link}".`);
     } catch (error) {
       console.error(`\u274C Error processing wikilink "${link}":`, error);
-      new import_obsidian4.Notice(`Failed to generate note for "${link}": ${error.message}`);
+      new import_obsidian3.Notice(`Failed to generate note for "${link}": ${error.message}`);
     }
   }
   /**
@@ -22422,7 +22358,7 @@ ${input.userPrompt}` : ""}
   doesNoteExist(title, folderPath) {
     const filePath = `${folderPath}/${title}.md`;
     const file = this.app.vault.getAbstractFileByPath(filePath);
-    return file instanceof import_obsidian4.TFile;
+    return file instanceof import_obsidian3.TFile;
   }
   /**
    * Get the folder path for the new note
@@ -22436,8 +22372,7 @@ ${input.userPrompt}` : ""}
    * Validate the input parameters
    */
   validateInput(input) {
-    const isValid = (input == null ? void 0 : input.sourceFile) instanceof import_obsidian4.TFile;
-    console.log(`\u{1F50D} KnowledgeBloomGenerator: Input validation result: ${isValid}`);
+    const isValid = (input == null ? void 0 : input.sourceFile) instanceof import_obsidian3.TFile;
     return isValid;
   }
   /**
@@ -22457,7 +22392,7 @@ ${input.userPrompt}` : ""}
    */
   handleError(error) {
     console.error(`\u274C KnowledgeBloomGenerator: Knowledge Bloom generation error: ${error.message}`, error);
-    new import_obsidian4.Notice(`Knowledge Bloom generation failed: ${error.message}`);
+    new import_obsidian3.Notice(`Knowledge Bloom generation failed: ${error.message}`);
     throw error;
   }
   /**
@@ -22507,7 +22442,6 @@ var GeneratorFactory = class {
       this.serviceState = "initializing" /* Initializing */;
       await this.initializeEssentialGenerators();
       this.serviceState = "ready" /* Ready */;
-      console.log("GeneratorFactory: Initialized and ready.");
     } catch (error) {
       this.serviceState = "error" /* Error */;
       this.serviceError = ServiceError.from(
@@ -22536,7 +22470,6 @@ var GeneratorFactory = class {
       this.instances.set("frontMatter" /* FrontMatter */, frontMatterGen);
       await frontMatterGen.initialize();
       this.updateState("frontMatter" /* FrontMatter */, "ready" /* Ready */);
-      console.log("GeneratorFactory: Essential generators initialized successfully");
     } catch (error) {
       throw new ServiceError(
         this.serviceName,
@@ -22562,7 +22495,6 @@ var GeneratorFactory = class {
       this.serviceState = "destroying" /* Destroying */;
       await this.cleanup();
       this.serviceState = "destroyed" /* Destroyed */;
-      console.log("GeneratorFactory: Destroyed.");
     } catch (error) {
       this.serviceState = "error" /* Error */;
       this.serviceError = ServiceError.from(
@@ -22570,7 +22502,6 @@ var GeneratorFactory = class {
         error,
         { context: "Service destroy failed" }
       );
-      console.error("GeneratorFactory: Destroy failed:", error);
       throw this.serviceError;
     }
   }
@@ -23083,7 +23014,7 @@ var AIModelMap = {
 };
 
 // src/adapters/OpenAIAdapter.ts
-var import_obsidian5 = require("obsidian");
+var import_obsidian4 = require("obsidian");
 var OpenAIAdapter = class {
   constructor(settingsService, jsonValidationService) {
     this.settingsService = settingsService;
@@ -23151,7 +23082,7 @@ var OpenAIAdapter = class {
    */
   async makeApiRequest(params) {
     var _a;
-    const response = await (0, import_obsidian5.requestUrl)({
+    const response = await (0, import_obsidian4.requestUrl)({
       url: "https://api.openai.com/v1/chat/completions",
       method: "POST",
       headers: {
@@ -23212,7 +23143,7 @@ var OpenAIAdapter = class {
   handleError(error) {
     console.error("Error in OpenAI API call:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    new import_obsidian5.Notice(`OpenAI API Error: ${errorMessage}`);
+    new import_obsidian4.Notice(`OpenAI API Error: ${errorMessage}`);
     return { success: false, error: errorMessage };
   }
   /**
@@ -23231,14 +23162,14 @@ var OpenAIAdapter = class {
         this.models[0].apiName
       );
       if (isValid) {
-        new import_obsidian5.Notice("OpenAI API key validated successfully");
+        new import_obsidian4.Notice("OpenAI API key validated successfully");
         return true;
       } else {
         throw new Error("Failed to validate API key");
       }
     } catch (error) {
       console.error("Error validating OpenAI API key:", error);
-      new import_obsidian5.Notice(`Failed to validate OpenAI API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
+      new import_obsidian4.Notice(`Failed to validate OpenAI API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
       return false;
     }
   }
@@ -23295,7 +23226,7 @@ var OpenAIAdapter = class {
 };
 
 // src/adapters/AnthropicAdapter.ts
-var import_obsidian6 = require("obsidian");
+var import_obsidian5 = require("obsidian");
 var AnthropicAdapter = class {
   constructor(settingsService, jsonValidationService) {
     this.settingsService = settingsService;
@@ -23354,7 +23285,7 @@ var AnthropicAdapter = class {
       max_tokens: maxTokens,
       temperature
     };
-    const response = await (0, import_obsidian6.requestUrl)({
+    const response = await (0, import_obsidian5.requestUrl)({
       url: "https://api.anthropic.com/v1/messages",
       method: "POST",
       headers: {
@@ -23375,7 +23306,7 @@ var AnthropicAdapter = class {
   handleError(error) {
     console.error("Error in Anthropic API call:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    new import_obsidian6.Notice(`Anthropic API Error: ${errorMessage}`);
+    new import_obsidian5.Notice(`Anthropic API Error: ${errorMessage}`);
     return { success: false, error: errorMessage };
   }
   async validateApiKey() {
@@ -23385,14 +23316,14 @@ var AnthropicAdapter = class {
       }
       const response = await this.testConnection("Return the word 'OK'.", this.models[0].apiName);
       if (response) {
-        new import_obsidian6.Notice("Anthropic API key validated successfully");
+        new import_obsidian5.Notice("Anthropic API key validated successfully");
         return true;
       } else {
         throw new Error("Failed to validate API key");
       }
     } catch (error) {
       console.error("Error validating Anthropic API key:", error);
-      new import_obsidian6.Notice(`Failed to validate Anthropic API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
+      new import_obsidian5.Notice(`Failed to validate Anthropic API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
       return false;
     }
   }
@@ -23423,7 +23354,7 @@ var AnthropicAdapter = class {
 };
 
 // src/adapters/GeminiAdapter.ts
-var import_obsidian7 = require("obsidian");
+var import_obsidian6 = require("obsidian");
 var GeminiAdapter = class {
   constructor(settingsService, jsonValidationService) {
     this.settingsService = settingsService;
@@ -23515,7 +23446,7 @@ var GeminiAdapter = class {
         topP: 0.95
       }
     };
-    const response = await (0, import_obsidian7.requestUrl)({
+    const response = await (0, import_obsidian6.requestUrl)({
       url: `https://generativelanguage.googleapis.com/v1/models/${params.model}:generateContent`,
       method: "POST",
       headers: {
@@ -23563,7 +23494,7 @@ var GeminiAdapter = class {
   handleError(error) {
     console.error("Error in Gemini API call:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    new import_obsidian7.Notice(`Gemini API Error: ${errorMessage}`);
+    new import_obsidian6.Notice(`Gemini API Error: ${errorMessage}`);
     return { success: false, error: errorMessage };
   }
   /**
@@ -23582,14 +23513,14 @@ var GeminiAdapter = class {
         this.models[0].apiName
       );
       if (isValid) {
-        new import_obsidian7.Notice("Gemini API key validated successfully");
+        new import_obsidian6.Notice("Gemini API key validated successfully");
         return true;
       } else {
         throw new Error("Failed to validate API key");
       }
     } catch (error) {
       console.error("Error validating Gemini API key:", error);
-      new import_obsidian7.Notice(`Failed to validate Gemini API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
+      new import_obsidian6.Notice(`Failed to validate Gemini API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
       return false;
     }
   }
@@ -23646,7 +23577,7 @@ var GeminiAdapter = class {
 };
 
 // src/adapters/GroqAdapter.ts
-var import_obsidian8 = require("obsidian");
+var import_obsidian7 = require("obsidian");
 var GroqAdapter = class {
   constructor(settingsService, jsonValidationService) {
     this.settingsService = settingsService;
@@ -23714,7 +23645,7 @@ var GroqAdapter = class {
    */
   async makeApiRequest(params) {
     var _a;
-    const response = await (0, import_obsidian8.requestUrl)({
+    const response = await (0, import_obsidian7.requestUrl)({
       url: "https://api.groq.com/openai/v1/chat/completions",
       method: "POST",
       headers: {
@@ -23773,7 +23704,7 @@ var GroqAdapter = class {
   handleError(error) {
     console.error("Error in Groq API call:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    new import_obsidian8.Notice(`Groq API Error: ${errorMessage}`);
+    new import_obsidian7.Notice(`Groq API Error: ${errorMessage}`);
     return { success: false, error: errorMessage };
   }
   /**
@@ -23792,14 +23723,14 @@ var GroqAdapter = class {
         this.models[0].apiName
       );
       if (isValid) {
-        new import_obsidian8.Notice("Groq API key validated successfully");
+        new import_obsidian7.Notice("Groq API key validated successfully");
         return true;
       } else {
         throw new Error("Failed to validate API key");
       }
     } catch (error) {
       console.error("Error validating Groq API key:", error);
-      new import_obsidian8.Notice(`Failed to validate Groq API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
+      new import_obsidian7.Notice(`Failed to validate Groq API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
       return false;
     }
   }
@@ -23856,7 +23787,7 @@ var GroqAdapter = class {
 };
 
 // src/adapters/OpenRouterAdapter.ts
-var import_obsidian9 = require("obsidian");
+var import_obsidian8 = require("obsidian");
 var OpenRouterAdapter = class {
   constructor(settingsService, jsonValidationService) {
     this.settingsService = settingsService;
@@ -23935,7 +23866,7 @@ var OpenRouterAdapter = class {
       "X-Title": "Obsidian GraphWeaver Plugin"
     };
     try {
-      const response = await (0, import_obsidian9.requestUrl)({
+      const response = await (0, import_obsidian8.requestUrl)({
         url: "https://openrouter.ai/api/v1/chat/completions",
         method: "POST",
         headers,
@@ -23994,7 +23925,7 @@ var OpenRouterAdapter = class {
   handleError(error) {
     console.error("Error in OpenRouter API call:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    new import_obsidian9.Notice(`OpenRouter API Error: ${errorMessage}`);
+    new import_obsidian8.Notice(`OpenRouter API Error: ${errorMessage}`);
     return { success: false, error: errorMessage };
   }
   /**
@@ -24013,14 +23944,14 @@ var OpenRouterAdapter = class {
         this.models[0].apiName
       );
       if (isValid) {
-        new import_obsidian9.Notice("OpenRouter API key validated successfully");
+        new import_obsidian8.Notice("OpenRouter API key validated successfully");
         return true;
       } else {
         throw new Error("Failed to validate API key");
       }
     } catch (error) {
       console.error("Error validating OpenRouter API key:", error);
-      new import_obsidian9.Notice(`Failed to validate OpenRouter API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
+      new import_obsidian8.Notice(`Failed to validate OpenRouter API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
       return false;
     }
   }
@@ -24077,7 +24008,7 @@ var OpenRouterAdapter = class {
 };
 
 // src/adapters/LMStudioAdapter.ts
-var import_obsidian10 = require("obsidian");
+var import_obsidian9 = require("obsidian");
 var LMStudioAdapter = class {
   constructor(settingsService, jsonValidationService) {
     this.settingsService = settingsService;
@@ -24089,7 +24020,7 @@ var LMStudioAdapter = class {
       if (!this.isReady()) {
         throw new Error("LM Studio settings are not properly configured");
       }
-      const response = await (0, import_obsidian10.requestUrl)({
+      const response = await (0, import_obsidian9.requestUrl)({
         url: `http://localhost:${this.port}/v1/chat/completions`,
         method: "POST",
         headers: {
@@ -24133,7 +24064,7 @@ var LMStudioAdapter = class {
       };
     } catch (error) {
       console.error("Error in LM Studio API call:", error);
-      new import_obsidian10.Notice(`LM Studio API Error: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
+      new import_obsidian9.Notice(`LM Studio API Error: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error occurred"
@@ -24695,7 +24626,6 @@ var AIService = class extends CoreService {
       this.initializeComponents();
       await this.initialize();
       if (this.config.enableNotifications) {
-        new import_obsidian11.Notice("AI Service reinitialized successfully!");
       }
     } catch (error) {
       throw new ServiceError(
@@ -25228,11 +25158,11 @@ var SettingsService = class extends CoreService {
 };
 
 // src/managers/FileManager.ts
-var import_obsidian13 = require("obsidian");
+var import_obsidian11 = require("obsidian");
 
 // src/components/modals/BatchProcessorModal.ts
-var import_obsidian12 = require("obsidian");
-var BatchProcessorModal = class extends import_obsidian12.Modal {
+var import_obsidian10 = require("obsidian");
+var BatchProcessorModal = class extends import_obsidian10.Modal {
   constructor(app, aiService, settingsService) {
     super(app);
     this.aiService = aiService;
@@ -25266,9 +25196,9 @@ var BatchProcessorModal = class extends import_obsidian12.Modal {
   renderVaultStructure(containerEl) {
     const rootFolder = this.app.vault.getRoot();
     rootFolder.children.forEach((child) => {
-      if (child instanceof import_obsidian12.TFolder) {
+      if (child instanceof import_obsidian10.TFolder) {
         this.renderFolder(containerEl, child);
-      } else if (child instanceof import_obsidian12.TFile) {
+      } else if (child instanceof import_obsidian10.TFile) {
         containerEl.appendChild(this.createFileElement(child));
       }
     });
@@ -25278,9 +25208,9 @@ var BatchProcessorModal = class extends import_obsidian12.Modal {
     containerEl.appendChild(folderEl);
     const contentEl = folderEl.querySelector(".gw-accordion-content");
     folder.children.forEach((child) => {
-      if (child instanceof import_obsidian12.TFolder) {
+      if (child instanceof import_obsidian10.TFolder) {
         this.renderFolder(contentEl, child);
-      } else if (child instanceof import_obsidian12.TFile) {
+      } else if (child instanceof import_obsidian10.TFile) {
         contentEl.appendChild(this.createFileElement(child));
       }
     });
@@ -25296,13 +25226,13 @@ var BatchProcessorModal = class extends import_obsidian12.Modal {
       cls: "gw-checkbox folder-checkbox"
     });
     const iconEl = titleWrapper.createDiv({ cls: "gw-accordion-icon" });
-    (0, import_obsidian12.setIcon)(iconEl, "folder");
+    (0, import_obsidian10.setIcon)(iconEl, "folder");
     titleWrapper.createSpan({
       text: folder.name,
       cls: "gw-accordion-title"
     });
     const toggleIcon = headerEl.createDiv({ cls: "gw-accordion-toggle" });
-    (0, import_obsidian12.setIcon)(toggleIcon, "chevron-right");
+    (0, import_obsidian10.setIcon)(toggleIcon, "chevron-right");
     const contentEl = folderEl.createDiv({ cls: "gw-accordion-content" });
     headerEl.addEventListener("click", (e) => {
       if (e.target !== checkbox) {
@@ -25322,7 +25252,7 @@ var BatchProcessorModal = class extends import_obsidian12.Modal {
       cls: "gw-checkbox file-checkbox"
     });
     const iconEl = contentWrapper.createDiv({ cls: "gw-accordion-icon" });
-    (0, import_obsidian12.setIcon)(iconEl, "file-text");
+    (0, import_obsidian10.setIcon)(iconEl, "file-text");
     contentWrapper.createSpan({
       text: file.name,
       cls: "gw-accordion-item-title"
@@ -25360,13 +25290,13 @@ var BatchProcessorModal = class extends import_obsidian12.Modal {
     }
   }
   createButtons(containerEl) {
-    new import_obsidian12.ButtonComponent(containerEl).setButtonText("Cancel").setClass("gw-button-secondary").onClick(() => this.close());
-    new import_obsidian12.ButtonComponent(containerEl).setButtonText("Confirm").setCta().setClass("gw-button-primary").onClick(() => this.confirmUpdate());
+    new import_obsidian10.ButtonComponent(containerEl).setButtonText("Cancel").setClass("gw-button-secondary").onClick(() => this.close());
+    new import_obsidian10.ButtonComponent(containerEl).setButtonText("Confirm").setCta().setClass("gw-button-primary").onClick(() => this.confirmUpdate());
   }
   async confirmUpdate() {
     const selectedPaths = this.getSelectedPaths();
     if (selectedPaths.length === 0) {
-      new import_obsidian12.Notice("No files selected for processing. Please select files or folders to update.");
+      new import_obsidian10.Notice("No files selected for processing. Please select files or folders to update.");
       return;
     }
     this.close();
@@ -25398,7 +25328,7 @@ var BatchProcessorModal = class extends import_obsidian12.Modal {
     for (const path of selectedPaths) {
       try {
         const file = this.app.vault.getAbstractFileByPath(path);
-        if (file instanceof import_obsidian12.TFile) {
+        if (file instanceof import_obsidian10.TFile) {
           await this.updateFile(file);
           updatedCount++;
           progressModal.updateProgress(updatedCount);
@@ -25412,7 +25342,7 @@ var BatchProcessorModal = class extends import_obsidian12.Modal {
     if (errorCount > 0) {
       message += ` Encountered errors in ${errorCount} file${errorCount !== 1 ? "s" : ""}.`;
     }
-    new import_obsidian12.Notice(message);
+    new import_obsidian10.Notice(message);
   }
   async updateFile(file) {
     const content = await this.app.vault.read(file);
@@ -25420,16 +25350,13 @@ var BatchProcessorModal = class extends import_obsidian12.Modal {
     await this.app.vault.modify(file, updatedContent);
   }
   async processContent(content) {
-    console.log("BatchProcessorModal: Starting content processing");
     let processedContent = content;
     try {
       const generationService = this.aiService.getGenerationService();
-      console.log("BatchProcessorModal: Generating front matter");
       processedContent = await generationService.generateFrontMatter(processedContent);
       processedContent = this.addOrUpdateFrontMatter(processedContent, processedContent);
       const settings = this.settingsService.getSettings();
       if (settings.advanced.generateWikilinks) {
-        console.log("BatchProcessorModal: Generating wikilinks");
         const existingPages = this.app.vault.getMarkdownFiles().map((file) => file.basename);
         processedContent = await generationService.generateWikilinks(processedContent, existingPages);
       }
@@ -25456,7 +25383,7 @@ ${content}`;
     this.containerEl.removeClass("graphweaver-modal");
   }
 };
-var ProcessingProgressModal = class extends import_obsidian12.Modal {
+var ProcessingProgressModal = class extends import_obsidian10.Modal {
   constructor(app, totalFiles) {
     super(app);
     this.totalFiles = totalFiles;
@@ -25521,7 +25448,6 @@ var FileManager = class {
       this.app.vault.on("create", this.handleFileModify.bind(this));
       this.app.vault.on("modify", this.handleFileModify.bind(this));
       this.serviceState = "ready" /* Ready */;
-      console.log("FileManager: Initialized.");
     } catch (error) {
       this.serviceError = error instanceof Error ? new ServiceError(this.serviceName, error.message) : null;
       this.serviceState = "error" /* Error */;
@@ -25532,7 +25458,6 @@ var FileManager = class {
   async destroy() {
     this.unloading = true;
     this.serviceState = "destroyed" /* Destroyed */;
-    console.log("FileManager: Destroyed.");
   }
   isReady() {
     return this.serviceState === "ready" /* Ready */ && !this.unloading;
@@ -25547,7 +25472,7 @@ var FileManager = class {
    * Handle file creation and modification events
    */
   async handleFileModify(file) {
-    if (!(file instanceof import_obsidian13.TFile) || !this.settingsService.getSettings().frontMatter.autoGenerate) {
+    if (!(file instanceof import_obsidian11.TFile) || !this.settingsService.getSettings().frontMatter.autoGenerate) {
       return;
     }
     try {
@@ -25556,12 +25481,11 @@ var FileManager = class {
         const result = await this.fileProcessor.processSingleFile(file, {
           generateFrontMatter: true
         });
-        new import_obsidian13.Notice(`Generated front matter for ${file.basename}`);
-        console.log(`FileManager: Generated front matter for ${file.path}`);
+        new import_obsidian11.Notice(`Generated front matter for ${file.basename}`);
       }
     } catch (error) {
       console.error("FileManager: Error handling file modification:", error);
-      new import_obsidian13.Notice(`Error processing file ${file.path}`);
+      new import_obsidian11.Notice(`Error processing file ${file.path}`);
     }
   }
   /**
@@ -25570,7 +25494,7 @@ var FileManager = class {
   async generateFrontmatter() {
     const activeFile = this.app.workspace.getActiveFile();
     if (!activeFile) {
-      new import_obsidian13.Notice("No active file. Please open a file to generate frontmatter.");
+      new import_obsidian11.Notice("No active file. Please open a file to generate frontmatter.");
       return;
     }
     try {
@@ -25578,15 +25502,14 @@ var FileManager = class {
         generateFrontMatter: true
       });
       if (result.success) {
-        new import_obsidian13.Notice("Frontmatter generated successfully!");
-        console.log(`FileManager: Frontmatter generated for ${activeFile.path}`);
+        new import_obsidian11.Notice("Frontmatter generated successfully!");
       } else if (result.error) {
-        new import_obsidian13.Notice(`Error: ${result.error}`);
+        new import_obsidian11.Notice(`Error: ${result.error}`);
         console.error(`FileManager: Error generating frontmatter for ${activeFile.path}:`, result.error);
       }
     } catch (error) {
       console.error("FileManager: Error generating frontmatter:", error);
-      new import_obsidian13.Notice("Failed to generate frontmatter");
+      new import_obsidian11.Notice("Failed to generate frontmatter");
     }
   }
   /**
@@ -25595,7 +25518,7 @@ var FileManager = class {
   async generateWikilinks() {
     const activeFile = this.app.workspace.getActiveFile();
     if (!activeFile) {
-      new import_obsidian13.Notice("No active file. Please open a file to generate wikilinks.");
+      new import_obsidian11.Notice("No active file. Please open a file to generate wikilinks.");
       return;
     }
     try {
@@ -25603,15 +25526,14 @@ var FileManager = class {
         generateWikilinks: true
       });
       if (result.success) {
-        new import_obsidian13.Notice("Wikilinks generated successfully!");
-        console.log(`FileManager: Wikilinks generated for ${activeFile.path}`);
+        new import_obsidian11.Notice("Wikilinks generated successfully!");
       } else if (result.error) {
-        new import_obsidian13.Notice(`Error: ${result.error}`);
+        new import_obsidian11.Notice(`Error: ${result.error}`);
         console.error(`FileManager: Error generating wikilinks for ${activeFile.path}:`, result.error);
       }
     } catch (error) {
       console.error("FileManager: Error generating wikilinks:", error);
-      new import_obsidian13.Notice("Failed to generate wikilinks");
+      new import_obsidian11.Notice("Failed to generate wikilinks");
     }
   }
   /**
@@ -25620,7 +25542,7 @@ var FileManager = class {
   async generateKnowledgeBloom() {
     const activeFile = this.app.workspace.getActiveFile();
     if (!activeFile) {
-      new import_obsidian13.Notice("No active file. Please open a file to generate Knowledge Bloom.");
+      new import_obsidian11.Notice("No active file. Please open a file to generate Knowledge Bloom.");
       return;
     }
     try {
@@ -25629,17 +25551,16 @@ var FileManager = class {
       for (const note of result.generatedNotes) {
         const filePath = `${note.title}.md`;
         const existingFile = this.app.vault.getAbstractFileByPath(filePath);
-        if (existingFile instanceof import_obsidian13.TFile) {
+        if (existingFile instanceof import_obsidian11.TFile) {
           await this.app.vault.modify(existingFile, note.content);
         } else {
           await this.app.vault.create(filePath, note.content);
         }
       }
-      new import_obsidian13.Notice(`Generated ${result.generatedNotes.length} new notes!`);
-      console.log(`FileManager: Generated ${result.generatedNotes.length} new notes for ${activeFile.path}`);
+      new import_obsidian11.Notice(`Generated ${result.generatedNotes.length} new notes!`);
     } catch (error) {
       console.error("FileManager: Error generating Knowledge Bloom:", error);
-      new import_obsidian13.Notice("Failed to generate Knowledge Bloom");
+      new import_obsidian11.Notice("Failed to generate Knowledge Bloom");
     }
   }
   /**
@@ -26055,7 +25976,6 @@ var StateManager = class extends import_events2.EventEmitter {
       await this.initializeInternal();
       this.serviceState = "ready" /* Ready */;
       if (this.options.debug) {
-        console.log(`${this.serviceName}: Initialized successfully`);
       }
     } catch (error) {
       this.serviceState = "error" /* Error */;
@@ -26088,7 +26008,6 @@ var StateManager = class extends import_events2.EventEmitter {
       this.removeAllListeners();
       this.serviceState = "destroyed" /* Destroyed */;
       if (this.options.debug) {
-        console.log(`${this.serviceName}: Destroyed successfully`);
       }
     } catch (error) {
       this.serviceState = "error" /* Error */;
@@ -26123,7 +26042,6 @@ var StateManager = class extends import_events2.EventEmitter {
   setupEventHandlers() {
     this.eventHandlers["stateChanged" /* StateChanged */] = (key, value) => {
       if (this.options.debug) {
-        console.log(`State changed: ${String(key)}`, value);
       }
     };
     this.eventHandlers["validationError" /* ValidationError */] = (error) => {
@@ -26285,7 +26203,6 @@ var PersistentStateManager = class extends StateManager {
         try {
           await StatePersistence.saveState(this.storageKey, this.state);
           if (this.options.debug) {
-            console.log(`PersistentStateManager: State persisted to ${this.storageKey}`);
           }
         } catch (error) {
           console.error("Error persisting state:", error);
@@ -26316,7 +26233,6 @@ var PersistentStateManager = class extends StateManager {
       await StatePersistence.clearState(this.storageKey);
       this.reset();
       if (this.options.debug) {
-        console.log(`PersistentStateManager: Cleared persisted state from ${this.storageKey}`);
       }
     } catch (error) {
       console.error("Error clearing persisted state:", error);
@@ -26336,7 +26252,7 @@ var PersistentStateManager = class extends StateManager {
 };
 
 // src/generators/BatchProcessor.ts
-var import_obsidian14 = require("obsidian");
+var import_obsidian12 = require("obsidian");
 var import_events3 = require("events");
 
 // src/types/ProcessingTypes.ts
@@ -26437,7 +26353,7 @@ var BatchProcessor = class extends CoreService {
     for (const chunk of chunks) {
       const files = chunk.map(
         (path) => this.app.vault.getAbstractFileByPath(path)
-      ).filter((file) => file instanceof import_obsidian14.TFile);
+      ).filter((file) => file instanceof import_obsidian12.TFile);
       const chunkResults = await Promise.all(
         files.map((file) => this.processFile(file, input))
       );
@@ -26534,7 +26450,6 @@ var BatchProcessor = class extends CoreService {
 };
 
 // src/services/JsonValidationService.ts
-var import_obsidian15 = require("obsidian");
 var JsonValidationService = class extends CoreService {
   constructor(config = {}) {
     super("json-validation", "JSON Validation Service");
@@ -26553,7 +26468,6 @@ var JsonValidationService = class extends CoreService {
    */
   async initializeInternal() {
     if (this.config.debug) {
-      console.log("JsonValidationService: Initialized successfully");
     }
   }
   /**
@@ -26561,7 +26475,6 @@ var JsonValidationService = class extends CoreService {
    */
   async destroyInternal() {
     if (this.config.debug) {
-      console.log("JsonValidationService: Cleanup complete");
     }
   }
   /**
@@ -26642,7 +26555,6 @@ var JsonValidationService = class extends CoreService {
         console.error(serviceError.getDetails());
       }
       if (this.config.notifyOnError) {
-        new import_obsidian15.Notice(`Invalid JSON format: ${serviceError.message}`);
       }
       return {
         valid: false,
@@ -26662,7 +26574,6 @@ var JsonValidationService = class extends CoreService {
       };
     } catch (initialError) {
       if (this.config.debug) {
-        console.log("JsonValidationService: Attempting to fix malformed JSON");
       }
       try {
         let fixed = str;
@@ -26682,13 +26593,6 @@ var JsonValidationService = class extends CoreService {
           fixed = trailingCommasFix;
         }
         const fixedJson = JSON.parse(fixed);
-        if (this.config.debug) {
-          console.log("JsonValidationService: Successfully fixed and parsed JSON:", {
-            original: str,
-            fixed,
-            fixes
-          });
-        }
         return {
           valid: true,
           value: fixedJson,
@@ -26751,7 +26655,7 @@ var JsonValidationService = class extends CoreService {
 };
 
 // src/services/file/FileProcessorService.ts
-var import_obsidian16 = require("obsidian");
+var import_obsidian13 = require("obsidian");
 var FileProcessorService = class {
   constructor(stateManager, app, aiService, settingsService, databaseService, fileScanner, generatorFactory) {
     this.stateManager = stateManager;
@@ -26771,7 +26675,6 @@ var FileProcessorService = class {
     try {
       this.serviceState = "initializing" /* Initializing */;
       this.serviceState = "ready" /* Ready */;
-      console.log("FileProcessorService: Initialized.");
     } catch (error) {
       this.serviceError = error instanceof Error ? new ServiceError(this.serviceName, error.message) : null;
       this.serviceState = "error" /* Error */;
@@ -26781,7 +26684,6 @@ var FileProcessorService = class {
   }
   async destroy() {
     this.serviceState = "destroyed" /* Destroyed */;
-    console.log("FileProcessorService: Destroyed.");
   }
   isReady() {
     return this.serviceState === "ready" /* Ready */ && !this.serviceError;
@@ -26846,13 +26748,11 @@ created: ${new Date().toISOString()}
 `;
     const content = await this.app.vault.read(file);
     await this.app.vault.modify(file, frontMatter + content);
-    console.log(`FileProcessorService: Front matter generated for ${file.path}`);
   }
   /**
    * Generate wikilinks using WikilinkGenerator
    */
   async generateWikilinks(file) {
-    console.log(`FileProcessorService: Generating wikilinks for ${file.path}`);
     try {
       const content = await this.app.vault.read(file);
       const existingPages = this.getExistingPageNames();
@@ -26864,7 +26764,6 @@ created: ${new Date().toISOString()}
         existingPages
       });
       await this.app.vault.modify(file, result.content);
-      console.log(`FileProcessorService: Wikilinks generated for ${file.path}`);
       return { success: true };
     } catch (error) {
       console.error(`FileProcessorService: Error generating wikilinks for ${file.path}:`, error);
@@ -26902,15 +26801,14 @@ created: ${new Date().toISOString()}
       progress: 100,
       error: void 0
     });
-    new import_obsidian16.Notice(`Successfully processed ${file.basename}`);
-    console.log(`FileProcessorService: Successfully processed ${file.path}`);
+    new import_obsidian13.Notice(`Successfully processed ${file.basename}`);
   }
   /**
    * Handle processing errors
    */
   handleProcessingError(message, error, file) {
     console.error("Processing error:", error);
-    new import_obsidian16.Notice(`Error processing file ${file == null ? void 0 : file.path}: ${error instanceof Error ? error.message : "Unknown error"}`);
+    new import_obsidian13.Notice(`Error processing file ${file == null ? void 0 : file.path}: ${error instanceof Error ? error.message : "Unknown error"}`);
     this.stateManager.update("processing", {
       isProcessing: false,
       currentFile: void 0,
@@ -26955,7 +26853,6 @@ var FileScannerService = class extends CoreService {
    */
   async initializeInternal() {
     if (this.config.debug) {
-      console.log("FileScannerService: Initialized successfully");
     }
   }
   /**
@@ -27052,9 +26949,6 @@ var FileScannerService = class extends CoreService {
         clearTimeout(this.scanTimeout);
         this.scanTimeout = null;
       }
-      if (this.config.debug) {
-        console.log(`Scanned ${file.path} in ${Date.now() - startTime}ms`);
-      }
       return result;
     } catch (error) {
       throw new ServiceError(
@@ -27100,9 +26994,6 @@ var FileScannerService = class extends CoreService {
     this.eventEmitter.emit(event, ...args);
   }
 };
-
-// src/services/ai/AIOperationManager.ts
-var import_obsidian17 = require("obsidian");
 
 // src/services/ai/QueueManagerService.ts
 var QueueManagerService = class extends CoreService {
@@ -27506,7 +27397,6 @@ var AIOperationManager = class {
     });
     this.eventEmitter.on("operationError", (error, status) => {
       console.error(`Operation error (${status.type}):`, error);
-      new import_obsidian17.Notice(`AI Operation Error: ${error.message}`);
       this.updateState();
     });
   }
@@ -27599,10 +27489,10 @@ var AIOperationManager = class {
 };
 
 // src/settings/GraphWeaverSettingTab.ts
-var import_obsidian30 = require("obsidian");
+var import_obsidian26 = require("obsidian");
 
 // src/components/accordions/ModelHookupAccordion.ts
-var import_obsidian19 = require("obsidian");
+var import_obsidian15 = require("obsidian");
 init_BaseAccordion();
 var ModelHookupAccordion = class extends BaseAccordion {
   constructor(app, containerEl, settingsService, aiService) {
@@ -27624,30 +27514,30 @@ var ModelHookupAccordion = class extends BaseAccordion {
     await this.settingsService.updateNestedSetting("aiProvider", "selected", value);
     try {
       await this.aiService.reinitialize();
-      new import_obsidian19.Notice(`AI Service reinitialized with provider ${value}.`);
+      new import_obsidian15.Notice(`AI Service reinitialized with provider ${value}.`);
       this.renderProviderSettings();
     } catch (error) {
       console.error("Failed to reinitialize AI Service:", error);
-      new import_obsidian19.Notice(`Failed to reinitialize AI Service: ${error.message}`);
+      new import_obsidian15.Notice(`Failed to reinitialize AI Service: ${error.message}`);
     }
   }
   async handleTestConnection(provider) {
     try {
       const result = await this.aiService.testConnection(provider);
       if (result) {
-        new import_obsidian19.Notice(`Successfully connected to ${this.getFormattedProviderName(provider)}`);
+        new import_obsidian15.Notice(`Successfully connected to ${this.getFormattedProviderName(provider)}`);
       } else {
-        new import_obsidian19.Notice(`Failed to connect to ${this.getFormattedProviderName(provider)}. Please check your settings and try again.`);
+        new import_obsidian15.Notice(`Failed to connect to ${this.getFormattedProviderName(provider)}. Please check your settings and try again.`);
       }
     } catch (error) {
       console.error("Test connection error:", error);
-      new import_obsidian19.Notice(`Test connection failed: ${error.message}`);
+      new import_obsidian15.Notice(`Test connection failed: ${error.message}`);
     }
   }
   // Update the onChange handler and test button to use the new methods
   createProviderDropdown(containerEl) {
     const settings = this.settingsService.getSettings();
-    new import_obsidian19.Setting(containerEl).setName("AI Provider").setDesc("Select the AI provider to use").addDropdown((dropdown) => {
+    new import_obsidian15.Setting(containerEl).setName("AI Provider").setDesc("Select the AI provider to use").addDropdown((dropdown) => {
       this.providerDropdown = dropdown;
       Object.values(AIProvider).forEach((provider) => {
         dropdown.addOption(provider, this.getFormattedProviderName(provider));
@@ -27678,7 +27568,7 @@ var ModelHookupAccordion = class extends BaseAccordion {
   }
   createApiKeyInput(containerEl, provider) {
     const settings = this.settingsService.getSettings();
-    new import_obsidian19.Setting(containerEl).setName("API Key").setDesc(`Enter your API key for ${this.getFormattedProviderName(provider)}`).addText((text) => {
+    new import_obsidian15.Setting(containerEl).setName("API Key").setDesc(`Enter your API key for ${this.getFormattedProviderName(provider)}`).addText((text) => {
       text.setPlaceholder("Enter API Key").setValue(settings.aiProvider.apiKeys[provider] || "").onChange(async (value) => {
         const currentApiKeys = this.settingsService.getNestedSetting("aiProvider", "apiKeys");
         const updatedApiKeys = { ...currentApiKeys, [provider]: value };
@@ -27689,7 +27579,7 @@ var ModelHookupAccordion = class extends BaseAccordion {
   }
   createPortInput(containerEl) {
     const settings = this.settingsService.getSettings();
-    new import_obsidian19.Setting(containerEl).setName("LM Studio Port").setDesc("Enter the port number for your local LM Studio instance").addText((text) => {
+    new import_obsidian15.Setting(containerEl).setName("LM Studio Port").setDesc("Enter the port number for your local LM Studio instance").addText((text) => {
       text.setPlaceholder("Enter port number").setValue(settings.localLMStudio.port.toString()).onChange(async (value) => {
         const port = parseInt(value, 10);
         if (!isNaN(port)) {
@@ -27701,7 +27591,7 @@ var ModelHookupAccordion = class extends BaseAccordion {
   }
   createModelNameInput(containerEl) {
     const settings = this.settingsService.getSettings();
-    new import_obsidian19.Setting(containerEl).setName("Model Name").setDesc("Enter the name of the local model you want to use").addText((text) => {
+    new import_obsidian15.Setting(containerEl).setName("Model Name").setDesc("Enter the name of the local model you want to use").addText((text) => {
       text.setPlaceholder("Enter model name").setValue(settings.localLMStudio.modelName).onChange(async (value) => {
         await this.settingsService.updateNestedSetting("localLMStudio", "modelName", value);
         await this.settingsService.updateNestedSetting("aiProvider", "selectedModels", {
@@ -27715,7 +27605,7 @@ var ModelHookupAccordion = class extends BaseAccordion {
   createModelDropdown(containerEl, provider) {
     const settings = this.settingsService.getSettings();
     const models = AIModelMap[provider];
-    new import_obsidian19.Setting(containerEl).setName("Model").setDesc(`Select the AI model for ${this.getFormattedProviderName(provider)}`).addDropdown((dropdown) => {
+    new import_obsidian15.Setting(containerEl).setName("Model").setDesc(`Select the AI model for ${this.getFormattedProviderName(provider)}`).addDropdown((dropdown) => {
       var _a;
       models.forEach((model) => {
         dropdown.addOption(model.apiName, model.name);
@@ -27729,7 +27619,7 @@ var ModelHookupAccordion = class extends BaseAccordion {
     });
   }
   createTestButton(containerEl, provider) {
-    new import_obsidian19.Setting(containerEl).addButton((button) => {
+    new import_obsidian15.Setting(containerEl).addButton((button) => {
       button.setButtonText("Test Connection").onClick(async () => {
         button.setDisabled(true);
         button.setButtonText("Testing...");
@@ -27737,9 +27627,9 @@ var ModelHookupAccordion = class extends BaseAccordion {
         button.setDisabled(false);
         button.setButtonText("Test Connection");
         if (result) {
-          new import_obsidian19.Notice(`Successfully connected to ${this.getFormattedProviderName(provider)}`);
+          new import_obsidian15.Notice(`Successfully connected to ${this.getFormattedProviderName(provider)}`);
         } else {
-          new import_obsidian19.Notice(`Failed to connect to ${this.getFormattedProviderName(provider)}. Please check your settings and try again.`);
+          new import_obsidian15.Notice(`Failed to connect to ${this.getFormattedProviderName(provider)}. Please check your settings and try again.`);
         }
       });
     });
@@ -27783,11 +27673,11 @@ var ModelHookupAccordion = class extends BaseAccordion {
 };
 
 // src/components/accordions/PropertyManagerAccordion.ts
-var import_obsidian21 = require("obsidian");
+var import_obsidian17 = require("obsidian");
 
 // src/components/modals/EditPropertiesModal.ts
-var import_obsidian20 = require("obsidian");
-var EditPropertiesModal = class extends import_obsidian20.Modal {
+var import_obsidian16 = require("obsidian");
+var EditPropertiesModal = class extends import_obsidian16.Modal {
   constructor(app, properties, onSubmit) {
     super(app);
     this.properties = [...properties];
@@ -27885,7 +27775,7 @@ var EditPropertiesModal = class extends import_obsidian20.Modal {
     });
   }
   createActionButtons(containerEl) {
-    new import_obsidian20.Setting(containerEl).addButton((btn) => {
+    new import_obsidian16.Setting(containerEl).addButton((btn) => {
       btn.setButtonText("Delete Selected").setClass("gw-button-warning").onClick(() => this.deleteSelectedProperties());
       return btn;
     }).addButton((btn) => {
@@ -27902,7 +27792,7 @@ var EditPropertiesModal = class extends import_obsidian20.Modal {
   }
   createEditableCell(row, property, field, index2) {
     const cell = row.createEl("td");
-    const input = new import_obsidian20.TextComponent(cell);
+    const input = new import_obsidian16.TextComponent(cell);
     input.inputEl.addClass("gw-text-input");
     input.setValue(property[field]).onChange((value) => {
       this.properties[index2][field] = value;
@@ -27910,7 +27800,7 @@ var EditPropertiesModal = class extends import_obsidian20.Modal {
   }
   createTypeDropdown(row, property, index2) {
     const cell = row.createEl("td");
-    const dropdown = new import_obsidian20.DropdownComponent(cell);
+    const dropdown = new import_obsidian16.DropdownComponent(cell);
     const types = ["string", "number", "boolean", "array", "date"];
     dropdown.selectEl.addClass("gw-dropdown");
     types.forEach((type) => {
@@ -27987,33 +27877,33 @@ var PropertyManagerAccordion = class extends BaseAccordion {
   }
   createPropertyEditor(containerEl) {
     const editorContainer = containerEl.createDiv({ cls: "gw-property-editor" });
-    new import_obsidian21.Setting(editorContainer).setName("Property Name").addText((text) => {
+    new import_obsidian17.Setting(editorContainer).setName("Property Name").addText((text) => {
       this.nameInput = text;
       text.setPlaceholder("Enter property name");
     });
-    new import_obsidian21.Setting(editorContainer).setName("Property Description").addTextArea((textarea) => {
+    new import_obsidian17.Setting(editorContainer).setName("Property Description").addTextArea((textarea) => {
       this.descriptionInput = textarea;
       textarea.setPlaceholder("Enter property description");
     });
-    new import_obsidian21.Setting(editorContainer).setName("Property Type").addDropdown((dropdown) => {
+    new import_obsidian17.Setting(editorContainer).setName("Property Type").addDropdown((dropdown) => {
       this.typeDropdown = dropdown;
       dropdown.addOption("string", "String").addOption("number", "Number").addOption("boolean", "Boolean").addOption("array", "Array").addOption("date", "Date").setValue("string");
     });
   }
   createButtonRow(containerEl) {
     const buttonContainer = containerEl.createDiv({ cls: "gw-button-container" });
-    new import_obsidian21.Setting(buttonContainer).addButton((button) => button.setButtonText("Edit Properties").onClick(() => this.openEditModal())).addButton((button) => button.setButtonText("Add Property").setCta().onClick(() => this.addProperty()));
+    new import_obsidian17.Setting(buttonContainer).addButton((button) => button.setButtonText("Edit Properties").onClick(() => this.openEditModal())).addButton((button) => button.setButtonText("Add Property").setCta().onClick(() => this.addProperty()));
   }
   addProperty() {
     const name = this.nameInput.getValue().trim();
     const description = this.descriptionInput.getValue().trim();
     const type = this.typeDropdown.getValue();
     if (!name) {
-      new import_obsidian21.Notice("Property name cannot be empty.");
+      new import_obsidian17.Notice("Property name cannot be empty.");
       return;
     }
     if (!description) {
-      new import_obsidian21.Notice("Property description cannot be empty.");
+      new import_obsidian17.Notice("Property description cannot be empty.");
       return;
     }
     const newProperty = {
@@ -28026,7 +27916,7 @@ var PropertyManagerAccordion = class extends BaseAccordion {
     const settings = this.settingsService.getSettings();
     settings.frontMatter.customProperties.push(newProperty);
     this.settingsService.updateSettings(settings);
-    new import_obsidian21.Notice(`Property "${name}" has been added.`);
+    new import_obsidian17.Notice(`Property "${name}" has been added.`);
     this.nameInput.setValue("");
     this.descriptionInput.setValue("");
     this.typeDropdown.setValue("string");
@@ -28046,11 +27936,11 @@ var PropertyManagerAccordion = class extends BaseAccordion {
 };
 
 // src/components/accordions/TagManagerAccordion.ts
-var import_obsidian23 = require("obsidian");
+var import_obsidian19 = require("obsidian");
 
 // src/components/modals/EditTagsModal.ts
-var import_obsidian22 = require("obsidian");
-var EditTagsModal = class extends import_obsidian22.Modal {
+var import_obsidian18 = require("obsidian");
+var EditTagsModal = class extends import_obsidian18.Modal {
   constructor(app, tags, onSubmit) {
     super(app);
     this.tags = [...tags];
@@ -28102,7 +27992,7 @@ var EditTagsModal = class extends import_obsidian22.Modal {
     });
   }
   createActionButtons(containerEl) {
-    new import_obsidian22.Setting(containerEl).addButton((btn) => {
+    new import_obsidian18.Setting(containerEl).addButton((btn) => {
       btn.setButtonText("Delete Selected").setClass("gw-button-warning").onClick(() => this.deleteSelectedTags());
       return btn;
     }).addButton((btn) => {
@@ -28151,13 +28041,13 @@ var EditTagsModal = class extends import_obsidian22.Modal {
   createEditableCell(row, tag, field, index2) {
     const cell = row.createEl("td");
     if (field === "name") {
-      const input = new import_obsidian22.TextComponent(cell);
+      const input = new import_obsidian18.TextComponent(cell);
       input.inputEl.addClass("gw-text-input");
       input.setValue(tag[field]).onChange((value) => {
         this.tags[index2][field] = value;
       });
     } else {
-      const textarea = new import_obsidian22.TextAreaComponent(cell);
+      const textarea = new import_obsidian18.TextAreaComponent(cell);
       textarea.inputEl.addClass("gw-textarea-input");
       textarea.setValue(tag[field]).onChange((value) => {
         this.tags[index2][field] = value;
@@ -28204,24 +28094,24 @@ var TagManagerAccordion = class extends BaseAccordion {
   }
   createTagEditor(containerEl) {
     const editorContainer = containerEl.createDiv({ cls: "gw-tag-editor" });
-    new import_obsidian23.Setting(editorContainer).setName("Tag Name").addText((text) => {
+    new import_obsidian19.Setting(editorContainer).setName("Tag Name").addText((text) => {
       this.nameInput = text;
       text.setPlaceholder("Enter tag name");
     });
-    new import_obsidian23.Setting(editorContainer).setName("Tag Description").addTextArea((textarea) => {
+    new import_obsidian19.Setting(editorContainer).setName("Tag Description").addTextArea((textarea) => {
       this.descriptionInput = textarea;
       textarea.setPlaceholder("Enter tag description");
     });
   }
   createButtonRow(containerEl) {
     const buttonContainer = containerEl.createDiv({ cls: "gw-button-container" });
-    new import_obsidian23.Setting(buttonContainer).addButton((button) => button.setButtonText("Edit Tags").onClick(() => this.openEditModal())).addButton((button) => button.setButtonText("Add Tag").setCta().onClick(() => this.addTag()));
+    new import_obsidian19.Setting(buttonContainer).addButton((button) => button.setButtonText("Edit Tags").onClick(() => this.openEditModal())).addButton((button) => button.setButtonText("Add Tag").setCta().onClick(() => this.addTag()));
   }
   addTag() {
     const name = this.nameInput.getValue().trim();
     const description = this.descriptionInput.getValue().trim();
     if (!name) {
-      new import_obsidian23.Notice("Tag name cannot be empty.");
+      new import_obsidian19.Notice("Tag name cannot be empty.");
       return;
     }
     const newTag = {
@@ -28234,7 +28124,7 @@ var TagManagerAccordion = class extends BaseAccordion {
     const settings = this.settingsService.getSettings();
     settings.tags.customTags.push(newTag);
     this.settingsService.updateSettings(settings);
-    new import_obsidian23.Notice(`Tag "${name}" has been added.`);
+    new import_obsidian19.Notice(`Tag "${name}" has been added.`);
     this.nameInput.setValue("");
     this.descriptionInput.setValue("");
   }
@@ -28253,21 +28143,17 @@ var TagManagerAccordion = class extends BaseAccordion {
 };
 
 // src/components/accordions/OntologyGenerationAccordion.ts
-var import_obsidian25 = require("obsidian");
+var import_obsidian21 = require("obsidian");
 init_BaseAccordion();
 
 // src/components/modals/OntologyGeneratorModal.ts
-var import_obsidian24 = require("obsidian");
-var OntologyGeneratorModal = class extends import_obsidian24.Modal {
-  /**
-   * Initialize ontology generator modal
-   * @param app - Obsidian app instance
-   * @param aiService - AI service for model management
-   * @param aiGenerationService - Service for generating content
-   * @param tagManagementService - Service for managing tags
-   * @param onGenerate - Callback for handling generated ontology
-   * @param adapterRegistry - Registry for AI adapters
-   */
+var import_obsidian20 = require("obsidian");
+
+// styles.css
+var _default = {};
+
+// src/components/modals/OntologyGeneratorModal.ts
+var OntologyGeneratorModal = class extends import_obsidian20.Modal {
   constructor(app, aiService, aiGenerationService, tagManagementService, onGenerate, adapterRegistry) {
     super(app);
     this.aiService = aiService;
@@ -28277,27 +28163,33 @@ var OntologyGeneratorModal = class extends import_obsidian24.Modal {
     this.adapterRegistry = adapterRegistry;
     this.vaultStats = { files: [], folders: [], tags: [] };
     this.availableModels = [];
-    this.containerEl.addClass("graphweaver-modal");
   }
   async onOpen() {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.addClass("status-history-modal");
     const modalContent = contentEl.createDiv({ cls: "modal-content" });
-    this.createLoadingState(modalContent);
+    const shadowContainer = modalContent.createDiv({ cls: "shadow-container" });
+    this.shadowRootEl = shadowContainer.attachShadow({ mode: "open" });
+    this.injectStyles(this.shadowRootEl);
+    const shadowWrapper = this.shadowRootEl.createDiv({ cls: "shadow-wrapper" });
+    this.createLoadingState(shadowWrapper);
     try {
       await this.loadVaultStats();
-      const provider = this.aiService.getCurrentProvider();
       this.availableModels = this.adapterRegistry.getAllAvailableModels();
-      this.renderContent(modalContent);
+      this.renderContent(shadowWrapper);
     } catch (error) {
       console.error("Error loading data:", error);
-      this.showError("An error occurred while retrieving data.");
+      this.showError(shadowWrapper, "An error occurred while retrieving data.");
     }
+  }
+  injectStyles(shadowRoot) {
+    const style = document.createElement("style");
+    style.textContent = _default;
+    shadowRoot.appendChild(style);
   }
   async loadVaultStats() {
     this.vaultStats.files = this.app.vault.getMarkdownFiles();
-    this.vaultStats.folders = this.app.vault.getAllLoadedFiles().filter((file) => file instanceof import_obsidian24.TFolder);
+    this.vaultStats.folders = this.app.vault.getAllLoadedFiles().filter((file) => file instanceof import_obsidian20.TFolder);
     this.vaultStats.tags = await this.getAllTags(this.vaultStats.files);
   }
   async getAllTags(files) {
@@ -28311,45 +28203,37 @@ var OntologyGeneratorModal = class extends import_obsidian24.Modal {
     }
     return Array.from(tagSet);
   }
-  renderContent(modalContent) {
-    this.loadingEl.hide();
-    modalContent.empty();
-    const header = modalContent.createDiv({ cls: "modal-header" });
-    header.createEl("h2", {
-      text: "Generate Ontology",
-      cls: "modal-header-title"
-    });
-    const scrollableContent = modalContent.createDiv({
-      cls: "modal-scrollable-content"
-    });
-    this.renderVaultStats(scrollableContent);
-    this.renderModelSelection(scrollableContent);
-    this.renderUserContextInput(scrollableContent);
-    this.renderGuidedQuestions(scrollableContent);
-    const buttonContainer = modalContent.createDiv({
-      cls: "modal-action-buttons"
-    });
-    this.renderButtons(buttonContainer);
+  renderContent(containerEl) {
+    this.loadingEl.remove();
+    this.renderVaultStats(containerEl);
+    this.renderModelSelection(containerEl);
+    this.renderUserContextInput(containerEl);
+    this.renderGuidedQuestions(containerEl);
+    this.renderButtons(containerEl);
   }
   renderVaultStats(containerEl) {
     const statsEl = containerEl.createDiv({ cls: "status-summary" });
     const summaryGrid = statsEl.createDiv({ cls: "summary-grid" });
     const items = [
-      { label: "Files", value: this.vaultStats.files.length },
-      { label: "Folders", value: this.vaultStats.folders.length },
-      { label: "Tags", value: this.vaultStats.tags.length }
+      { label: "Files", value: this.vaultStats.files.length, icon: "file-text" },
+      { label: "Folders", value: this.vaultStats.folders.length, icon: "folder" },
+      { label: "Tags", value: this.vaultStats.tags.length, icon: "tag" }
     ];
     items.forEach((item) => {
       const itemEl = summaryGrid.createDiv({ cls: "summary-item" });
-      itemEl.createSpan({ text: item.label, cls: "summary-label" });
-      itemEl.createSpan({ text: item.value.toString(), cls: "summary-value" });
+      const iconEl = itemEl.createDiv({ cls: "summary-icon" });
+      (0, import_obsidian20.setIcon)(iconEl, item.icon);
+      const valueEl = itemEl.createDiv({ cls: "summary-value" });
+      valueEl.setText(item.value.toString());
+      const labelEl = itemEl.createDiv({ cls: "summary-label" });
+      labelEl.setText(item.label);
     });
   }
   renderModelSelection(containerEl) {
     const settingContainer = containerEl.createDiv({ cls: "gw-accordion" });
-    new import_obsidian24.Setting(settingContainer).setName("AI Model").setDesc("Select the AI model to use for ontology generation").addDropdown((dropdown) => {
+    new import_obsidian20.Setting(settingContainer).setName("AI Model").setDesc("Select the AI model to use for ontology generation").addDropdown((dropdown) => {
       this.modelSelect = dropdown;
-      dropdown.selectEl.addClass("gw-dropdown");
+      dropdown.selectEl.classList.add("gw-dropdown");
       if (this.availableModels.length === 0) {
         dropdown.setDisabled(true);
         return;
@@ -28366,9 +28250,9 @@ var OntologyGeneratorModal = class extends import_obsidian24.Modal {
   }
   renderUserContextInput(containerEl) {
     const settingContainer = containerEl.createDiv({ cls: "gw-accordion" });
-    new import_obsidian24.Setting(settingContainer).setName("Additional Context").setDesc("Provide any additional context or information about your knowledge base.").addTextArea((text) => {
+    new import_obsidian20.Setting(settingContainer).setName("Additional Context").setDesc("Provide any additional context or information about your knowledge base.").addTextArea((text) => {
       this.userContextInput = text;
-      text.inputEl.addClass("gw-textarea-input");
+      text.inputEl.classList.add("gw-textarea-input");
       text.inputEl.rows = 4;
       text.inputEl.cols = 50;
       return text;
@@ -28395,20 +28279,24 @@ var OntologyGeneratorModal = class extends import_obsidian24.Modal {
     });
   }
   renderButtons(containerEl) {
-    new import_obsidian24.Setting(containerEl).addButton((btn) => {
+    new import_obsidian20.Setting(containerEl).addButton((btn) => {
       this.generateButton = btn;
-      btn.setButtonText("Generate Ontology").setCta().setClass("gw-button-primary").setDisabled(this.availableModels.length === 0).onClick(() => this.generateOntology());
+      btn.setButtonText("Generate Ontology").setCta().setClass("gw-button");
+      btn.buttonEl.classList.add("gw-button-primary");
+      btn.setDisabled(this.availableModels.length === 0).onClick(() => this.generateOntology());
       return btn;
     }).addButton((btn) => {
-      btn.setButtonText("Cancel").setClass("gw-button-secondary").onClick(() => this.close());
+      btn.setButtonText("Cancel").setClass("gw-button");
+      btn.buttonEl.classList.add("gw-button-secondary");
+      btn.onClick(() => this.close());
       return btn;
     });
-    containerEl.addClass("gw-button-container");
+    containerEl.classList.add("gw-button-container");
   }
   async generateOntology() {
     const modelValue = this.modelSelect.getValue();
     if (!modelValue) {
-      new import_obsidian24.Notice("Please select an AI model first.");
+      new import_obsidian20.Notice("Please select an AI model first.");
       return;
     }
     const [provider, modelApiName] = modelValue.split(":");
@@ -28426,41 +28314,43 @@ var OntologyGeneratorModal = class extends import_obsidian24.Modal {
       const ontology = await this.aiGenerationService.generateOntology(input);
       await this.tagManagementService.updateTags(ontology.suggestedTags);
       loadingEl.remove();
-      new import_obsidian24.Notice("Ontology generated and tags updated successfully!");
+      new import_obsidian20.Notice("Ontology generated and tags updated successfully!");
       this.onGenerate(ontology);
       this.close();
     } catch (error) {
       console.error("Error generating ontology:", error);
       loadingEl.remove();
-      new import_obsidian24.Notice(`Failed to generate ontology: ${error.message}`);
+      this.showError(
+        this.shadowRootEl.host,
+        `Failed to generate ontology: ${error.message}`
+      );
     } finally {
       this.generateButton.setDisabled(false);
     }
   }
-  showError(message) {
-    this.loadingEl.hide();
-    const errorEl = this.contentEl.createDiv({ cls: "error-container status-error" });
-    errorEl.createEl("span", { cls: "gw-status-bar-icon" });
-    (0, import_obsidian24.setIcon)(errorEl.lastChild, "alert-circle");
-    errorEl.createEl("p", { text: message, cls: "error-message" });
-  }
-  createLoadingState(modalContent) {
-    this.loadingEl = modalContent.createDiv({
-      cls: "loading-container status-running"
+  showError(containerEl, message) {
+    this.loadingEl.remove();
+    const errorEl = containerEl.createDiv({ cls: "error-container status-error" });
+    const iconEl = errorEl.createDiv({ cls: "gw-status-bar-icon" });
+    (0, import_obsidian20.setIcon)(iconEl, "alert-circle");
+    errorEl.createEl("p", {
+      text: message,
+      cls: "error-message"
     });
+  }
+  createLoadingState(containerEl) {
+    this.loadingEl = containerEl.createDiv({ cls: "loading-container status-running" });
     const spinner = this.loadingEl.createDiv({ cls: "gw-status-bar-icon" });
-    (0, import_obsidian24.setIcon)(spinner, "loader");
+    (0, import_obsidian20.setIcon)(spinner, "loader");
     this.loadingEl.createEl("p", {
       text: "Retrieving vault statistics and available models...",
       cls: "loading-text"
     });
   }
   createGeneratingState() {
-    const loadingEl = this.contentEl.createDiv({
-      cls: "loading-container status-running"
-    });
+    const loadingEl = this.shadowRootEl.host.createDiv({ cls: "loading-container status-running" });
     const spinner = loadingEl.createDiv({ cls: "gw-status-bar-icon" });
-    (0, import_obsidian24.setIcon)(spinner, "loader");
+    (0, import_obsidian20.setIcon)(spinner, "loader");
     loadingEl.createEl("p", {
       text: "Generating ontology...",
       cls: "loading-text"
@@ -28469,7 +28359,6 @@ var OntologyGeneratorModal = class extends import_obsidian24.Modal {
   }
   onClose() {
     this.contentEl.empty();
-    this.containerEl.removeClass("graphweaver-modal");
   }
 };
 
@@ -28530,7 +28419,7 @@ var OntologyGenerationAccordion = class extends BaseAccordion {
     const buttonContainer = containerEl.createDiv({
       cls: "generate-button-container"
     });
-    new import_obsidian25.Setting(buttonContainer).addButton((button) => {
+    new import_obsidian21.Setting(buttonContainer).addButton((button) => {
       this.generateButton = button;
       button.setButtonText("Generate Ontology").setCta().onClick(() => this.handleGenerateClick());
       return button;
@@ -28589,7 +28478,7 @@ var OntologyGenerationAccordion = class extends BaseAccordion {
         }
       };
       await this.deps.settingsService.updateSettings(updatedSettings);
-      new import_obsidian25.Notice("Ontology has been successfully generated and saved!");
+      new import_obsidian21.Notice("Ontology has been successfully generated and saved!");
     } catch (error) {
       this.handleError("Failed to save generated ontology", error);
     }
@@ -28599,11 +28488,10 @@ var OntologyGenerationAccordion = class extends BaseAccordion {
    */
   ensureServicesReady() {
     if (!this.deps.aiService.isReady()) {
-      new import_obsidian25.Notice("AI Service is not ready. Please check your settings.");
+      new import_obsidian21.Notice("AI Service is not ready. Please check your settings.");
       return false;
     }
     if (!this.deps.generationService || !this.deps.adapterRegistry) {
-      new import_obsidian25.Notice("Required services are not initialized.");
       return false;
     }
     return true;
@@ -28613,7 +28501,7 @@ var OntologyGenerationAccordion = class extends BaseAccordion {
    */
   handleError(context, error) {
     console.error(`Ontology Generation Error: ${context}`, error);
-    new import_obsidian25.Notice(`${context}: ${error instanceof Error ? error.message : "Unknown error"}`);
+    new import_obsidian21.Notice(`${context}: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
   /**
    * Enable generate button
@@ -28647,7 +28535,7 @@ var OntologyGenerationAccordion = class extends BaseAccordion {
 };
 
 // src/components/accordions/BatchProcessorAccordion.ts
-var import_obsidian26 = require("obsidian");
+var import_obsidian22 = require("obsidian");
 init_BaseAccordion();
 var BatchProcessorAccordion = class extends BaseAccordion {
   constructor(app, containerEl, settingsService, aiService) {
@@ -28665,7 +28553,7 @@ var BatchProcessorAccordion = class extends BaseAccordion {
     this.createRunBatchProcessorButton(contentEl);
   }
   createAutoGenerateToggle(containerEl) {
-    new import_obsidian26.Setting(containerEl).setName("Auto-generate Front Matter").setDesc("Automatically generate front matter for new or unprocessed notes when you open your vault.").addToggle((toggle) => this.setupAutoGenerateToggle(toggle));
+    new import_obsidian22.Setting(containerEl).setName("Auto-generate Front Matter").setDesc("Automatically generate front matter for new or unprocessed notes when you open your vault.").addToggle((toggle) => this.setupAutoGenerateToggle(toggle));
   }
   setupAutoGenerateToggle(toggle) {
     const settings = this.settingsService.getSettings();
@@ -28674,7 +28562,7 @@ var BatchProcessorAccordion = class extends BaseAccordion {
     });
   }
   createRunBatchProcessorButton(containerEl) {
-    new import_obsidian26.Setting(containerEl).setName("Run Batch Processor").setDesc("Manually process multiple files to generate front matter and wikilinks.").addButton((button) => this.setupRunBatchProcessorButton(button));
+    new import_obsidian22.Setting(containerEl).setName("Run Batch Processor").setDesc("Manually process multiple files to generate front matter and wikilinks.").addButton((button) => this.setupRunBatchProcessorButton(button));
   }
   setupRunBatchProcessorButton(button) {
     button.setButtonText("Run Batch Processor").setCta().onClick(() => {
@@ -28685,7 +28573,7 @@ var BatchProcessorAccordion = class extends BaseAccordion {
 };
 
 // src/components/accordions/AdvancedAccordion.ts
-var import_obsidian27 = require("obsidian");
+var import_obsidian23 = require("obsidian");
 init_BaseAccordion();
 var AdvancedAccordion = class extends BaseAccordion {
   constructor(app, containerEl, settingsService, aiService) {
@@ -28703,11 +28591,11 @@ var AdvancedAccordion = class extends BaseAccordion {
     this.createAIParameterOverrides(contentEl);
   }
   createWikilinksToggle(containerEl) {
-    new import_obsidian27.Setting(containerEl).setName("Generate Wikilinks").addToggle((toggle) => this.setupWikilinksToggle(toggle));
+    new import_obsidian23.Setting(containerEl).setName("Generate Wikilinks").addToggle((toggle) => this.setupWikilinksToggle(toggle));
   }
   createAIParameterOverrides(containerEl) {
-    new import_obsidian27.Setting(containerEl).setName("Temperature").addText((text) => this.setupTemperatureOverride(text));
-    new import_obsidian27.Setting(containerEl).setName("Max Tokens").addText((text) => this.setupMaxTokensOverride(text));
+    new import_obsidian23.Setting(containerEl).setName("Temperature").addText((text) => this.setupTemperatureOverride(text));
+    new import_obsidian23.Setting(containerEl).setName("Max Tokens").addText((text) => this.setupMaxTokensOverride(text));
   }
   setupWikilinksToggle(toggle) {
     const settings = this.settingsService.getSettings();
@@ -28736,7 +28624,7 @@ var AdvancedAccordion = class extends BaseAccordion {
 };
 
 // src/components/accordions/KnowledgeBloomAccordion.ts
-var import_obsidian28 = require("obsidian");
+var import_obsidian24 = require("obsidian");
 init_BaseAccordion();
 var KnowledgeBloomAccordion = class extends BaseAccordion {
   constructor(app, containerEl, settingsService, aiService) {
@@ -28778,10 +28666,10 @@ var KnowledgeBloomAccordion = class extends BaseAccordion {
     await this.settingsService.updateKnowledgeBloomSettings({ selectedModel: value });
     try {
       await this.aiService.reinitialize();
-      new import_obsidian28.Notice("AI Service reinitialized with the new model.");
+      new import_obsidian24.Notice("AI Service reinitialized with the new model.");
     } catch (error) {
       console.error("Failed to reinitialize AI Service:", error);
-      new import_obsidian28.Notice(`Failed to reinitialize AI Service: ${error.message}`);
+      new import_obsidian24.Notice(`Failed to reinitialize AI Service: ${error.message}`);
     }
   }
   /**
@@ -28790,7 +28678,7 @@ var KnowledgeBloomAccordion = class extends BaseAccordion {
    */
   createModelSelector(containerEl) {
     const selectorEl = containerEl.createDiv({ cls: "knowledge-bloom-model-selector" });
-    new import_obsidian28.Setting(selectorEl).setName("AI Model").setDesc("Select the AI model to use for Knowledge Bloom").addDropdown((dropdown) => {
+    new import_obsidian24.Setting(selectorEl).setName("AI Model").setDesc("Select the AI model to use for Knowledge Bloom").addDropdown((dropdown) => {
       this.modelSelector = dropdown;
       this.updateModelOptions();
       dropdown.onChange(async (value) => {
@@ -28831,7 +28719,7 @@ var KnowledgeBloomAccordion = class extends BaseAccordion {
    */
   createUserPromptInput(containerEl) {
     const promptEl = containerEl.createDiv({ cls: "knowledge-bloom-prompt" });
-    new import_obsidian28.Setting(promptEl).setName("Additional Context").setDesc("Provide any additional context or instructions for note generation (optional)").addTextArea((text) => {
+    new import_obsidian24.Setting(promptEl).setName("Additional Context").setDesc("Provide any additional context or instructions for note generation (optional)").addTextArea((text) => {
       this.userPromptInput = text;
       text.inputEl.rows = 4;
       text.inputEl.cols = 50;
@@ -28844,7 +28732,7 @@ var KnowledgeBloomAccordion = class extends BaseAccordion {
    */
   createGenerateButton(containerEl) {
     const buttonEl = containerEl.createDiv({ cls: "knowledge-bloom-generate-button" });
-    new import_obsidian28.Setting(buttonEl).addButton((button) => {
+    new import_obsidian24.Setting(buttonEl).addButton((button) => {
       button.setButtonText("Generate Knowledge Bloom").setCta().onClick(() => this.handleGenerateKnowledgeBloom(button));
     });
   }
@@ -28855,7 +28743,7 @@ var KnowledgeBloomAccordion = class extends BaseAccordion {
   async handleGenerateKnowledgeBloom(button) {
     const activeFile = this.app.workspace.getActiveFile();
     if (!activeFile) {
-      new import_obsidian28.Notice("No active file. Please open a file to generate Knowledge Bloom.");
+      new import_obsidian24.Notice("No active file. Please open a file to generate Knowledge Bloom.");
       return;
     }
     button.setDisabled(true);
@@ -28866,13 +28754,13 @@ var KnowledgeBloomAccordion = class extends BaseAccordion {
       const result = await generationService.generateKnowledgeBloom(activeFile, userPrompt);
       if (result.generatedNotes.length > 0) {
         await this.createGeneratedNotes(result.generatedNotes);
-        new import_obsidian28.Notice(`Generated ${result.generatedNotes.length} new notes!`);
+        new import_obsidian24.Notice(`Generated ${result.generatedNotes.length} new notes!`);
       } else {
-        new import_obsidian28.Notice("No new notes were generated.");
+        new import_obsidian24.Notice("No new notes were generated.");
       }
     } catch (error) {
       console.error("Error generating Knowledge Bloom:", error);
-      new import_obsidian28.Notice(`Failed to generate Knowledge Bloom: ${error.message}`);
+      new import_obsidian24.Notice(`Failed to generate Knowledge Bloom: ${error.message}`);
     } finally {
       button.setDisabled(false);
       button.setButtonText("Generate Knowledge Bloom");
@@ -28885,7 +28773,7 @@ var KnowledgeBloomAccordion = class extends BaseAccordion {
     for (const note of notes) {
       const filePath = `${note.title}.md`;
       const existingFile = this.app.vault.getAbstractFileByPath(filePath);
-      if (existingFile instanceof import_obsidian28.TFile) {
+      if (existingFile instanceof import_obsidian24.TFile) {
         await this.app.vault.modify(existingFile, note.content);
       } else {
         await this.app.vault.create(filePath, note.content);
@@ -28895,7 +28783,7 @@ var KnowledgeBloomAccordion = class extends BaseAccordion {
 };
 
 // src/services/ai/AITagManagementService.ts
-var import_obsidian29 = require("obsidian");
+var import_obsidian25 = require("obsidian");
 var TagManagementService = class {
   constructor(app) {
     this.app = app;
@@ -28920,7 +28808,7 @@ var TagManagementService = class {
     if (!tagIndexFile) {
       tagIndexFile = await this.app.vault.create(this.TAG_INDEX_PATH, "");
     }
-    if (!(tagIndexFile instanceof import_obsidian29.TFile)) {
+    if (!(tagIndexFile instanceof import_obsidian25.TFile)) {
       throw new Error("Tag index is not a file");
     }
     return tagIndexFile;
@@ -28966,7 +28854,7 @@ var TagManagementService = class {
 };
 
 // src/settings/GraphWeaverSettingTab.ts
-var GraphWeaverSettingTab = class extends import_obsidian30.PluginSettingTab {
+var GraphWeaverSettingTab = class extends import_obsidian26.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
@@ -29010,7 +28898,6 @@ var GraphWeaverSettingTab = class extends import_obsidian30.PluginSettingTab {
       this.isInitialized = true;
     } catch (error) {
       console.error("Failed to initialize services:", error);
-      new import_obsidian30.Notice("Failed to initialize settings tab services");
       this.isInitialized = false;
     }
   }
@@ -29238,10 +29125,10 @@ var GraphWeaverSettingTab = class extends import_obsidian30.PluginSettingTab {
 };
 
 // src/managers/UIManager.ts
-var import_obsidian33 = require("obsidian");
+var import_obsidian29 = require("obsidian");
 
 // src/components/status/ProcessingStatusBar.ts
-var import_obsidian32 = require("obsidian");
+var import_obsidian28 = require("obsidian");
 var ProcessingStatusBar = class {
   constructor(app, statusBar, stateManager, aiService, settingsService, databaseService, config = {}) {
     this.app = app;
@@ -29330,7 +29217,7 @@ var ProcessingStatusBar = class {
       ["idle" /* IDLE */]: "check-circle"
     };
     const iconName = iconMap[this.currentState] || iconMap["idle" /* IDLE */];
-    (0, import_obsidian32.setIcon)(this.iconEl, iconName);
+    (0, import_obsidian28.setIcon)(this.iconEl, iconName);
   }
   updateProgressBar() {
     const { filesProcessed, filesQueued } = this.currentStatus;
@@ -29386,7 +29273,7 @@ var ProcessingStatusBar = class {
     try {
       const recentStats = await this.databaseService.getProcessingStats();
       if (!recentStats || recentStats.length === 0) {
-        new import_obsidian32.Notice("No processing history available.");
+        new import_obsidian28.Notice("No processing history available.");
         return;
       }
       const module2 = await Promise.resolve().then(() => (init_StatusHistoryModal(), StatusHistoryModal_exports));
@@ -29398,7 +29285,6 @@ var ProcessingStatusBar = class {
       ).open();
     } catch (error) {
       console.error("Error opening history modal:", error);
-      new import_obsidian32.Notice("An error occurred while opening the history modal.");
     }
   }
   startPeriodicUpdates() {
@@ -29454,20 +29340,13 @@ var UIManager = class {
     if (this.isUnloading)
       return;
     try {
-      console.log("UIManager: Initializing status bar...");
       await this.initializeStatusBar();
-      console.log("UIManager: Status bar initialized.");
-      console.log("UIManager: Initializing ribbon icon...");
       this.initializeRibbonIcon();
-      console.log("UIManager: Ribbon icon initialized.");
-      console.log("UIManager: Initializing commands...");
       this.initializeCommands();
-      console.log("UIManager: Commands initialized.");
       this.plugin.register(() => {
         this.destroy();
       });
     } catch (error) {
-      console.error("Failed to initialize UI Manager:", error);
       throw error;
     }
   }
@@ -29544,7 +29423,6 @@ var UIManager = class {
     commands.forEach((command) => {
       const registeredCommand = this.plugin.addCommand(command);
       if (registeredCommand) {
-        console.log(`UIManager: Registered command '${command.id}'.`);
         this.commands.set(command.id, registeredCommand);
       } else {
         console.error(`UIManager: Failed to register command '${command.id}'.`);
@@ -29555,10 +29433,9 @@ var UIManager = class {
    * Open the plugin menu at mouse event location
    */
   openPluginMenu(evt) {
-    console.log("UIManager: Ribbon icon clicked.");
     if (this.isUnloading)
       return;
-    const menu = new import_obsidian33.Menu();
+    const menu = new import_obsidian29.Menu();
     this.addMenuItems(menu);
     menu.showAtMouseEvent(evt);
   }
@@ -29626,12 +29503,11 @@ var UIManager = class {
       this.eventHandlers[key] = () => {
       };
     });
-    console.log("UIManager: Resources cleaned up successfully");
   }
 };
 
 // main.ts
-var GraphWeaverPlugin = class extends import_obsidian34.Plugin {
+var GraphWeaverPlugin = class extends import_obsidian30.Plugin {
   constructor(app, manifest) {
     super(app, manifest);
     // Public service access methods
@@ -29644,7 +29520,6 @@ var GraphWeaverPlugin = class extends import_obsidian34.Plugin {
     this.getOperationManager = () => this.serviceManager.getService("operation-manager");
     this.getFileProcessor = () => this.serviceManager.getService("file-processor");
     this.getFileScanner = () => this.serviceManager.getService("file-scanner");
-    console.log("Initializing GraphWeaver Plugin");
     this.errorManager = new ErrorManager();
     this.serviceManager = new ServiceManager(this.app);
     this.eventManager = new EventManager(app);
@@ -29658,13 +29533,11 @@ var GraphWeaverPlugin = class extends import_obsidian34.Plugin {
   }
   async onload() {
     try {
-      console.log("Loading GraphWeaver Plugin");
       this.eventManager.register("layout-ready", this.handleLayoutReady.bind(this));
       this.app.workspace.containerEl.addClass("graphweaver-plugin");
       await this.registerServices();
     } catch (error) {
       console.error("Failed to load plugin:", error);
-      new import_obsidian34.Notice("Failed to load GraphWeaver plugin. Check console for details.");
     }
   }
   /**
@@ -29672,7 +29545,6 @@ var GraphWeaverPlugin = class extends import_obsidian34.Plugin {
    */
   async registerServices() {
     try {
-      console.log("Registering services...");
       this.registerStateManager();
       this.registerDatabaseService();
       this.registerFileScannerService();
@@ -29901,14 +29773,11 @@ var GraphWeaverPlugin = class extends import_obsidian34.Plugin {
       await this.uiManager.initialize();
       this.registerCommands();
       this.addSettingTab(new GraphWeaverSettingTab(this.app, this));
-      console.log("GraphWeaver Plugin is now active and ready to use.");
     } catch (error) {
       console.error("Failed to initialize plugin:", error);
-      new import_obsidian34.Notice("Failed to initialize GraphWeaver plugin");
     }
   }
   async onunload() {
-    console.log("Unloading GraphWeaver Plugin");
     this.app.workspace.containerEl.removeClass("graphweaver-plugin");
     this.eventManager.cleanup();
     await this.serviceManager.destroy();

@@ -1,4 +1,4 @@
-import { Modal, Setting, TextComponent, TextAreaComponent, ButtonComponent, Notice, App } from "obsidian";
+import { Modal, Setting, TextComponent, TextAreaComponent, App } from "obsidian";
 import { Tag } from "../../models/PropertyTag";
 
 type Callback = (tags: Tag[]) => void;

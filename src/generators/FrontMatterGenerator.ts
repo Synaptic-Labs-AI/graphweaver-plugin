@@ -39,34 +39,11 @@ export class FrontMatterGenerator extends BaseGenerator<FrontMatterInput, FrontM
     }
 
     /**
-     * Initialize the FrontMatterGenerator.
-     * Currently, no specific initialization is required.
-     * Override this method if specific initialization steps are needed.
-     */
-    public async initialize(): Promise<void> {
-        // No initialization steps required currently.
-        // Add any necessary initialization logic here in the future.
-        console.log('FrontMatterGenerator: Initialized.');
-    }
-
-    /**
-     * Destroy the FrontMatterGenerator.
-     * Currently, no specific cleanup is required.
-     * Override this method if specific cleanup steps are needed.
-     */
-    public async destroy(): Promise<void> {
-        // No cleanup steps required currently.
-        // Add any necessary cleanup logic here in the future.
-        console.log('FrontMatterGenerator: Destroyed.');
-    }
-
-    /**
      * Generates front matter for the provided content
      * @param input The input containing content and optional properties
      * @returns Promise resolving to content with front matter
      */
     public async generate(input: FrontMatterInput): Promise<FrontMatterOutput> {
-        console.log('FrontMatterGenerator: Starting generation');
         
         try {
             const settings = this.getSettings();
@@ -78,25 +55,19 @@ export class FrontMatterGenerator extends BaseGenerator<FrontMatterInput, FrontM
                 customTags: input.customTags || settings.tags.customTags.map(tag => tag.name)
             };
 
-            console.log('FrontMatterGenerator: Complete input prepared:', completeInput);
-
             const prompt = this.preparePrompt(completeInput);
             const model = await this.getCurrentModel();
             
-            console.log('FrontMatterGenerator: Sending request to AI');
             const aiResponse = await this.aiAdapter.generateResponse(prompt, model);
-            
-            console.log('FrontMatterGenerator: AI response received:', aiResponse);
 
             if (!aiResponse.success || !aiResponse.data) {
-                console.error('FrontMatterGenerator: AI response was unsuccessful or empty');
-                return { content: input.content }; // Return original content if AI generation fails
+                return { content: input.content }; 
             }
 
             return this.formatOutput(aiResponse.data, completeInput);
         } catch (error) {
             console.error('FrontMatterGenerator: Error during generation:', error);
-            return { content: input.content }; // Return original content on error
+            return { content: input.content };
         }
     }
 
@@ -147,7 +118,6 @@ Generate ONLY the front matter fields as JSON. Do not include any other text or 
      * @returns Formatted output with front matter
      */
     protected formatOutput(aiResponse: any, originalInput: FrontMatterInput): FrontMatterOutput {
-        console.log('FrontMatterGenerator: Formatting AI response into front matter');
     
         const parsedResponse = this.parseAIResponse(aiResponse);
         if (!parsedResponse) {
@@ -162,8 +132,6 @@ Generate ONLY the front matter fields as JSON. Do not include any other text or 
     
         const frontMatter = this.convertToFrontMatter(parsedResponse);
         const finalContent = this.mergeFrontMatter(originalInput.content, frontMatter);
-    
-        console.log('FrontMatterGenerator: Front matter generated successfully');
     
         return { content: finalContent };
     }

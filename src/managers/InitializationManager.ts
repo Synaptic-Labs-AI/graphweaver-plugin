@@ -1,6 +1,6 @@
 // src/managers/InitializationManager.ts
 
-import { Plugin, Notice, App } from 'obsidian';
+import { Plugin, App } from 'obsidian';
 import { ServiceManager } from './ServiceManager';
 import { ErrorManager } from './ErrorManager';
 
@@ -23,11 +23,8 @@ export class InitializationManager {
             // Initialize all registered services
             await this.serviceManager.initializeServices();
 
-            console.log('Initialization completed successfully');
-            new Notice('GraphWeaver Plugin Initialized Successfully!');
         } catch (error) {
             this.errorManager.handleError('Initialization failed:', error);
-            new Notice('GraphWeaver Plugin failed to initialize. Check console for details.');
             throw error;
         }
     }

@@ -1,6 +1,6 @@
 // src/managers/EventManager.ts
 
-import { App, Events, EventRef, TFile, Editor, View, WorkspaceLeaf } from 'obsidian';
+import { App, Events, EventRef, TFile, Editor, WorkspaceLeaf } from 'obsidian';
 
 /**
  * Handler type for workspace events

@@ -85,7 +85,6 @@ export class FileScannerService extends CoreService implements IConfigurableServ
     protected async initializeInternal(): Promise<void> {
         // No special initialization needed
         if (this.config.debug) {
-            console.log('FileScannerService: Initialized successfully');
         }
     }
 
@@ -208,10 +207,6 @@ export class FileScannerService extends CoreService implements IConfigurableServ
             if (this.scanTimeout) {
                 clearTimeout(this.scanTimeout);
                 this.scanTimeout = null;
-            }
-
-            if (this.config.debug) {
-                console.log(`Scanned ${file.path} in ${Date.now() - startTime}ms`);
             }
 
             return result;

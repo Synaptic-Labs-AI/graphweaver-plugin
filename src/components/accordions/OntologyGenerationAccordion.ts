@@ -1,6 +1,6 @@
 // src/components/accordions/OntologyGenerationAccordion.ts
 
-import { App, Notice, TFile, TFolder, setIcon, Setting, ButtonComponent } from 'obsidian'; // Add missing imports
+import { App, Notice, Setting, ButtonComponent } from 'obsidian'; // Add missing imports
 import { BaseAccordion } from './BaseAccordion';
 import { AIService } from '../../services/ai/AIService';
 import { SettingsService } from '../../services/SettingsService';
@@ -184,7 +184,6 @@ export class OntologyGenerationAccordion extends BaseAccordion {
         }
 
         if (!this.deps.generationService || !this.deps.adapterRegistry) {
-            new Notice("Required services are not initialized.");
             return false;
         }
 

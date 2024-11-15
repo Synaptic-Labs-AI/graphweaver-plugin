@@ -153,17 +153,40 @@ export abstract class BaseAccordion extends Component {
      */
     public toggleAccordion(): void {
         this.isOpen = !this.isOpen;
-
+    
         // Update ARIA attributes
         this.accordionEl.setAttribute('aria-expanded', this.isOpen.toString());
         this.headerEl.setAttribute('aria-expanded', this.isOpen.toString());
         this.contentEl.setAttribute('aria-hidden', (!this.isOpen).toString());
-
+    
+        // Get the content height before transitioning
+        const contentHeight = this.contentEl.scrollHeight;
+    
+        // Set explicit height for animation
+        if (this.isOpen) {
+            this.contentEl.style.height = '0px';
+            requestAnimationFrame(() => {
+                this.contentEl.style.height = `${contentHeight}px`;
+                
+                // Remove fixed height after transition
+                this.contentEl.addEventListener('transitionend', () => {
+                    if (this.isOpen) {
+                        this.contentEl.style.height = 'auto';
+                    }
+                }, { once: true });
+            });
+        } else {
+            this.contentEl.style.height = `${contentHeight}px`;
+            requestAnimationFrame(() => {
+                this.contentEl.style.height = '0px';
+            });
+        }
+    
         // Update visual state
         this.accordionEl.classList.toggle("gw-accordion-open", this.isOpen);
         this.updateToggleIcon();
-
-        // Use appInstance instead of app
+    
+        // Trigger event
         this.appInstance.workspace.trigger('accordion-state-changed', {
             id: this.accordionEl.id,
             isOpen: this.isOpen

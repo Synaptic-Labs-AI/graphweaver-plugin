@@ -1,6 +1,6 @@
 // src/settings/GraphWeaverSettingTab.ts
 
-import { App, PluginSettingTab, Notice } from 'obsidian';
+import { App, PluginSettingTab } from 'obsidian';
 import GraphWeaverPlugin from '../../main';
 
 // Import accordion components
@@ -114,7 +114,6 @@ export class GraphWeaverSettingTab extends PluginSettingTab {
 
         } catch (error) {
             console.error('Failed to initialize services:', error);
-            new Notice('Failed to initialize settings tab services');
             
             // Set initialized to false to prevent accordion initialization
             this.isInitialized = false;

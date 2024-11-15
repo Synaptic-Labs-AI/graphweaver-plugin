@@ -6,9 +6,6 @@ import { SettingsService } from './SettingsService';
 import { DatabaseService } from './DatabaseService';
 import { BatchProcessor } from '../generators/BatchProcessor';
 import { StateManager } from '../managers/StateManager';
-import { BatchHandler } from './file/BatchHandler';
-import { DEFAULT_PROCESSING_OPTIONS } from '../types/ProcessingTypes';
-
 import { 
     StartupStateManager, 
     StartupState,
@@ -209,7 +206,6 @@ export class StartupGenerateService {
         }
 
         if (!this.isUnloading) {
-            new Notice(`${message} ${errorMessage}`);
         }
     }
 

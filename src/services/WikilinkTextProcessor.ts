@@ -1,7 +1,6 @@
 // src/services/WikilinkTextProcessor.ts
 
 import { CoreService } from './core/CoreService';
-import { ServiceError } from './core/ServiceError';
 import { WikilinkPatterns, WikilinkConfig, WikilinkUtils, isAllowedSpecialChar } from 'src/generators/utils/WikilinkPatterns';
 
 /**
@@ -14,12 +13,10 @@ export class WikilinkTextProcessor extends CoreService {
 
     protected async initializeInternal(): Promise<void> {
         // No initialization required
-        console.log('WikilinkTextProcessor: Initialized.');
     }
 
     protected async destroyInternal(): Promise<void> {
         // No cleanup required
-        console.log('WikilinkTextProcessor: Destroyed.');
     }
 
     /**
@@ -30,7 +27,6 @@ export class WikilinkTextProcessor extends CoreService {
         suggestedLinks: string[],
         existingWikilinks: Set<string>
     ): string {
-        console.log('WikilinkTextProcessor: Adding wikilinks.');
         // First protect code blocks
         const codeBlocks = new Map<string, string>();
         let processedContent = this.protectCodeBlocks(content, codeBlocks);
@@ -66,7 +62,6 @@ export class WikilinkTextProcessor extends CoreService {
 
         // Restore code blocks and return
         const finalContent = this.restoreCodeBlocks(processedContent, codeBlocks);
-        console.log('WikilinkTextProcessor: Wikilinks added.');
         return finalContent;
     }
     
@@ -74,7 +69,6 @@ export class WikilinkTextProcessor extends CoreService {
      * Clean nested wikilinks while preserving structure
      */
     public cleanNestedWikilinks(content: string): string {
-        console.log('WikilinkTextProcessor: Cleaning nested wikilinks.');
         const processedLinks = new Set<string>();
         let result = content;
 
@@ -112,8 +106,7 @@ export class WikilinkTextProcessor extends CoreService {
                 processedLinks.add(match.inner.toLowerCase());
             }
         }
-
-        console.log('WikilinkTextProcessor: Nested wikilinks cleaned.');
+        
         return result;
     }
 

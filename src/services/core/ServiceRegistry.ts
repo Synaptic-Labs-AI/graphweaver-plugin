@@ -37,7 +37,6 @@ export class ServiceRegistry {
             };
     
             this.services.set(config.id, registration);
-            console.log(`ServiceRegistry: Service ${config.id} registered`);
     
         } catch (error) {
             throw ServiceError.from('ServiceRegistry', error, {
@@ -85,8 +84,6 @@ export class ServiceRegistry {
                 });
             }
     
-            console.log('ServiceRegistry: All services initialized successfully');
-    
         } finally {
             this.isInitializing = false;
         }
@@ -122,8 +119,6 @@ export class ServiceRegistry {
             await registration.instance.initialize();
             registration.status = RegistrationStatus.Initialized;
             registration.error = undefined;
-
-            console.log(`ServiceRegistry: Service ${id} initialized`);
 
         } catch (error) {
             registration.status = RegistrationStatus.Error;
@@ -165,7 +160,6 @@ export class ServiceRegistry {
                     await registration.instance.destroy();
                     registration.status = RegistrationStatus.Registered;
                     registration.instance = null;
-                    console.log(`ServiceRegistry: Service ${id} destroyed`);
                 } catch (error) {
                     errors.push({ 
                         id, 
@@ -183,8 +177,6 @@ export class ServiceRegistry {
                 failedServices: errors
             });
         }
-
-        console.log('ServiceRegistry: All services destroyed successfully');
     }
 
     /**

@@ -60,17 +60,9 @@ export class UIManager {
         if (this.isUnloading) return;
 
         try {
-            console.log('UIManager: Initializing status bar...');
             await this.initializeStatusBar();
-            console.log('UIManager: Status bar initialized.');
-
-            console.log('UIManager: Initializing ribbon icon...');
             this.initializeRibbonIcon();
-            console.log('UIManager: Ribbon icon initialized.');
-
-            console.log('UIManager: Initializing commands...');
             this.initializeCommands();
-            console.log('UIManager: Commands initialized.');
 
             // Register cleanup
             this.plugin.register(() => {
@@ -78,7 +70,6 @@ export class UIManager {
             });
 
         } catch (error) {
-            console.error('Failed to initialize UI Manager:', error);
             throw error;
         }
     }
@@ -163,7 +154,6 @@ export class UIManager {
         commands.forEach(command => {
             const registeredCommand = this.plugin.addCommand(command);
             if (registeredCommand) {
-                console.log(`UIManager: Registered command '${command.id}'.`);
                 this.commands.set(command.id, registeredCommand);
             } else {
                 console.error(`UIManager: Failed to register command '${command.id}'.`);
@@ -175,7 +165,6 @@ export class UIManager {
      * Open the plugin menu at mouse event location
      */
     private openPluginMenu(evt: MouseEvent): void {
-        console.log('UIManager: Ribbon icon clicked.');
         if (this.isUnloading) return;
 
         const menu = new Menu();
@@ -261,7 +250,5 @@ export class UIManager {
         Object.keys(this.eventHandlers).forEach(key => {
             this.eventHandlers[key] = () => {};
         });
-
-        console.log('UIManager: Resources cleaned up successfully');
     }
 }
