@@ -128,7 +128,6 @@ export class GraphWeaverSettingTab extends PluginSettingTab {
             console.error('Cannot initialize accordions: services not initialized');
             return;
         }
-
         const accordionConfigs: Array<{id: string; section: AccordionSection}> = [
             {
                 id: 'modelHookup',
@@ -148,51 +147,11 @@ export class GraphWeaverSettingTab extends PluginSettingTab {
                 }
             },
             {
-                id: 'knowledgeBloom',
-                section: {
-                    title: 'Knowledge Bloom',
-                    description: 'Generate notes from wikilinks',
-                    priority: 2,
-                    render: (containerEl) => this.createAccordion(
-                        containerEl,
-                        () => new KnowledgeBloomAccordion(
-                            this.services.app,
-                            containerEl,
-                            this.services.settingsService,
-                            this.services.aiService
-                        )
-                    )
-                }
-            },
-            {
-                id: 'ontologyGeneration',
-                section: {
-                    title: 'Ontology Generation',
-                    description: 'Generate and manage ontologies',
-                    priority: 3,
-                    render: (containerEl) => this.createAccordion(
-                        containerEl,
-                        () => new OntologyGenerationAccordion(
-                            this.services.app,
-                            containerEl,
-                            {
-                                app: this.services.app,
-                                settingsService: this.services.settingsService,
-                                aiService: this.services.aiService,
-                                generationService: this.services.generationService!,
-                                adapterRegistry: this.services.adapterRegistry!,
-                                tagManagementService: this.services.tagManagementService!
-                            }
-                        )
-                    )
-                }
-            },
-            {
                 id: 'propertyManager',
                 section: {
                     title: 'Property Manager',
                     description: 'Manage custom properties',
-                    priority: 4,
+                    priority: 5,
                     render: (containerEl) => this.createAccordion(
                         containerEl,
                         () => new PropertyManagerAccordion(
@@ -222,6 +181,28 @@ export class GraphWeaverSettingTab extends PluginSettingTab {
                 }
             },
             {
+                id: 'ontologyGeneration',
+                section: {
+                    title: 'Ontology Generation',
+                    description: 'Generate and manage ontologies',
+                    priority: 3,
+                    render: (containerEl) => this.createAccordion(
+                        containerEl,
+                        () => new OntologyGenerationAccordion(
+                            {
+                                app: this.services.app,
+                                settingsService: this.services.settingsService,
+                                aiAdapter: this.services.aiService.getCurrentAdapter(), // Ensures AIAdapter is defined
+                                generationService: this.services.generationService!,
+                                adapterRegistry: this.services.adapterRegistry!,
+                                tagManagementService: this.services.tagManagementService!
+                            },
+                            containerEl
+                        )
+                    )
+                }
+            },
+            {
                 id: 'batchProcessor',
                 section: {
                     title: 'Batch Processor',
@@ -230,6 +211,25 @@ export class GraphWeaverSettingTab extends PluginSettingTab {
                     render: (containerEl) => this.createAccordion(
                         containerEl,
                         () => new BatchProcessorAccordion(
+                            {
+                                app: this.services.app,
+                                settingsService: this.services.settingsService,
+                                aiService: this.services.aiService // Pass AIService instead of AIAdapter
+                            },
+                            containerEl
+                        )
+                    )
+                }
+            },
+            {
+                id: 'knowledgeBloom',
+                section: {
+                    title: 'Knowledge Bloom',
+                    description: 'Generate notes from wikilinks',
+                    priority: 2,
+                    render: (containerEl) => this.createAccordion(
+                        containerEl,
+                        () => new KnowledgeBloomAccordion(
                             this.services.app,
                             containerEl,
                             this.services.settingsService,
@@ -248,7 +248,7 @@ export class GraphWeaverSettingTab extends PluginSettingTab {
                         containerEl,
                         () => new AdvancedAccordion(
                             this.services.app,
-                            containerEl,
+                            containerEl, // Ensure only two arguments are passed
                             this.services.settingsService,
                             this.services.aiService
                         )
@@ -300,7 +300,7 @@ private createAccordion<T extends { render: () => void }>(
         const headerEl = containerEl.createEl('div', { cls: 'settings-header' });
         
         headerEl.createEl('h2', { 
-            text: 'GraphWeaver Settings',
+            text: 'GraphWeaver',
             cls: 'settings-header-title' 
         });
 

@@ -1,6 +1,6 @@
 // src/components/accordions/KnowledgeBloomAccordion.ts
 
-import { App, Setting, TextAreaComponent, ButtonComponent, Notice, DropdownComponent, TFile } from "obsidian";
+import { App, TextAreaComponent, DropdownComponent, TFile } from "obsidian";
 import { BaseAccordion } from "./BaseAccordion";
 import { SettingsService } from "../../services/SettingsService"; 
 import { AIService } from "../../services/ai/AIService";
@@ -56,10 +56,10 @@ export class KnowledgeBloomAccordion extends BaseAccordion {
         await this.settingsService.updateKnowledgeBloomSettings({ selectedModel: value });
         try {
             await this.aiService.reinitialize(); // Reinitialize AIService with new model
-            new Notice('AI Service reinitialized with the new model.');
+            this.showNotice('AI Service reinitialized with the new model.');
         } catch (error) {
             console.error('Failed to reinitialize AI Service:', error);
-            new Notice(`Failed to reinitialize AI Service: ${(error as Error).message}`);
+            this.handleError('Reinitialize AI Service', error);
         }
     }
 
@@ -68,38 +68,41 @@ export class KnowledgeBloomAccordion extends BaseAccordion {
      * @param containerEl The container element to append the dropdown to.
      */
     public createModelSelector(containerEl: HTMLElement): void {
-        const selectorEl = containerEl.createDiv({ cls: "knowledge-bloom-model-selector" });
-        new Setting(selectorEl)
-            .setName("AI Model")
-            .setDesc("Select the AI model to use for Knowledge Bloom")
-            .addDropdown(dropdown => {
-                this.modelSelector = dropdown;
-                this.updateModelOptions();
-                dropdown.onChange(async (value) => {
-                    await this.handleModelChange(value);
-                });
-            });
+        this.modelSelector = this.addDropdown(
+            "AI Model",
+            "Select the AI model to use for Knowledge Bloom",
+            {
+                // Example options, should be populated dynamically
+            },
+            this.settingsService.getSettings().knowledgeBloom?.selectedModel || '',
+            async (value: string) => {
+                await this.handleModelChange(value);
+            }
+        );
+        this.updateModelOptions();
     }
 
     /**
      * Update the options in the AI Model Selector based on available models.
-     * Fixed to use correct method and type annotations
      */
     public updateModelOptions(): void {
-        const currentProvider = this.aiService.getCurrentProvider();
-        // Use getAvailableModels instead
         const models = this.aiService.getAdapterRegistry().getAllAvailableModels();
         const settings = this.settingsService.getSettings();
         const currentModel = settings.knowledgeBloom?.selectedModel;
-    
+
+        const options: Record<string, string> = {};
+        models.forEach((modelInfo: { provider: AIProvider; model: AIModel }) => {
+            options[modelInfo.model.apiName] = modelInfo.model.name;
+        });
+
         // Clear existing options
         this.modelSelector.selectEl.innerHTML = '';
-    
-        // Add new options with proper type annotation
-        models.forEach((modelInfo: { provider: AIProvider; model: AIModel }) => {
-            this.modelSelector.addOption(modelInfo.model.apiName, modelInfo.model.name);
+
+        // Add new options
+        Object.entries(options).forEach(([key, label]) => {
+            this.modelSelector.addOption(key, label);
         });
-    
+
         // Set current value or default
         if (currentModel && models.some((modelInfo) => modelInfo.model.apiName === currentModel)) {
             this.modelSelector.setValue(currentModel);
@@ -120,16 +123,17 @@ export class KnowledgeBloomAccordion extends BaseAccordion {
      * @param containerEl The container element to append the input to.
      */
     public createUserPromptInput(containerEl: HTMLElement): void {
-        const promptEl = containerEl.createDiv({ cls: "knowledge-bloom-prompt" });
-        new Setting(promptEl)
-            .setName("Additional Context")
-            .setDesc("Provide any additional context or instructions for note generation (optional)")
-            .addTextArea(text => {
-                this.userPromptInput = text;
-                text.inputEl.rows = 4;
-                text.inputEl.cols = 50;
-                return text;
-            });
+        this.userPromptInput = this.addTextArea(
+            "Additional Context",
+            "Provide any additional context or instructions for note generation (optional)",
+            "Enter your prompts here...",
+            "",
+            (value: string) => {
+                // Handle prompt change if needed
+            }
+        );
+        this.userPromptInput.inputEl.rows = 4;
+        this.userPromptInput.inputEl.cols = 50;
     }
 
     /**
@@ -137,48 +141,36 @@ export class KnowledgeBloomAccordion extends BaseAccordion {
      * @param containerEl The container element to append the button to.
      */
     public createGenerateButton(containerEl: HTMLElement): void {
-        const buttonEl = containerEl.createDiv({ cls: "knowledge-bloom-generate-button" });
-        new Setting(buttonEl)
-            .addButton((button: ButtonComponent) => {
-                button
-                    .setButtonText("Generate Knowledge Bloom")
-                    .setCta()
-                    .onClick(() => this.handleGenerateKnowledgeBloom(button));
-            });
+        const button = this.addButton(
+            "Generate Knowledge Bloom",
+            () => this.handleGenerateKnowledgeBloom(),
+            true
+        );
     }
 
     /**
      * Handle the generate button click event.
-     * Updated to use correct parameter passing
      */
-    public async handleGenerateKnowledgeBloom(button: ButtonComponent): Promise<void> {
-        const activeFile = this.app.workspace.getActiveFile();
-        if (!activeFile) {
-            new Notice("No active file. Please open a file to generate Knowledge Bloom.");
-            return;
-        }
-        
-        button.setDisabled(true);
-        button.setButtonText("Generating...");
-        
+    public async handleGenerateKnowledgeBloom(): Promise<void> {
         try {
+            const activeFile = this.app.workspace.getActiveFile();
+            if (!(activeFile instanceof TFile)) {
+                this.showNotice('No active file found.');
+                return;
+            }
+
             const userPrompt = this.userPromptInput.getValue();
-            // Get the generation service from AIService and use it
+
             const generationService = this.aiService.getGenerationService();
             const result = await generationService.generateKnowledgeBloom(activeFile, userPrompt);
-            
-            if (result.generatedNotes.length > 0) {
+            if (result && result.generatedNotes) {
                 await this.createGeneratedNotes(result.generatedNotes);
-                new Notice(`Generated ${result.generatedNotes.length} new notes!`);
+                this.showNotice(`Generated ${result.generatedNotes.length} new notes!`);
             } else {
-                new Notice("No new notes were generated.");
+                this.showNotice('No notes were generated.');
             }
         } catch (error) {
-            console.error("Error generating Knowledge Bloom:", error);
-            new Notice(`Failed to generate Knowledge Bloom: ${(error as Error).message}`);
-        } finally {
-            button.setDisabled(false);
-            button.setButtonText("Generate Knowledge Bloom");
+            this.handleError("Generate Knowledge Bloom", error);
         }
     }
     
@@ -194,6 +186,6 @@ export class KnowledgeBloomAccordion extends BaseAccordion {
             } else {
                 await this.app.vault.create(filePath, note.content);
             }
-            }
         }
     }
+}

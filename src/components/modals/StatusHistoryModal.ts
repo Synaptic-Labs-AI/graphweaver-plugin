@@ -233,8 +233,7 @@ export default class StatusHistoryModal extends Modal {
             this.chart.destroy();
             this.chart = null;
         }
-        const { contentEl } = this;
-        contentEl.empty();
+        this.contentEl.empty();
     }
 }
 

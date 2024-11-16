@@ -1,11 +1,10 @@
-import { Modal, App, Setting, DropdownComponent, TextAreaComponent, Notice, ButtonComponent, TFile, TFolder, setIcon } from "obsidian";
-import styles from 'styles.css';
-import { AIService } from "../../services/ai/AIService";
-import { AIGenerationService } from "../../services/ai/AIGenerationService"; 
-import { TagManagementService } from "../../services/ai/AITagManagementService";
-import { AdapterRegistry } from "../../services/ai/AdapterRegistry";
-import { AIProvider, AIModel } from "../../models/AIModels";
-import { OntologyInput, OntologyResult } from "../../models/OntologyTypes";
+import { App, Modal, Setting, Notice, ButtonComponent, DropdownComponent, TextAreaComponent, TFolder, TFile } from 'obsidian';
+import { AIAdapter } from 'src/models/AIModels';
+import { AIGenerationService } from 'src/services/ai/AIGenerationService';
+import { TagManagementService } from 'src/services/ai/AITagManagementService';
+import { AdapterRegistry } from 'src/services/ai/AdapterRegistry';
+import { OntologyResult, OntologyInput } from 'src/models/OntologyTypes';
+import { AIModelUtils } from 'src/models/AIModels';
 
 export class OntologyGeneratorModal extends Modal {
     private modelSelect: DropdownComponent;
@@ -17,15 +16,14 @@ export class OntologyGeneratorModal extends Modal {
         tags: string[];
     };
     private availableModels: {
-        provider: AIProvider;
-        model: AIModel;
+        provider: string;
+        model: string;
     }[];
     private userContextInput: TextAreaComponent;
-    private shadowRootEl: ShadowRoot;
 
     constructor(
         app: App,
-        private aiService: AIService,
+        private aiAdapter: AIAdapter,
         private aiGenerationService: AIGenerationService,
         private tagManagementService: TagManagementService,
         private onGenerate: (ontology: OntologyResult) => void,
@@ -34,263 +32,174 @@ export class OntologyGeneratorModal extends Modal {
         super(app);
         this.vaultStats = { files: [], folders: [], tags: [] };
         this.availableModels = [];
+        this.containerEl.addClass('graphweaver-modal');
     }
 
-    public async onOpen() {
+    async onOpen() {
         const { contentEl } = this;
         contentEl.empty();
 
-        const modalContent = contentEl.createDiv({ cls: "modal-content" });
-        const shadowContainer = modalContent.createDiv({ cls: "shadow-container" });
-        this.shadowRootEl = shadowContainer.attachShadow({ mode: "open" });
+        const modalContent = contentEl.createDiv({ cls: 'modal-content' });
+        this.createHeader(modalContent);
 
-        this.injectStyles(this.shadowRootEl);
-        const shadowWrapper = this.shadowRootEl.createDiv({ cls: "shadow-wrapper" });
-        this.createLoadingState(shadowWrapper);
+        await this.loadVaultStats();
 
-        try {
-            await this.loadVaultStats();
-            this.availableModels = this.adapterRegistry.getAllAvailableModels();
-            this.renderContent(shadowWrapper);
-        } catch (error) {
-            console.error("Error loading data:", error);
-            this.showError(shadowWrapper, "An error occurred while retrieving data.");
-        }
+        this.renderVaultStats(modalContent);
+        this.renderModelSelection(modalContent);
+        this.renderUserContextInput(modalContent);
+        this.renderGuidedQuestions(modalContent);
+        this.renderButtons(modalContent);
     }
 
-    private injectStyles(shadowRoot: ShadowRoot) {
-        const style = document.createElement("style");
-        style.textContent = styles;
-        shadowRoot.appendChild(style);
+    private createHeader(containerEl: HTMLElement): void {
+        const header = containerEl.createDiv({ cls: 'modal-header' });
+        header.createEl('h2', { 
+            text: 'Generate Ontology',
+            cls: 'modal-header-title'
+        });
     }
 
     private async loadVaultStats() {
         this.vaultStats.files = this.app.vault.getMarkdownFiles();
-        this.vaultStats.folders = this.app.vault
-            .getAllLoadedFiles()
-            .filter((file) => file instanceof TFolder) as TFolder[];
+        this.vaultStats.folders = this.app.vault.getAllLoadedFiles().filter(file => file instanceof TFolder) as TFolder[];
         this.vaultStats.tags = await this.getAllTags(this.vaultStats.files);
+        this.availableModels = AIModelUtils.getModelsForProvider(this.aiAdapter.getProviderType()).map(model => ({
+            provider: this.aiAdapter.getProviderType(),
+            model: model.name
+        }));
     }
 
     private async getAllTags(files: TFile[]): Promise<string[]> {
         const tagSet = new Set<string>();
         for (const file of files) {
             const content = await this.app.vault.read(file);
-            const tags = content.match(/#[\w-]+/g);
-            if (tags) {
-                tags.forEach((tag) => tagSet.add(tag));
-            }
+            const tags = this.extractTags(content);
+            tags.forEach(tag => tagSet.add(tag));
         }
         return Array.from(tagSet);
     }
 
-    private renderContent(containerEl: HTMLElement) {
-        this.loadingEl.remove();
-        this.renderVaultStats(containerEl);
-        this.renderModelSelection(containerEl);
-        this.renderUserContextInput(containerEl);
-        this.renderGuidedQuestions(containerEl);
-        this.renderButtons(containerEl);
+    private extractTags(content: string): string[] {
+        const tagRegex = /#(\w+)/g;
+        const tags = [];
+        let match;
+        while ((match = tagRegex.exec(content)) !== null) {
+            tags.push(match[1]);
+        }
+        return tags;
     }
 
     private renderVaultStats(containerEl: HTMLElement) {
-        // 📊 Create the stats container
-        const statsEl = containerEl.createDiv({ cls: "status-summary" });
-        const summaryGrid = statsEl.createDiv({ cls: "summary-grid" });
-        
-        // 🎯 Define stat items with their icons
-        const items = [
-            { label: "Files", value: this.vaultStats.files.length, icon: "file-text" },
-            { label: "Folders", value: this.vaultStats.folders.length, icon: "folder" },
-            { label: "Tags", value: this.vaultStats.tags.length, icon: "tag" }
+        const statsContainer = containerEl.createDiv({ cls: 'stats-container' });
+
+        const stats = [
+            { label: "Files", count: this.vaultStats.files.length, icon: "📄" },
+            { label: "Folders", count: this.vaultStats.folders.length, icon: "📁" },
+            { label: "Tags", count: this.vaultStats.tags.length, icon: "🏷️" }
         ];
-        
-        // 🎨 Render each stat card
-        items.forEach((item) => {
-            const itemEl = summaryGrid.createDiv({ cls: "summary-item" });
-            
-            const iconEl = itemEl.createDiv({ cls: "summary-icon" });
-            setIcon(iconEl, item.icon);
-            
-            const valueEl = itemEl.createDiv({ cls: "summary-value" });
-            valueEl.setText(item.value.toString());
-            
-            const labelEl = itemEl.createDiv({ cls: "summary-label" });
-            labelEl.setText(item.label);
+
+        stats.forEach(stat => {
+            const card = statsContainer.createDiv({ cls: 'stat-card' });
+            card.createSpan({ text: stat.icon, cls: 'stat-icon' });
+            card.createEl('div', { text: `${stat.label}: ${stat.count}`, cls: 'stat-text' });
         });
     }
 
     private renderModelSelection(containerEl: HTMLElement) {
-        const settingContainer = containerEl.createDiv({ cls: "gw-accordion" });
-        
-        new Setting(settingContainer)
+        new Setting(containerEl)
             .setName("AI Model")
             .setDesc("Select the AI model to use for ontology generation")
-            .addDropdown((dropdown) => {
+            .addDropdown(dropdown => {
                 this.modelSelect = dropdown;
-                dropdown.selectEl.classList.add("gw-dropdown");
-
-                if (this.availableModels.length === 0) {
-                    dropdown.setDisabled(true);
-                    return;
-                }
-
-                this.availableModels.forEach(({ provider, model }) => {
-                    const optionText = `${provider} - ${model.name}`;
-                    dropdown.addOption(`${provider}:${model.apiName}`, optionText);
+                this.availableModels.forEach(model => {
+                    dropdown.addOption(model.model, model.model);
                 });
-
-                if (this.availableModels.length > 0) {
-                    const firstModel = this.availableModels[0];
-                    dropdown.setValue(`${firstModel.provider}:${firstModel.model.apiName}`);
-                }
+                dropdown.onChange(value => {
+                    // Handle model selection change if needed
+                });
             });
     }
 
     private renderUserContextInput(containerEl: HTMLElement) {
-        const settingContainer = containerEl.createDiv({ cls: "gw-accordion" });
-        
-        new Setting(settingContainer)
+        new Setting(containerEl)
             .setName("Additional Context")
             .setDesc("Provide any additional context or information about your knowledge base.")
-            .addTextArea((text) => {
+            .addTextArea(text => {
                 this.userContextInput = text;
-                text.inputEl.classList.add("gw-textarea-input");
-                text.inputEl.rows = 4;
-                text.inputEl.cols = 50;
-                return text;
+                text.setPlaceholder("Enter additional context here...");
             });
     }
 
     private renderGuidedQuestions(containerEl: HTMLElement) {
-        const questionsEl = containerEl.createDiv({ cls: "gw-accordion" });
-        const header = questionsEl.createDiv({ cls: "gw-accordion-header" });
-        
-        header.createEl("h4", {
-            text: "Guided Questions",
-            cls: "gw-accordion-title"
-        });
+        const questionsEl = containerEl.createDiv({ cls: 'guided-questions' });
+        questionsEl.createEl("h4", { text: "Guided Questions" });
+        const questionsList = questionsEl.createEl("ul", { cls: "questions-list" });
 
-        const content = questionsEl.createDiv({ cls: "gw-accordion-content" });
-        
-        content.createEl("p", {
-            text: "Consider the following questions when providing additional context:"
-        });
-
-        const questionsList = content.createEl("ul", { cls: "gw-list" });
-        
         [
             "What are the main themes or topics in your knowledge base?",
             "Are there any specific hierarchies or relationships between concepts that you want to emphasize?",
             "What are your goals for organizing your knowledge base?"
-        ].forEach((question) => {
+        ].forEach(question => {
             questionsList.createEl("li", { text: question });
         });
     }
 
     private renderButtons(containerEl: HTMLElement) {
-        new Setting(containerEl)
-            .addButton((btn) => {
-                this.generateButton = btn;
-                btn.setButtonText("Generate Ontology")
+        const buttonContainer = containerEl.createDiv({ cls: 'button-container' });
+
+        new Setting(buttonContainer)
+            .addButton(btn => {
+                this.generateButton = btn
+                    .setButtonText("Generate")
                     .setCta()
-                    .setClass("gw-button");
-                btn.buttonEl.classList.add("gw-button-primary");
-                btn.setDisabled(this.availableModels.length === 0)
                     .onClick(() => this.generateOntology());
-                return btn;
-            })
-            .addButton((btn) => {
-                btn.setButtonText("Cancel")
-                    .setClass("gw-button");
-                btn.buttonEl.classList.add("gw-button-secondary");
-                btn.onClick(() => this.close());
-                return btn;
             });
 
-        containerEl.classList.add("gw-button-container");
+        new Setting(buttonContainer)
+            .addButton(btn => btn
+                .setButtonText("Cancel")
+                .setClass('secondary-button')
+                .onClick(() => this.close()));
     }
 
     private async generateOntology() {
-        const modelValue = this.modelSelect.getValue();
-        if (!modelValue) {
-            new Notice("Please select an AI model first.");
+        const model = this.modelSelect.getValue();
+        const context = this.userContextInput.getValue();
+
+        if (!model) {
+            new Notice('Please select an AI model.');
             return;
         }
 
-        const [provider, modelApiName] = modelValue.split(":");
         this.generateButton.setDisabled(true);
-        const loadingEl = this.createGeneratingState();
+        this.loadingEl = this.contentEl.createDiv({ cls: "loading-container" });
+        this.loadingEl.createEl('span', { text: 'Generating ontology...' });
 
         try {
             const input: OntologyInput = {
                 files: this.vaultStats.files,
                 folders: this.vaultStats.folders,
                 tags: this.vaultStats.tags,
-                provider: provider as AIProvider,
-                modelApiName,
-                userContext: this.userContextInput.getValue()
+                provider: this.aiAdapter.getProviderType(),
+                modelApiName: model,
+                userContext: context
             };
 
             const ontology = await this.aiGenerationService.generateOntology(input);
-            await this.tagManagementService.updateTags(ontology.suggestedTags);
-            
-            loadingEl.remove();
-            new Notice("Ontology generated and tags updated successfully!");
             this.onGenerate(ontology);
+            new Notice('Ontology generated successfully.');
             this.close();
         } catch (error) {
-            console.error("Error generating ontology:", error);
-            loadingEl.remove();
-            this.showError(
-                this.shadowRootEl.host as HTMLElement,
-                `Failed to generate ontology: ${(error as Error).message}`
-            );
+            new Notice('Error generating ontology.');
         } finally {
             this.generateButton.setDisabled(false);
+            this.loadingEl.remove();
         }
     }
 
-    private showError(containerEl: HTMLElement, message: string) {
-        this.loadingEl.remove();
-        const errorEl = containerEl.createDiv({ cls: "error-container status-error" });
-        
-        const iconEl = errorEl.createDiv({ cls: "gw-status-bar-icon" });
-        setIcon(iconEl, "alert-circle");
-        
-        errorEl.createEl("p", {
-            text: message,
-            cls: "error-message"
-        });
-    }
-
-    private createLoadingState(containerEl: HTMLElement): void {
-        this.loadingEl = containerEl.createDiv({ cls: "loading-container status-running" });
-        
-        const spinner = this.loadingEl.createDiv({ cls: "gw-status-bar-icon" });
-        setIcon(spinner, "loader");
-        
-        this.loadingEl.createEl("p", {
-            text: "Retrieving vault statistics and available models...",
-            cls: "loading-text"
-        });
-    }
-
-    private createGeneratingState(): HTMLElement {
-        const loadingEl = this.shadowRootEl.host.createDiv({ cls: "loading-container status-running" });
-        
-        const spinner = loadingEl.createDiv({ cls: "gw-status-bar-icon" });
-        setIcon(spinner, "loader");
-        
-        loadingEl.createEl("p", {
-            text: "Generating ontology...",
-            cls: "loading-text"
-        });
-        
-        return loadingEl;
-    }
-
     onClose() {
-        this.contentEl.empty();
+        const { contentEl } = this;
+        contentEl.empty();
+        this.containerEl.removeClass('graphweaver-modal');
     }
 }

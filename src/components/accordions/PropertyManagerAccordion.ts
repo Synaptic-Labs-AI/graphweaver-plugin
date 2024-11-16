@@ -1,4 +1,4 @@
-import { App, Setting, TextComponent, TextAreaComponent, DropdownComponent, Notice } from "obsidian";
+import { App, TextComponent, TextAreaComponent, DropdownComponent } from "obsidian";
 import { PropertyTag, PropertyType } from "../../models/PropertyTag";
 import { EditPropertiesModal } from "../modals/EditPropertiesModal";
 import { BaseAccordion } from "./BaseAccordion";
@@ -31,44 +31,62 @@ export class PropertyManagerAccordion extends BaseAccordion {
     public createPropertyEditor(containerEl: HTMLElement): void {
         const editorContainer = containerEl.createDiv({ cls: "gw-property-editor" });
 
-        new Setting(editorContainer)
-            .setName("Property Name")
-            .addText(text => {
-                this.nameInput = text;
-                text.setPlaceholder("Enter property name");
-            });
+        this.nameInput = this.addTextInput(
+            editorContainer,
+            "Property Name",
+            "Enter property name",
+            "Enter property name",
+            "",
+            (value: string) => {
+                // Handle name input change if needed
+            }
+        );
 
-        new Setting(editorContainer)
-            .setName("Property Description")
-            .addTextArea(textarea => {
-                this.descriptionInput = textarea;
-                textarea.setPlaceholder("Enter property description");
-            });
+        this.descriptionInput = this.addTextArea(
+            editorContainer,
+            "Property Description",
+            "Enter property description",
+            "Enter property description",
+            "",
+            (value: string) => {
+                // Handle description input change if needed
+            }
+        );
 
-        new Setting(editorContainer)
-            .setName("Property Type")
-            .addDropdown(dropdown => {
-                this.typeDropdown = dropdown;
-                dropdown.addOption("string", "String")
-                    .addOption("number", "Number")
-                    .addOption("boolean", "Boolean")
-                    .addOption("array", "Array")
-                    .addOption("date", "Date")
-                    .setValue("string");
-            });
+        this.typeDropdown = this.addDropdown(
+            editorContainer,
+            "Property Type",
+            "Select property type",
+            {
+                "string": "String",
+                "number": "Number",
+                "boolean": "Boolean",
+                "array": "Array",
+                "date": "Date"
+            },
+            "string",
+            (value: string) => {
+                // Handle dropdown change if needed
+            }
+        );
     }
 
     public createButtonRow(containerEl: HTMLElement): void {
         const buttonContainer = containerEl.createDiv({ cls: "gw-button-container" });
 
-        new Setting(buttonContainer)
-            .addButton(button => button
-                .setButtonText("Edit Properties")
-                .onClick(() => this.openEditModal()))
-            .addButton(button => button
-                .setButtonText("Add Property")
-                .setCta()
-                .onClick(() => this.addProperty()));
+        this.addButton(
+            buttonContainer,
+            "Edit Properties",
+            false,
+            () => this.openEditModal()
+        );
+
+        this.addButton(
+            buttonContainer,
+            "Add Property",
+            true,
+            () => this.addProperty()
+        );
     }
 
     public addProperty(): void {
@@ -77,12 +95,12 @@ export class PropertyManagerAccordion extends BaseAccordion {
         const type = this.typeDropdown.getValue() as PropertyType;
 
         if (!name) {
-            new Notice("Property name cannot be empty.");
+            this.showNotice("Property name cannot be empty.");
             return;
         }
 
         if (!description) {
-            new Notice("Property description cannot be empty.");
+            this.showNotice("Property description cannot be empty.");
             return;
         }
 
@@ -94,14 +112,17 @@ export class PropertyManagerAccordion extends BaseAccordion {
             multipleValues: false
         };
 
-        const settings = this.settingsService.getSettings();
-        settings.frontMatter.customProperties.push(newProperty);
-        this.settingsService.updateSettings(settings);
+        try {
+            const settings = this.settingsService.getSettings();
+            settings.frontMatter.customProperties.push(newProperty);
+            this.settingsService.updateSettings(settings);
 
-        new Notice(`Property "${name}" has been added.`);
-        this.nameInput.setValue("");
-        this.descriptionInput.setValue("");
-        this.typeDropdown.setValue("string");
+            this.showNotice(`Property "${name}" has been added.`);
+            this.resetInputs(this.nameInput, this.descriptionInput);
+            this.typeDropdown.setValue("string");
+        } catch (error) {
+            this.handleError("Add Property", error);
+        }
     }
 
     public openEditModal(): void {

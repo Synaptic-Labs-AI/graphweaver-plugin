@@ -6,6 +6,7 @@ import { PersistentStateManager } from '../../managers/StateManager';
 import { AIService } from '../../services/ai/AIService';
 import { SettingsService } from '../../services/SettingsService';
 import { DatabaseService } from '../../services/DatabaseService';
+import StatusHistoryModal from '../modals/StatusHistoryModal';
 
 interface StatusBarConfig {
     showTooltips: boolean;
@@ -136,18 +137,22 @@ export class ProcessingStatusBar {
         this.statusBarItem.addClass(`status-${this.currentState.toLowerCase()}`);
     }
 
-    private updateIcon(): void {
+    private updateIconAndColor(): void {
         this.iconEl.empty();
-
         const iconMap: Record<ProcessingState, string> = {
-            [ProcessingState.RUNNING]: 'refresh-cw',
-            [ProcessingState.PAUSED]: 'pause-circle',
-            [ProcessingState.ERROR]: 'alert-circle',
-            [ProcessingState.IDLE]: 'check-circle'
+            [ProcessingState.RUNNING]: 'play',
+            [ProcessingState.PAUSED]: 'pause',
+            [ProcessingState.ERROR]: 'alert',
+            [ProcessingState.IDLE]: 'check',
         };
-
-        const iconName = iconMap[this.currentState] || iconMap[ProcessingState.IDLE];
-        setIcon(this.iconEl, iconName);
+        const colorMap: Record<ProcessingState, string> = {
+            [ProcessingState.RUNNING]: 'var(--interactive-accent)',
+            [ProcessingState.ERROR]: 'var(--color-red)',
+            [ProcessingState.PAUSED]: 'var(--text-muted)',
+            [ProcessingState.IDLE]: 'var(--color-green)',
+        };
+        setIcon(this.iconEl, iconMap[this.currentState]);
+        this.statusBarItem.style.backgroundColor = colorMap[this.currentState];
     }
 
     private updateProgressBar(): void {
@@ -188,7 +193,7 @@ export class ProcessingStatusBar {
 
     private updateDisplay(): void {
         this.updateStateClasses();
-        this.updateIcon();
+        this.updateIconAndColor();
         this.updateProgressBar();
 
         if (this.getConfig().showTooltips) {
@@ -222,9 +227,6 @@ export class ProcessingStatusBar {
                 new Notice('No processing history available.');
                 return;
             }
-
-            const module = await import('../modals/StatusHistoryModal');
-            const { default: StatusHistoryModal } = module;
 
             new StatusHistoryModal(
                 this.app,

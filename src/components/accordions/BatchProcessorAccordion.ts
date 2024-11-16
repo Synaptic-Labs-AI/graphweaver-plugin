@@ -1,17 +1,24 @@
-import { App, Setting, ToggleComponent, ButtonComponent } from "obsidian";
+import { App, Setting, Notice } from "obsidian";
 import { BaseAccordion } from "./BaseAccordion";
 import { AIService } from "../../services/ai/AIService";
 import { SettingsService } from "../../services/SettingsService";
 import { BatchProcessorModal } from "../modals/BatchProcessorModal";
 
+interface AccordionDependencies {
+    app: App;
+    settingsService: SettingsService;
+    aiService: AIService;
+}
+
+/**
+ * Accordion component for batch processing functionality
+ */
 export class BatchProcessorAccordion extends BaseAccordion {
     constructor(
-        public app: App,
-        containerEl: HTMLElement,
-        public settingsService: SettingsService,
-        public aiService: AIService
+        private dependencies: AccordionDependencies,
+        containerEl: HTMLElement
     ) {
-        super(containerEl, app);
+        super(containerEl, dependencies.app);
     }
 
     public render(): void {
@@ -19,40 +26,55 @@ export class BatchProcessorAccordion extends BaseAccordion {
             "🔄 Batch Processor",
             "Process multiple files to generate front matter and wikilinks."
         );
+        
         this.createAutoGenerateToggle(contentEl);
-        this.createRunBatchProcessorButton(contentEl);
+        this.createBatchProcessorButton(contentEl);
     }
 
-    public createAutoGenerateToggle(containerEl: HTMLElement): void {
-        new Setting(containerEl)
-            .setName("Auto-generate Front Matter")
-            .setDesc("Automatically generate front matter for new or unprocessed notes when you open your vault.")
-            .addToggle(toggle => this.setupAutoGenerateToggle(toggle));
+    /**
+     * Create toggle for auto-generate setting
+     */
+    private createAutoGenerateToggle(containerEl: HTMLElement): void {
+        this.addToggle(
+            "Auto-generate Front Matter",
+            "Automatically generate front matter for new or unprocessed notes when you open your vault.",
+            this.dependencies.settingsService.getSettings().frontMatter.autoGenerate,
+            async (value: boolean) => {
+                try {
+                    await this.dependencies.settingsService.updateNestedSetting(
+                        'frontMatter', 
+                        'autoGenerate', 
+                        value
+                    );
+                    new Notice("Auto-generate Front Matter updated.");
+                } catch (error) {
+                    console.error('Error updating auto-generate setting:', error);
+                    new Notice(`Failed to update setting: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                }
+            }
+        );
     }
 
-    public setupAutoGenerateToggle(toggle: ToggleComponent): void {
-        const settings = this.settingsService.getSettings();
-        toggle
-            .setValue(settings.frontMatter.autoGenerate)
-            .onChange(async (value: boolean) => {
-                await this.settingsService.updateNestedSetting('frontMatter', 'autoGenerate', value);
-            });
-    }
-
-    public createRunBatchProcessorButton(containerEl: HTMLElement): void {
-        new Setting(containerEl)
-            .setName("Run Batch Processor")
-            .setDesc("Manually process multiple files to generate front matter and wikilinks.")
-            .addButton(button => this.setupRunBatchProcessorButton(button));
-    }
-
-    public setupRunBatchProcessorButton(button: ButtonComponent): void {
-        button
-            .setButtonText("Run Batch Processor")
-            .setCta()
-            .onClick(() => {
-                const modal = new BatchProcessorModal(this.app, this.aiService, this.settingsService);
-                modal.open();
-            });
+    /**
+     * Create button to run batch processor
+     */
+    private createBatchProcessorButton(containerEl: HTMLElement): void {
+        this.addButton(
+            "Run Batch Processor",
+            () => {
+                try {
+                    const modal = new BatchProcessorModal(
+                        this.appInstance,
+                        this.dependencies.aiService,
+                        this.dependencies.settingsService
+                    );
+                    modal.open();
+                } catch (error) {
+                    console.error('Error opening batch processor:', error);
+                    new Notice(`Failed to open batch processor: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                }
+            },
+            true
+        );
     }
 }
