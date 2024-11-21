@@ -1,6 +1,6 @@
-import { CoreService } from '../services/core/CoreService';
-import { ServiceError } from '../services/core/ServiceError';
-import { IConfigurableService } from '../services/core/IService';
+import { CoreService } from '@services/core/CoreService';
+import { ServiceError } from '@services/core/ServiceError';
+import { IConfigurableService } from '@services/core/IService';
 
 /**
  * Configuration options for JSON validation
@@ -12,16 +12,6 @@ export interface JsonValidationConfig {
     allowComments?: boolean;
     fixMalformed?: boolean;
     debug?: boolean;
-}
-
-/**
- * Validation result interface
- */
-export interface ValidationResult<T = any> {
-    valid: boolean;
-    value?: T;
-    error?: string;
-    fixes?: string[];
 }
 
 /**

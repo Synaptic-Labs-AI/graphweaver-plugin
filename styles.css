@@ -1,332 +1,332 @@
-/* styles.css */
-
-/* Base Variables */
-:host {
-  --graphweaver-spacing: 1rem;
-  --graphweaver-border-radius: 0.5rem;
-  --graphweaver-transition: 0.3s ease;
-  --graphweaver-font-base: 1rem;
-  --graphweaver-font-large: 1.2rem;
-  --graphweaver-font-small: 0.95rem;
-
-  --background-primary: #1e1e1e;
-  --background-secondary: #2d2d2d;
-  --background-modifier-border: #3c3c3c;
-  --background-modifier-hover: #3c3c3c;
-  --interactive-accent: #007acc;
-  --interactive-accent-hover: #005a9e;
-  --text-normal: #ffffff;
-  --text-muted: #aaaaaa;
-  --text-error: #ff5555;
-  --text-on-accent: #ffffff;
-
-  --card-background: var(--background-secondary);
-  --card-border: var(--background-modifier-border);
-  --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  display: block;
-  color: var(--text-normal);
-}
-
-/* Scoped Reset */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-/* Modal Content Wrapper */
-.shadow-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-/* Vault Statistics Container */
-/* 🎨 Stats Cards Base Container */
-.status-summary {
-  padding: 2rem 1rem;
-  margin-bottom: 2rem;
-}
-
-/* 🎭 Grid Layout for Stats */
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-/* 🃏 Individual Stat Card */
-.summary-item {
-  background-color: var(--background-secondary);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 12px;
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease-in-out;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* ✨ Hover Animation */
-.summary-item:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-/* 🎯 Icon Styling */
-.summary-icon {
-  color: var(--text-muted);
-  margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.summary-icon svg {
-  width: 32px;
-  height: 32px;
-}
-
-/* 📊 Value Display */
-.summary-value {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--text-normal);
-  margin-bottom: 0.5rem;
-  line-height: 1;
-}
-
-/* 🏷️ Label Styling */
-.summary-label {
-  font-size: 0.875rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 500;
-}
-
-/* 📱 Responsive Design */
-@media (max-width: 768px) {
-  .summary-grid {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 1rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .summary-grid {
-      grid-template-columns: 1fr;
+/* 🎨 Theme Variables
+   ============================================= */
+   .graphweaver-plugin {
+    /* Spacing */
+    --gw-spacing-xs: 0.25rem;
+    --gw-spacing-sm: 0.5rem;
+    --gw-spacing-md: 1rem;
+    --gw-spacing-lg: 1.5rem;
+    --gw-spacing-xl: 2rem;
+  
+    /* Border Radius */
+    --gw-border-radius-sm: 4px;
+    --gw-border-radius-md: 8px;
+    --gw-border-radius-lg: 12px;
+  
+    /* Typography */
+    --gw-font-small: 0.875rem;
+    --gw-font-base: 1rem;
+    --gw-font-large: 1.125rem;
+    --gw-font-xl: 1.25rem;
+    --gw-line-height: 1.5;
+  
+    /* Transitions */
+    --gw-transition-fast: 0.2s ease;
+    --gw-transition-normal: 0.3s ease;
+  
+    /* Shadows */
+    --gw-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --gw-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --gw-shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.1);
+  
+    /* Z-index layers */
+    --gw-z-dropdown: 100;
+    --gw-z-modal: 1000;
   }
   
-  .summary-item {
-      padding: 1.25rem;
+  /* 🎭 Base Layout
+     ============================================= */
+  .graphweaver-plugin {
+    width: 100%;
+    height: 100%;
+    color: var(--text-normal);
+    font-size: var(--gw-font-base);
+    line-height: var(--gw-line-height);
   }
-}
-
-/* Accordion Container */
-.gw-accordion {
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 8px;
-  margin-bottom: 12px;
+  
+  /* 📦 Accordion Components
+   ============================================= */
+.graphweaver-plugin .gw-accordion {
   background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--gw-border-radius-md);
+  margin-bottom: var(--gw-spacing-md);
   overflow: hidden;
-  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Accordion Header */
-.gw-accordion-header {
-  padding: 16px 24px;  /* Increased padding */
+.graphweaver-plugin .gw-accordion-header {
   background-color: var(--background-secondary);
+  padding: var(--gw-spacing-sm) var(--gw-spacing-md);
   display: flex;
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
   user-select: none;
-  transition: background-color 0.3s ease;
-}
-
-/* Accordion Title */
-.gw-accordion-title {
-  font-size: 1.1rem;  /* Larger font size */
-  font-weight: 600;
-  color: var(--text-normal);
-  line-height: 1.4;
-}
-
-/* Accordion Toggle Icon */
-.gw-accordion-toggle {
-  font-size: 18px;  /* Larger icon */
-  color: var(--text-muted);
-  margin-left: 16px;
-  transition: transform 0.3s ease;
-}
-
-/* Accordion Content */
-.gw-accordion-content {
-  height: 0;
-  opacity: 0;
-  overflow: hidden;
-  padding: 0 24px;  /* Match header padding */
-  transition: height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
-}
-
-/* Open State */
-.gw-accordion.gw-accordion-open {
-  margin-bottom: 16px;  /* More space between open accordions */
-}
-
-.gw-accordion.gw-accordion-open .gw-accordion-content {
-  height: auto;
-  opacity: 1;
-  padding: 20px 24px;
-}
-
-.gw-accordion.gw-accordion-open .gw-accordion-toggle {
-  transform: rotate(90deg);
-}
-
-/* Hover States */
-.gw-accordion-header:hover {
-  background-color: var(--background-modifier-hover);
-}
-
-/* Focus States */
-.gw-accordion-header:focus-visible {
-  outline: 2px solid var(--interactive-accent);
-  outline-offset: -2px;
-}
-
-/* Settings Items within Accordion */
-.gw-setting-item {
-  padding: 16px 0;
   border-bottom: 1px solid var(--background-modifier-border);
 }
 
-.gw-setting-item:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-/* Button Styles */
-.gw-button {
-  padding: 0.75rem 1.5rem;
-  background-color: var(--interactive-accent);
-  color: var(--text-on-accent);
-  border: none;
-  border-radius: var(--graphweaver-border-radius);
-  cursor: pointer;
-  transition: background-color var(--graphweaver-transition);
-  font-size: var(--graphweaver-font-base);
-}
-
-.gw-button:hover {
-  background-color: var(--interactive-accent-hover);
-}
-
-/* Secondary Button Styles */
-.gw-button-secondary {
-  background-color: var(--background-secondary);
-  color: var(--text-normal);
-}
-
-.gw-button-secondary:hover {
+.graphweaver-plugin .gw-accordion-header:hover {
   background-color: var(--background-modifier-hover);
 }
 
-/* Button Container */
-.gw-button-container {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: var(--graphweaver-spacing);
-}
-
-/* Input Fields */
-.gw-input {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--graphweaver-border-radius);
-  background-color: var(--background-primary);
-  color: var(--text-normal);
-}
-
-.gw-input:focus {
-  border-color: var(--interactive-accent);
-  outline: none;
-}
-
-/* Loading and Error States */
-.loading-container.status-running,
-.error-container.status-error {
+.graphweaver-plugin .gw-accordion-title-wrapper {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 1rem;
-  border-radius: var(--graphweaver-border-radius);
-  background-color: var(--background-secondary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  gap: var(--gw-spacing-sm);
 }
 
-.loading-container.status-running {
+.graphweaver-plugin .gw-accordion-title {
+  font-size: var(--gw-font-large);
+  font-weight: 600;
   color: var(--text-normal);
 }
 
-.error-container.status-error {
-  color: var(--text-error);
+.graphweaver-plugin .gw-accordion-description {
+  padding: var(--gw-spacing-sm) var(--gw-spacing-md);
+  color: var(--text-muted);
+  font-size: var(--gw-font-small);
+  border-bottom: 1px solid var(--background-modifier-border);
 }
 
-.error-container.status-error .gw-status-bar-icon {
-  color: var(--text-error);
+.graphweaver-plugin .gw-accordion-toggle {
+  color: var(--text-muted);
+  transition: transform var(--gw-transition-normal);
 }
 
-.loading-text,
-.error-message {
-  font-size: var(--graphweaver-font-base);
+.graphweaver-plugin .gw-accordion-open .gw-accordion-toggle {
+  transform: rotate(90deg);
 }
 
-/* Icon Styling */
-.gw-status-bar-icon svg {
-  width: 24px;
-  height: 24px;
+/* Accordion Content */
+.graphweaver-plugin .gw-accordion-content {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height var(--gw-transition-normal), 
+              opacity var(--gw-transition-normal),
+              padding var(--gw-transition-normal);
+  padding: 0;
 }
 
-/* Responsive Design Adjustments */
-
-/* Medium Screens */
-@media (max-width: 768px) {
-  .summary-grid {
-      gap: 16px;
-  }
-
-  .summary-item {
-      width: 100px;
-      padding: 1rem 1.5rem;
-  }
-
-  .summary-value {
-      font-size: 2rem;
-  }
+.graphweaver-plugin .gw-accordion-open .gw-accordion-content {
+  max-height: none;
+  opacity: 1;
+  padding: var(--gw-spacing-lg);
 }
 
-/* Small Screens */
-@media (max-width: 480px) {
-  .summary-grid {
-      flex-direction: column;
-      align-items: center;
-      gap: 16px;
-  }
-
-  .summary-item {
-      width: 100%;
-      max-width: 300px;
-  }
-
-  .summary-value {
-      font-size: 1.75rem;
-  }
+.graphweaver-plugin .gw-accordion-content-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gw-spacing-md);
 }
+
+/* Model Selection Styles */
+.graphweaver-plugin .model-selection {
+  margin-bottom: var(--gw-spacing-lg);
+}
+
+.graphweaver-plugin .setting-item {
+  display: flex;
+  flex-direction: column;
+  padding: var(--gw-spacing-sm) 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.graphweaver-plugin .setting-item:last-child {
+  border-bottom: none;
+}
+
+.graphweaver-plugin .setting-item-control {
+  width: 100%;
+}
+
+/* Ensure dropdowns and inputs are visible */
+.graphweaver-plugin select,
+.graphweaver-plugin .dropdown,
+.graphweaver-plugin input[type="text"] {
+  width: 100%;
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--gw-border-radius-sm);
+  padding: var(--gw-spacing-sm) var(--gw-spacing-md);
+  color: var(--text-normal);
+  margin: var(--gw-spacing-xs) 0;
+  min-height: 2.5rem;
+}
+
+/* Links within accordions */
+.graphweaver-plugin .gw-accordion a {
+  color: var(--text-accent);
+  text-decoration: none;
+}
+
+.graphweaver-plugin .gw-accordion a:hover {
+  text-decoration: underline;
+}
+
+/* Test Connection Button */
+.graphweaver-plugin .test-connection {
+  margin-top: var(--gw-spacing-md);
+}
+
+/* Button styling */
+.graphweaver-plugin button {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+  padding: var(--gw-spacing-sm) var(--gw-spacing-md);
+  border-radius: var(--gw-border-radius-sm);
+  border: none;
+  cursor: pointer;
+  font-size: var(--gw-font-base);
+}
+
+.graphweaver-plugin button:hover {
+  background-color: var(--interactive-accent-hover);
+}
+  
+  /* 📝 Settings and Forms
+     ============================================= */
+  .graphweaver-plugin .setting-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gw-spacing-sm);
+    padding: var(--gw-spacing-md) 0;
+    border-bottom: 1px solid var(--background-modifier-border);
+  }
+  
+  .graphweaver-plugin .setting-item:last-child {
+    border-bottom: none;
+  }
+  
+  .graphweaver-plugin .setting-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gw-spacing-xs);
+  }
+  
+  .graphweaver-plugin .setting-item-name {
+    font-weight: 600;
+    color: var(--text-normal);
+  }
+  
+  .graphweaver-plugin .setting-item-description {
+    color: var(--text-muted);
+    font-size: var(--gw-font-small);
+    line-height: 1.5;
+  }
+  
+  .graphweaver-plugin .setting-item-control {
+    width: 100%;
+    margin-top: var(--gw-spacing-sm);
+  }
+  
+  /* 🔤 Input Elements
+     ============================================= */
+  .graphweaver-plugin input[type="text"],
+  .graphweaver-plugin textarea {
+    width: 100%;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--gw-border-radius-sm);
+    padding: var(--gw-spacing-sm) var(--gw-spacing-md);
+    color: var(--text-normal);
+    font-size: var(--gw-font-base);
+    line-height: var(--gw-line-height);
+    transition: border-color var(--gw-transition-fast);
+  }
+  
+  .graphweaver-plugin input[type="text"]:focus,
+  .graphweaver-plugin textarea:focus {
+    border-color: var(--interactive-accent);
+    outline: none;
+    box-shadow: 0 0 0 2px var(--background-modifier-border-hover);
+  }
+  
+  .graphweaver-plugin textarea {
+    min-height: 120px;
+    resize: vertical;
+  }
+  
+  /* 🔽 Dropdowns
+     ============================================= */
+  .graphweaver-plugin select,
+  .graphweaver-plugin .dropdown {
+    width: 100%;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--gw-border-radius-sm);
+    padding: var(--gw-spacing-sm) var(--gw-spacing-md);
+    color: var(--text-normal);
+    font-size: var(--gw-font-base);
+    line-height: var(--gw-line-height);
+    cursor: pointer;
+    min-height: 2.5rem;
+  }
+  
+  /* 🔘 Buttons
+     ============================================= */
+  .graphweaver-plugin .gw-button-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gw-spacing-sm);
+    margin-top: var(--gw-spacing-lg);
+    padding-top: var(--gw-spacing-lg);
+    border-top: 1px solid var(--background-modifier-border);
+  }
+  
+  .graphweaver-plugin .gw-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--gw-spacing-sm) var(--gw-spacing-lg);
+    border-radius: var(--gw-border-radius-sm);
+    font-size: var(--gw-font-base);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--gw-transition-fast);
+    min-height: 2.5rem;
+    width: 100%;
+  }
+  
+  .graphweaver-plugin .gw-button-primary {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border: none;
+  }
+  
+  .graphweaver-plugin .gw-button-primary:hover {
+    background-color: var(--interactive-accent-hover);
+  }
+  
+  .graphweaver-plugin .gw-button-secondary {
+    background-color: var(--background-secondary);
+    color: var(--text-normal);
+    border: 1px solid var(--background-modifier-border);
+  }
+  
+  .graphweaver-plugin .gw-button-secondary:hover {
+    background-color: var(--background-modifier-hover);
+  }
+  
+  /* 📱 Responsive Design
+     ============================================= */
+  @media screen and (max-width: 768px) {
+    .graphweaver-plugin .gw-accordion-header,
+    .graphweaver-plugin .gw-accordion-content {
+      padding: var(--gw-spacing-md);
+    }
+    
+    .graphweaver-plugin .setting-item {
+      padding: var(--gw-spacing-md) 0;
+    }
+    
+    .graphweaver-plugin input[type="text"],
+    .graphweaver-plugin textarea,
+    .graphweaver-plugin select,
+    .graphweaver-plugin .dropdown {
+      font-size: var(--gw-font-base);
+      padding: var(--gw-spacing-sm);
+    }
+  }

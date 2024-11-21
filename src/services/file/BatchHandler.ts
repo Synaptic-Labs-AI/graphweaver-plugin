@@ -1,8 +1,7 @@
 // src/services/file/BatchHandler.ts
 
 import { TFile } from 'obsidian';
-import { ProcessingOptions } from '../../types/ProcessingTypes';
-import { retry } from 'src/state/utils/retry';
+import { ProcessingOptions } from '../../types/processing.types';
 
 export class BatchHandler {
     constructor(
@@ -11,6 +10,19 @@ export class BatchHandler {
         private readonly maxRetries: number,
         private readonly retryDelay: number
     ) {}
+
+    async processBatches(batches: TFile[][]): Promise<void> {
+        for (const batch of batches) {
+            await Promise.all(
+                batch.map(file => 
+                    this.processFile(file)
+                )
+            );
+            if (this.options.delayBetweenChunks > 0) {
+                await delay(this.options.delayBetweenChunks);
+            }
+        }
+    }
 
     createBatches(files: TFile[]): TFile[][] {
         const batches: TFile[][] = [];
@@ -21,19 +33,6 @@ export class BatchHandler {
         }
 
         return batches;
-    }
-
-    async processBatches(batches: TFile[][]): Promise<void> {
-        for (const batch of batches) {
-            await Promise.all(
-                batch.map(file => 
-                    retry(() => this.processFile(file), this.maxRetries, this.retryDelay)
-                )
-            );
-            if (this.options.delayBetweenChunks > 0) {
-                await delay(this.options.delayBetweenChunks);
-            }
-        }
     }
 }
 

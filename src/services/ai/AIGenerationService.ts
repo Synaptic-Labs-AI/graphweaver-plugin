@@ -1,7 +1,7 @@
 import { TFile } from 'obsidian';
 import { GeneratorFactory, GeneratorType } from './GeneratorFactory';
-import { OntologyInput, OntologyResult } from '../../models/OntologyTypes';
-import { AIServiceError } from './AIServiceError';
+import { ServiceError } from '@services/core/ServiceError';
+import { OntologyInput, OntologyResult } from '@type/component.types';
 
 /**
  * Handles all AI generation operations including front matter, wikilinks, 
@@ -21,7 +21,7 @@ export class AIGenerationService {
             const result = await generator.generate({ content });
             return result.content;
         } catch (error) {
-            throw new AIServiceError('Failed to generate front matter', error);
+            throw new ServiceError('Failed to generate front matter', (error as Error).message);
         }
     }
 
@@ -34,7 +34,7 @@ export class AIGenerationService {
             const result = await generator.generate({ content, existingPages });
             return result.content;
         } catch (error) {
-            throw new AIServiceError('Failed to generate wikilinks', error);
+            throw new ServiceError('Failed to generate wikilinks', (error as Error).message);
         }
     }
 
@@ -46,7 +46,7 @@ export class AIGenerationService {
             const generator = await this.generatorFactory.getGenerator(GeneratorType.KnowledgeBloom);
             return await generator.generate({ sourceFile, userPrompt });
         } catch (error) {
-            throw new AIServiceError('Failed to generate Knowledge Bloom', error);
+            throw new ServiceError('Failed to generate Knowledge Bloom', (error as Error).message);
         }
     }
 
@@ -58,7 +58,7 @@ export class AIGenerationService {
             const generator = await this.generatorFactory.getGenerator(GeneratorType.Ontology);
             return await generator.generate(input);
         } catch (error) {
-            throw new AIServiceError('Failed to generate ontology', error);
+            throw new ServiceError('Failed to generate ontology', (error as Error).message);
         }
     }
 }

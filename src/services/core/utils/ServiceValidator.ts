@@ -2,9 +2,9 @@
 
 import { IService } from '../IService';
 import { ServiceError } from '../ServiceError';
-import { ServiceRegistrationConfig, ServiceRegistration, RegistrationStatus, isFactoryServiceConfig, isConstructorServiceConfig } from '../../../types/ServiceTypes';
+import { ServiceRegistrationConfig, ServiceRegistration, RegistrationStatus, isFactoryServiceConfig, isConstructorServiceConfig } from '@type/services.types';
 import { DependencyResolver } from './DependencyResolver';
-
+import { LifecycleState } from '@type/base.types';
 /**
  * Handles validation of service registration and configuration
  */
@@ -45,8 +45,10 @@ export class ServiceValidator {
                 instance: null,
                 dependencies: config.dependencies || [],
                 status: RegistrationStatus.Registered,
+                state: LifecycleState.Uninitialized,
                 factory: isFactoryServiceConfig(config) ? config.factory : undefined,
                 constructor: isConstructorServiceConfig(config) ? config.constructor : undefined,
+                lastUpdated: Date.now()
             };
 
             tempServices.set(config.id, newRegistration);

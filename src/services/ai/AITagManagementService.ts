@@ -1,6 +1,6 @@
 import { App, TFile } from 'obsidian';
-import { Tag } from 'src/models/PropertyTag';
-import { AIServiceError } from './AIServiceError';
+import { Tag } from '@type/metadata.types';
+import { ServiceError } from '@services/core/ServiceError';
 
 /**
  * Handles all tag-related operations including updates, validation, and vault integration
@@ -15,10 +15,11 @@ export class TagManagementService {
      */
     public async updateTags(tags: Tag[]): Promise<void> {
         try {
+            this.validateTags(tags);
             let tagIndexFile = await this.getOrCreateTagIndex();
             await this.updateTagIndex(tagIndexFile, tags);
         } catch (error) {
-            throw new AIServiceError('Failed to update tags', error);
+            throw new ServiceError('Failed to update tags', (error as Error).message);
         }
     }
 

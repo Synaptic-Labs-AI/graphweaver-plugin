@@ -1,25 +1,25 @@
 // src/generators/FrontMatterGenerator.ts
 
-import { BaseGenerator, BaseGeneratorInput, BaseGeneratorOutput } from './BaseGenerator';
-import { AIAdapter, AIProvider } from 'src/models/AIModels';
-import { SettingsService } from '../services/SettingsService';
-import { JsonSchemaGenerator } from './JsonSchemaGenerator';
-import { PropertyTag } from '../models/PropertyTag';
+import { BaseGenerator, BaseGeneratorInput, BaseGeneratorOutput } from '@generators/BaseGenerator';
+import { AIAdapter, AIProvider } from '@type/ai.types';
+import { SettingsService } from '@services/SettingsService';
+import { JsonSchemaGenerator } from '@generators/JsonSchemaGenerator';
+import { PropertyTag } from '@type/metadata.types';
 
 /**
  * Input interface for front matter generation
  */
 export interface FrontMatterInput extends BaseGeneratorInput {
-    content: string;                   // The note content to generate front matter for
-    customProperties?: PropertyTag[];  // Optional custom properties
-    customTags?: string[];             // Optional custom tags
+    content: string;                   
+    customProperties?: PropertyTag[];  
+    customTags?: string[];             
 }
 
 /**
  * Output interface for front matter generation
  */
 export interface FrontMatterOutput extends BaseGeneratorOutput {
-    content: string;                   // The content with generated front matter
+    content: string;                   
 }
 
 /**
@@ -52,7 +52,7 @@ export class FrontMatterGenerator extends BaseGenerator<FrontMatterInput, FrontM
             const completeInput: FrontMatterInput = {
                 ...input,
                 customProperties: input.customProperties || settings.frontMatter.customProperties,
-                customTags: input.customTags || settings.tags.customTags.map(tag => tag.name)
+                customTags: input.customTags || settings.tags.customTags.map((tag: { name: string }) => tag.name)
             };
 
             const prompt = this.preparePrompt(completeInput);

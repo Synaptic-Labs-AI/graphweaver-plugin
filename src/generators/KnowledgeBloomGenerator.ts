@@ -1,10 +1,10 @@
 import { TFile, App, Notice } from 'obsidian';
 import { BaseGenerator, BaseGeneratorInput, BaseGeneratorOutput } from './BaseGenerator';
-import { AIAdapter, AIResponseOptions } from '../models/AIModels';
-import { SettingsService } from '../services/SettingsService';
-import { FrontMatterGenerator, FrontMatterInput } from './FrontMatterGenerator';
-import { PropertyTag } from '../models/PropertyTag';
-import { WikilinkTextProcessor } from '../services/WikilinkTextProcessor';
+import { AIAdapter, AIResponseOptions } from '@type/ai.types';
+import { SettingsService } from '@services/SettingsService';
+import { FrontMatterGenerator, FrontMatterInput } from '@generators/FrontMatterGenerator';
+import { PropertyTag } from '@type/metadata.types';
+import { WikilinkTextProcessor } from '@services/WikilinkTextProcessor';
 
 /**
  * Input interface for the Knowledge Bloom generator
@@ -256,7 +256,7 @@ Return ONLY the array of strings, nothing else.
      */
     protected extractCustomTags(content: string): string[] {
         try {
-            return this.settingsService.getSettings().tags.customTags.map(tag => tag.name);
+            return this.settingsService.getSettings().tags.customTags.map((tag: { name: string }) => tag.name);
         } catch (error) {
             console.error('❌ Error extracting custom tags:', error);
             return [];

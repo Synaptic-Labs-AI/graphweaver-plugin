@@ -1,248 +1,360 @@
 // src/generators/BatchProcessor.ts
-
 import { App, TFile } from 'obsidian';
-import { CoreService } from '../services/core/CoreService';
+import { CoreService } from '@services/core/CoreService';
 import { EventEmitter } from 'events';
-import { FileProcessorService } from '../services/file/FileProcessorService';
-import { OperationExecutor } from '../services/ai/OperationExecutor';
-import { GeneratorFactory } from '../services/ai/GeneratorFactory';
+import { BatchHandler } from '@services/file/BatchHandler';
 import {
     ProcessingStatus,
     ProcessingState,
-    ProcessingEvent,
+    ProcessingStateEnum,
+    IProcessingStatusBar,
     ProcessingStats,
     FileProcessingResult,
     ProcessingOptions,
-    DEFAULT_PROCESSING_OPTIONS,
-} from '../types/ProcessingTypes';
-import { OperationType } from '../types/OperationTypes'; // Added import
+    FileChunk,
+    ProcessingError
+} from '../types/processing.types';
+import { DEFAULT_PROCESSING_OPTIONS } from '@type/constants';
 
-/**
- * Input interface for batch processing
- */
+// 🦇 Types for better organization and type safety
 interface BatchInput {
-    files: TFile[];
+    files: string[];
     generateFrontMatter: boolean;
     generateWikilinks: boolean;
     options?: Partial<ProcessingOptions>;
 }
 
 /**
- * Enhanced BatchProcessor that leverages existing services
+ * 🦇 BatchProcessor - Handles batch processing of files with status tracking and event emission
  */
-export class BatchProcessor extends CoreService {
-    private readonly eventEmitter: EventEmitter;
-    private options: ProcessingOptions;
-    private currentStatus: ProcessingStatus;
-    private processingTimeout: NodeJS.Timeout | null = null;
+export class BatchProcessor extends EventEmitter {
+    // 🎸 Private state management
+    private readonly state: {
+        status: ProcessingStatus;
+        options: ProcessingOptions;
+        isProcessing: boolean;
+        isPaused: boolean;
+        results: FileProcessingResult[];
+        startTime: number;
+        batchHandler: BatchHandler | null;
+    };
 
     constructor(
-        private app: App,
-        private fileProcessor: FileProcessorService,
-        private operationManager: OperationExecutor, // Updated type
-        private generatorFactory: GeneratorFactory
+        private readonly app: App,
+        private readonly coreService: CoreService,
+        private readonly statusBar: IProcessingStatusBar
     ) {
-        super('batch-processor', 'Batch Processor');
-        this.eventEmitter = new EventEmitter();
-        this.options = DEFAULT_PROCESSING_OPTIONS;
-        this.currentStatus = this.getDefaultStatus();
-    }
-
-    /**
-     * Initialize the service
-     */
-    protected async initializeInternal(): Promise<void> {
-        try {
-            if (!this.fileProcessor || !this.operationManager || !this.generatorFactory) {
-                throw new Error('Required services not initialized');
-            }
-
-            // Reset status
-            this.currentStatus = this.getDefaultStatus();
-            
-            // Initialize required generators
-            await this.generatorFactory.initialize();
-            
-        } catch (error) {
-            this.handleError('Initialization failed', error);
-        }
-    }
-
-    /**
-     * Clean up resources
-     */
-    protected async destroyInternal(): Promise<void> {
-        this.eventEmitter.removeAllListeners();
-        if (this.processingTimeout) {
-            clearTimeout(this.processingTimeout);
-        }
-    }
-
-    /**
-     * Process files in batch
-     */
-    public async generate(input: BatchInput): Promise<{
-        fileResults: FileProcessingResult[];
-        stats: ProcessingStats;
-    }> {
-        if (!this.validateInput(input)) {
-            throw new Error('Invalid batch input');
-        }
-
-        const startTime = Date.now();
-        this.options = { ...this.options, ...input.options };
-
-        try {
-            await this.startProcessing(input.files);
-            const results = await this.processFiles(input);
-            return {
-                fileResults: results,
-                stats: await this.finalizeProcessing(results, startTime)
-            };
-        } catch (error) {
-            this.handleError('Batch processing failed', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Process individual file with operation tracking
-     */
-    private async processFile(file: TFile, input: BatchInput): Promise<FileProcessingResult> {
-        return this.operationManager.execute(
-            OperationType.FrontMatter, // Corrected method
-            async () => {
-                const result = await this.fileProcessor.processSingleFile(file);
-                this.emitEvent('fileComplete', { result });
-                return result;
+        super();
+        
+        // Initialize state with default values
+        const defaultState = this.createInitialProcessingState();
+        this.state = {
+            status: {
+                state: defaultState,
+                filesQueued: 0,
+                filesProcessed: 0,
+                filesRemaining: 0,
+                currentFile: undefined, // Changed from null to undefined
+                startTime: 0,
+                errors: []
             },
-            { filePath: file.path }
-        );
+            options: { ...DEFAULT_PROCESSING_OPTIONS },
+            isProcessing: false,
+            isPaused: false,
+            results: [],
+            startTime: 0,
+            batchHandler: null
+        };
     }
 
-    /**
-     * Process files in chunks
-     */
-    private async processFiles(input: BatchInput): Promise<FileProcessingResult[]> {
-        const chunks = this.createChunks(input.files);
-        const allResults: FileProcessingResult[] = [];
+    // 🎸 Public API Methods
+    public async process(input: BatchInput): Promise<ProcessingStats> {
+        this.validateInput(input);
+        this.initializeProcessing(input);
 
-        for (const chunk of chunks) {
-            const files = chunk.map(path => 
-                this.app.vault.getAbstractFileByPath(path)
-            ).filter((file): file is TFile => file instanceof TFile);
+        try {
+            const tfiles = this.getValidFiles(input.files);
+            await this.initializeBatchHandler(tfiles, input);
+            await this.processBatches(this.state.batchHandler!.createBatches(tfiles));
+            return this.generateStats();
+        } catch (error) {
+            this.handleError(this.normalizeError(error));
+            throw error;
+        } finally {
+            this.cleanup();
+        }
+    }
 
-            const chunkResults = await Promise.all(
-                files.map(file => this.processFile(file, input))
-            );
+    public pause(): void {
+        this.state.isPaused = true;
+        this.updateStatusAndEmit(ProcessingStateEnum.PAUSED);
+    }
 
-            allResults.push(...chunkResults);
-            await this.delay(this.options.delayBetweenChunks);
+    public resume(): void {
+        this.state.isPaused = false;
+        this.updateStatusAndEmit(ProcessingStateEnum.RUNNING);
+    }
+
+    // 🎸 Private Processing Methods
+    private async processBatches(batches: TFile[][]): Promise<void> {
+        for (const [index, batch] of batches.entries()) {
+            await this.processSingleBatch(batch, index, batches.length);
+        }
+    }
+
+    private async processSingleBatch(batch: TFile[], index: number, total: number): Promise<void> {
+        if (this.state.isPaused) {
+            await this.waitForResume();
         }
 
-        return allResults;
+        const batchInfo = { 
+            files: batch.map(f => f.path), 
+            index, 
+            size: batch.length 
+        };
+
+        this.emit('chunkStart', batchInfo);
+        await this.state.batchHandler!.processBatches([batch]);
+        this.emit('chunkComplete', batchInfo);
     }
 
-    /**
-     * Create file chunks for processing
-     */
-    private createChunks(files: TFile[]): string[][] {
-        const chunks: string[][] = [];
-        for (let i = 0; i < files.length; i += this.options.chunkSize) {
-            chunks.push(
-                files
-                    .slice(i, i + this.options.chunkSize)
-                    .map(f => f.path)
-            );
+    private async processFile(file: TFile, input: BatchInput): Promise<void> {
+        this.emit('fileStart', { file: file.path });
+        
+        try {
+            const result = await this.executeFileProcessing(file, input);
+            this.updateFileProgress(file.path, result);
+            this.emit('fileComplete', { result });
+        } catch (error) {
+            this.handleFileError(file.path, this.normalizeError(error));
         }
-        return chunks;
     }
 
-    /**
-     * Start batch processing
-     */
-    private async startProcessing(files: TFile[]): Promise<void> {
-        this.currentStatus = {
-            state: ProcessingState.RUNNING,
-            filesQueued: files.length,
-            filesProcessed: 0,
-            filesRemaining: files.length,
-            startTime: Date.now(),
-            errors: []
-        };
-
-        this.emitEvent('start', { totalFiles: files.length });
+    // 🎸 State Management Methods
+    private updateStatusAndEmit(newState: ProcessingStateEnum): void {
+        this.updateStatus({ 
+            state: this.createProcessingState(newState) 
+        });
     }
 
-    /**
-     * Finalize processing and calculate stats
-     */
-    private async finalizeProcessing(
-        results: FileProcessingResult[], 
-        startTime: number
-    ): Promise<ProcessingStats> {
-        const successfulFiles = results.filter(r => r.success);
-        const stats: ProcessingStats = {
-            totalFiles: results.length,
-            processedFiles: successfulFiles.length,
-            errorFiles: results.length - successfulFiles.length,
-            skippedFiles: 0,
-            startTime,
-            endTime: Date.now(),
-            averageProcessingTime: this.calculateAverageTime(successfulFiles)
-        };
-
-        this.emitEvent('complete', stats);
-        return stats;
-    }
-
-    /**
-     * Calculate average processing time
-     */
-    private calculateAverageTime(results: FileProcessingResult[]): number {
-        if (results.length === 0) return 0;
-        return results.reduce((sum, r) => sum + r.processingTime, 0) / results.length;
-    }
-
-    /**
-     * Get default status
-     */
-    private getDefaultStatus(): ProcessingStatus {
+    // 🎸 Create initial processing state without dependencies
+    private createInitialProcessingState(): ProcessingState {
         return {
-            state: ProcessingState.IDLE,
+            isProcessing: false,
+            currentFile: null,
+            queue: [],
+            progress: 0,
+            state: ProcessingStateEnum.IDLE,
             filesQueued: 0,
             filesProcessed: 0,
             filesRemaining: 0,
+            errors: [],
+            error: null,
+            startTime: null,
+            estimatedTimeRemaining: null
+        };
+    }
+
+    private createProcessingState(state: ProcessingStateEnum): ProcessingState {
+        if (!this.state) {
+            return this.createInitialProcessingState();
+        }
+
+        const { status, isProcessing, startTime } = this.state;
+        
+        return {
+            isProcessing,
+            currentFile: status.currentFile || null, // Ensures null when undefined
+            queue: [],
+            progress: this.calculateProgress(),
+            state,
+            filesQueued: status.filesQueued,
+            filesProcessed: status.filesProcessed,
+            filesRemaining: status.filesRemaining,
+            errors: status.errors,
+            error: null,
+            startTime: startTime || null,
+            estimatedTimeRemaining: this.calculateETA()
+        };
+    }
+
+    private updateStatus(update: Partial<ProcessingStatus>): void {
+        this.state.status = { ...this.state.status, ...update };
+        this.emit('stateChanged', {
+            state: this.state.status.state,
+            currentFile: this.state.status.currentFile,
+            progress: this.calculateProgress(),
+            status: this.state.status
+        });
+    }
+
+    // 🎸 Utility Methods
+    private calculateProgress(): number {
+        const { filesProcessed, filesQueued } = this.state.status;
+        return filesQueued === 0 ? 0 : (filesProcessed / filesQueued) * 100;
+    }
+
+    private calculateETA(): number | null {
+        const { filesProcessed, filesRemaining } = this.state.status;
+        
+        if (filesProcessed === 0) return null;
+        
+        const elapsed = Date.now() - this.state.startTime;
+        const averageTimePerFile = elapsed / filesProcessed;
+        return averageTimePerFile * filesRemaining;
+    }
+
+    private calculateAverageProcessingTime(): number {
+        const { results } = this.state;
+        if (results.length === 0) return 0;
+        
+        const totalTime = results.reduce((sum, r) => sum + r.processingTime, 0);
+        return totalTime / results.length;
+    }
+
+    // 🎸 Initialization Methods
+    private initializeStatus(): ProcessingStatus {
+        const defaultState = this.createProcessingState(ProcessingStateEnum.IDLE);
+        return {
+            state: defaultState,
+            filesQueued: 0,
+            filesProcessed: 0,
+            filesRemaining: 0,
+            currentFile: undefined,  // Changed from null to undefined
             startTime: 0,
             errors: []
         };
     }
 
-    /**
-     * Validate batch input
-     */
-    private validateInput(input: BatchInput): boolean {
-        return Array.isArray(input.files) && 
-               input.files.length > 0 && 
-               typeof input.generateFrontMatter === 'boolean' &&
-               typeof input.generateWikilinks === 'boolean';
+    private initializeProcessing(input: BatchInput): void {
+        Object.assign(this.state, {
+            isProcessing: true,
+            startTime: Date.now(),
+            results: [],
+            options: { ...this.state.options, ...input.options }
+        });
+
+        this.updateStatus({
+            state: this.createProcessingState(ProcessingStateEnum.RUNNING),
+            filesQueued: input.files.length,
+            filesProcessed: 0,
+            filesRemaining: input.files.length,
+            startTime: this.state.startTime,
+            errors: []
+        });
+
+        this.emit('start', { status: this.state.status });
     }
 
-    /**
-     * Utility delay method
-     */
-    private delay(ms: number): Promise<void> {
-        return new Promise(resolve => setTimeout(resolve, ms));
+    private async initializeBatchHandler(files: TFile[], input: BatchInput): Promise<void> {
+        this.state.batchHandler = new BatchHandler(
+            async (file: TFile) => this.processFile(file, input),
+            this.state.options,
+            this.state.options.maxRetries,
+            this.state.options.delayBetweenChunks
+        );
     }
 
-    /**
-     * Event emitter methods
-     */
-    public on(event: keyof ProcessingEvent, callback: (data: any) => void): void {
-        this.eventEmitter.on(event, callback);
+    // 🎸 Helper Methods
+    private async executeFileProcessing(file: TFile, input: BatchInput): Promise<FileProcessingResult> {
+        const startTime = Date.now();
+        await this.state.batchHandler!.processBatches([[file]]);
+        
+        return {
+            success: true,
+            path: file.path,
+            frontMatterGenerated: input.generateFrontMatter,
+            wikilinksGenerated: input.generateWikilinks,
+            processingTime: Date.now() - startTime
+        };
     }
 
-    private emitEvent(event: keyof ProcessingEvent, data: any): void {
-        this.eventEmitter.emit(event, data);
+    private updateFileProgress(filePath: string, result: FileProcessingResult): void {
+        this.state.results.push(result);
+        this.state.status.filesProcessed++;
+        this.state.status.filesRemaining--;
+        
+        this.statusBar.updateFromState({
+            currentFile: filePath,
+            progress: this.calculateProgress(),
+            status: this.state.status
+        });
+    }
+
+    private getValidFiles(filePaths: string[]): TFile[] {
+        return filePaths
+            .map(path => this.app.vault.getAbstractFileByPath(path))
+            .filter((file): file is TFile => file instanceof TFile);
+    }
+
+    private validateInput(input: BatchInput): void {
+        if (!Array.isArray(input.files) || 
+            input.files.length === 0 || 
+            typeof input.generateFrontMatter !== 'boolean' ||
+            typeof input.generateWikilinks !== 'boolean') {
+            throw new Error('Invalid batch input');
+        }
+    }
+
+    // 🎸 Error Handling Methods
+    private normalizeError(error: unknown): Error {
+        return error instanceof Error ? error : new Error(String(error));
+    }
+
+    private handleError(error: Error): void {
+        this.updateStatus({ 
+            state: this.createProcessingState(ProcessingStateEnum.ERROR) 
+        });
+        
+        this.emit('error', {
+            filePath: this.state.status.currentFile || '',
+            error: error.message,
+            timestamp: Date.now(),
+            retryCount: 0
+        });
+    }
+
+    private handleFileError(filePath: string, error: Error): void {
+        const newError: ProcessingError = {
+            filePath,
+            error: error.message,
+            timestamp: Date.now(),
+            retryCount: 0
+        };
+
+        this.state.status.errors.push(newError);
+        this.emit('error', newError);
+    }
+
+    // 🎸 Cleanup and Management Methods
+    private cleanup(): void {
+        this.state.isProcessing = false;
+        this.updateStatus({ 
+            state: this.createProcessingState(ProcessingStateEnum.IDLE) 
+        });
+    }
+
+    private async waitForResume(): Promise<void> {
+        return new Promise(resolve => {
+            const resumeHandler = () => {
+                this.off('resume', resumeHandler);
+                resolve();
+            };
+            this.on('resume', resumeHandler);
+        });
+    }
+
+    private generateStats(): ProcessingStats {
+        const endTime = Date.now();
+        return {
+            totalFiles: this.state.status.filesQueued,
+            processedFiles: this.state.status.filesProcessed,
+            skippedFiles: 0,
+            errorFiles: this.state.status.errors.length,
+            startTime: this.state.startTime,
+            endTime,
+            averageProcessingTime: this.calculateAverageProcessingTime(),
+            timestamp: endTime
+        };
     }
 }

@@ -1,13 +1,12 @@
 import { IService } from './IService';
-import { ServiceState } from 'src/state/ServiceState';
-import { ServiceError } from './ServiceError';
+import { LifecycleState } from '@type/base.types';import { ServiceError } from './ServiceError';
 
 /**
  * Abstract base class providing common functionality for services.
  * Implements standard lifecycle management, error handling, and state tracking.
  */
 export abstract class CoreService implements IService {
-    protected state: ServiceState = ServiceState.Uninitialized;
+    protected state: LifecycleState = LifecycleState.Uninitialized;
     protected error: ServiceError | null = null;
     protected isUnloading: boolean = false;
 
@@ -26,13 +25,13 @@ export abstract class CoreService implements IService {
         }
 
         try {
-            this.state = ServiceState.Initializing;
+            this.state = LifecycleState.Initializing;
             await this.initializeInternal();
-            this.state = ServiceState.Ready;
+            this.state = LifecycleState.Ready;
             this.error = null;
         } catch (error) {
             this.handleError('Initialization failed', error);
-            this.state = ServiceState.Error;
+            this.state = LifecycleState.Error;
             throw error;
         }
     }
@@ -47,7 +46,7 @@ export abstract class CoreService implements IService {
      * Check if service is ready for use
      */
     public isReady(): boolean {
-        return this.state === ServiceState.Ready && !this.isUnloading;
+        return this.state === LifecycleState.Ready && !this.isUnloading;
     }
 
     /**
@@ -58,9 +57,9 @@ export abstract class CoreService implements IService {
 
         try {
             this.isUnloading = true;
-            this.state = ServiceState.Destroying;
+            this.state = LifecycleState.Destroying;
             await this.destroyInternal();
-            this.state = ServiceState.Destroyed;
+            this.state = LifecycleState.Destroyed;
         } catch (error) {
             this.handleError('Destroy failed', error);
             throw error;
@@ -75,7 +74,7 @@ export abstract class CoreService implements IService {
     /**
      * Get current service state
      */
-    public getState(): { state: ServiceState; error: ServiceError | null } {
+    public getState(): { state: LifecycleState; error: ServiceError | null } {
         return { state: this.state, error: this.error };
     }
 

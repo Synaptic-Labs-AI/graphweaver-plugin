@@ -1,46 +1,81 @@
-Component Files:
-
-src/components/modals/*.ts
-
-Add event handler cleanup
-Update lifecycle methods
-
-
-
-
-Type Definition Files:
-
-src/types/ServiceTypes.ts
-
-Add event handler interfaces
-Update service interfaces
-
-
-src/types/ProcessingTypes.ts
-
-Add event-related types
-
-
-
-
-Utility Classes:
-
-src/generators/BaseGenerator.ts
-
-Add event handling
-Update cleanup methods
-
-
-
-
-
-Specific Changes Needed:
-
-Event Handler Management:
-
-Add EventHandlers interface to each class
-Store handler references
-Implement proper cleanup
+src/
+├── adapters/
+│   ├── AnthropicAdapter.ts        [EDIT - Add store consumption]
+│   ├── GeminiAdapter.ts           [EDIT - Add store consumption]
+│   ├── GroqAdapter.ts             [EDIT - Add store consumption]
+│   ├── LMStudioAdapter.ts         [EDIT - Add store consumption]
+│   ├── OpenAIAdapter.ts           [EDIT - Add store consumption]
+│   └── OpenRouterAdapter.ts       [EDIT - Add store consumption]
+├── components/
+│   ├── accordions/
+│   │   ├── AdvancedAccordion.svelte           [EDIT - Use stores]
+│   │   ├── BaseAccordion.svelte               [EDIT - Use stores]
+│   │   ├── BatchProcessorAccordion.svelte     [EDIT - Use stores]
+│   │   ├── KnowledgeBloomAccordion.svelte     [EDIT - Use stores]
+│   │   ├── ModelHookupAccordion.svelte        [EDIT - Use stores]
+│   │   ├── OntologyGenerationAccordion.svelte [EDIT - Use stores]
+│   │   ├── PropertyManagerAccordion.svelte    [EDIT - Use stores]
+│   │   └── TagManagerAccordion.svelte         [EDIT - Use stores]
+│   ├── modals/
+│   │   ├── BatchProcessorModal.svelte         [EDIT - Use stores]
+│   │   ├── EditPropertiesModal.svelte         [EDIT - Use stores]
+│   │   ├── EditTagsModal.svelte               [EDIT - Use stores]
+│   │   ├── OntologyGeneratorModal.svelte      [EDIT - Use stores]
+│   │   ├── StatusHistoryModal.svelte          [EDIT - Use stores]
+│   │   └── StatusHistoryModal.ts              [DELETE - Merge into .svelte]
+│   └── status/
+│       └── ProcessingStatusBar.ts             [EDIT - Convert to .svelte]
+├── generators/
+│   └── [All files]                           [EDIT - Minor store integration]
+├── managers/
+│   ├── startup/                              [DELETE - Move to services]
+│   ├── DatabaseManager.ts                    [DELETE - Move to services]
+│   ├── ErrorManager.ts                       [EDIT - Minor updates]
+│   ├── EventManager.ts                       [EDIT - Minor updates]
+│   ├── FileManager.ts                        [EDIT - Use stores]
+│   ├── InitializationManager.ts              [DELETE - Move to services]
+│   ├── ServiceManager.ts                     [DELETE - Use ServiceRegistry]
+│   ├── SettingsStateManager.ts               [DELETE - Replace with store]
+│   ├── StateManager.ts                       [DELETE - Replace with stores]
+│   └── UIManager.ts                          [EDIT - Use stores]
+├── models/
+│   ├── AIModels.ts                          [EDIT - Minor updates]
+│   ├── OntologyTypes.ts                     [KEEP]
+│   └── PropertyTag.ts                       [KEEP]
+├── services/
+│   ├── ai/                                  [EDIT - Most files need store updates]
+│   ├── core/                                [KEEP - Core services remain]
+│   ├── file/                                [EDIT - Use stores]
+│   └── [Other service files]                [EDIT - Use stores]
+├── settings/
+│   ├── GraphWeaverSettingTab.ts             [EDIT - Use stores]
+│   ├── Settings.ts                          [EDIT - Minor updates]
+│   └── SettingsTab.svelte                   [EDIT - Use stores]
+├── state/
+│   ├── PluginState.ts                       [EDIT - Convert to store types]
+│   ├── ServiceState.ts                      [KEEP]
+│   └── utils/                               [DELETE - Replace with store utils]
+├── stores/ [NEW]
+│   ├── index.ts                             [NEW]
+│   ├── plugin.ts                            [NEW]
+│   ├── settings.ts                          [NEW]
+│   ├── ai.ts                                [NEW]
+│   ├── processing.ts                        [NEW]
+│   ├── ui.ts                                [NEW]
+│   └── types/                               [NEW]
+│       └── store.types.ts                   [NEW]
+├── types/
+│   ├── OperationTypes.ts                    [EDIT - Add store types]
+│   ├── ProcessingTypes.ts                   [EDIT - Add store types]
+│   ├── ServiceTypes.ts                      [EDIT - Add store types]
+│   └── SettingsTypes.ts                     [EDIT - Add store types]
+├── registrations/ [NEW]
+│   ├── index.ts                             [NEW]
+│   ├── StoreRegistrations.ts               [NEW]
+│   ├── CoreRegistrations.ts                [NEW]
+│   ├── AIRegistrations.ts                  [NEW]
+│   └── FileRegistrations.ts                [NEW]
+└── main.ts                                  [EDIT - Major simplification]
 
 
 # GraphWeaver Plugin for Obsidian

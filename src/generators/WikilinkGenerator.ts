@@ -1,10 +1,10 @@
 // src/generators/WikilinkGenerator.ts
 
 import { BaseGenerator, BaseGeneratorInput, BaseGeneratorOutput } from './BaseGenerator';
-import { AIAdapter, AIProvider } from 'src/models/AIModels';
-import { SettingsService } from '../services/SettingsService';
-import { WikilinkTextProcessor } from '../services/WikilinkTextProcessor';
-import { ServiceError } from '../services/core/ServiceError';
+import { AIAdapter, AIProvider } from '@type/ai.types';
+import { SettingsService } from '@services/SettingsService';
+import { WikilinkTextProcessor } from '@services/WikilinkTextProcessor';
+import { ServiceError } from '@services/core/ServiceError';
 
 /**
  * Input interface for wikilink generation

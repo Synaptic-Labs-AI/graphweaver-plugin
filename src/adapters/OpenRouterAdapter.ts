@@ -1,9 +1,10 @@
 // src/adapters/OpenRouterAdapter.ts
 
 import { Notice, requestUrl, RequestUrlResponse } from 'obsidian';
-import { AIProvider, AIResponse, AIAdapter, AIModel, AIModelMap, AIResponseOptions } from '../models/AIModels';
-import { SettingsService } from '../services/SettingsService';
-import { JsonValidationService } from '../services/JsonValidationService';
+import { AIProvider, AIResponse, AIAdapter, AIModel, AIResponseOptions } from '@type/ai.types';
+import { AIModelMap } from '@type/aiModels';
+import { SettingsService } from '@services/SettingsService';
+import { JsonValidationService } from '@services/JsonValidationService';
 
 /**
  * OpenRouter AI service adapter implementation

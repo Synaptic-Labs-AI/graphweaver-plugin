@@ -1,246 +1,163 @@
-// File: src/services/StartupGenerateService.ts
+// src/services/StartupGenerateService.ts
 
-import { TFile, Notice, App } from 'obsidian';
-import { AIService } from './ai/AIService';
-import { SettingsService } from './SettingsService';
-import { DatabaseService } from './DatabaseService';
-import { BatchProcessor } from '../generators/BatchProcessor';
-import { StateManager } from '../managers/StateManager';
-import { 
-    StartupStateManager, 
-    StartupState,
-    StartupStateEvents 
-} from '../managers/startup/StartupStateManager';
-import { FileQueueManager } from '../managers/startup/FileQueueManager';
-import { StartupConfigManager, StartupGenerateConfig } from '../managers/startup/StartupConfigManager';
+import { App, TFile } from 'obsidian';
+import { get, writable } from 'svelte/store';
 import { FileProcessorService } from './file/FileProcessorService';
 import { FileScannerService } from './file/FileScannerService';
-import { ServiceManager } from '../managers/ServiceManager';
+import { SettingsService } from './SettingsService';
+import { LifecycleState } from '@type/base.types';import { CoreService } from './core/CoreService';
+import { ServiceError } from './core/ServiceError';
+
+interface StartupState {
+  isProcessing: boolean;
+  processed: number;
+  total: number;
+  error?: string;
+}
 
 /**
- * Coordinates the startup content generation process using specialized managers
+ * Handles automatic frontmatter generation during plugin startup
  */
-export class StartupGenerateService {
-    public isInitialLoad: boolean = true;
+export class StartupGenerateService extends CoreService {
+  private isInitialLoad: boolean = true;
+  private startupTimeout?: number;
 
-    private stateManager: StartupStateManager;
-    private queueManager: FileQueueManager;
-    private configManager: StartupConfigManager;
-    private completionTimeout?: number;
-    private isUnloading: boolean = false;
-    private fileProcessor: FileProcessorService;
-    private fileScanner: FileScannerService
+  // Svelte store for state management
+  private startupState = writable<StartupState>({
+    isProcessing: false,
+    processed: 0,
+    total: 0
+  });
 
-    constructor(
-        private app: App,
-        private aiService: AIService,
-        private settingsService: SettingsService,
-        private databaseService: DatabaseService,
-        private batchProcessor: BatchProcessor,
-        private persistentStateManager: StateManager,
-        private serviceManager: ServiceManager, // Added to retrieve services
-        config: Partial<StartupGenerateConfig> = {}
-    ) {
-        // Initialize managers
-        this.stateManager = new StartupStateManager();
-        this.queueManager = new FileQueueManager();
-        this.configManager = new StartupConfigManager(config);
+  constructor(
+    private app: App,
+    private settingsService: SettingsService,
+    private fileScanner: FileScannerService,
+    private fileProcessor: FileProcessorService
+  ) {
+    super('startup-generate', 'Startup Generate Service');
+  }
 
-        // Retrieve FileProcessorService from ServiceManager
-        this.fileProcessor = this.serviceManager.getService<FileProcessorService>('file-processor');
+  /**
+   * Initialize service and run startup generation if enabled
+   */
+  protected async initializeInternal(): Promise<void> {
+    try {
+      if (!this.validateServices()) {
+        throw new ServiceError(this.serviceName, 'Required services not initialized');
+      }
 
-        this.setupInitialState();
+      // Only run on initial load and if auto-generate is enabled
+      if (this.isInitialLoad && this.shouldRunAutoGenerate()) {
+        this.startupTimeout = window.setTimeout(() => {
+          this.runStartupGenerate();
+        }, 1000); // Brief delay to let app fully load
+      }
+
+      this.isInitialLoad = false;
+
+    } catch (error) {
+      throw new ServiceError(this.serviceName, 'Failed to initialize', error);
+    }
+  }
+
+  /**
+   * Run the startup generation process
+   */
+  private async runStartupGenerate(): Promise<void> {
+    try {
+      this.startupState.set({ isProcessing: true, processed: 0, total: 0 });
+
+      // Get files needing frontmatter
+      const files = await this.scanVaultFiles();
+      
+      if (files.length === 0) {
+        this.startupState.set({ isProcessing: false, processed: 0, total: 0 });
+        return;
+      }
+
+      // Process files in batches
+      for (const file of files) {
+        if (!this.isReady()) break;
+        
+        await this.fileProcessor.processSingleFile(file, {
+          generateFrontMatter: true,
+          generateWikilinks: false
+        });
+
+        this.startupState.update(s => ({
+          ...s,
+          processed: s.processed + 1
+        }));
+      }
+
+      this.startupState.set({ isProcessing: false, processed: files.length, total: files.length });
+
+    } catch (error) {
+      this.startupState.update(s => ({
+        ...s,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }));
+    }
+  }
+
+  /**
+   * Scan vault for files needing frontmatter
+   */
+  private async scanVaultFiles(): Promise<TFile[]> {
+    const allFiles = this.app.vault.getMarkdownFiles();
+    const filesToProcess: TFile[] = [];
+
+    for (const file of allFiles) {
+      const hasFrontMatter = await this.fileScanner.hasFrontMatter(file);
+      if (!hasFrontMatter) {
+        filesToProcess.push(file);
+      }
     }
 
-    /**
-     * Setup initial state and completion timeout
-     */
-    private setupInitialState(): void {
-        if (this.isUnloading) return;
+    this.startupState.update(s => ({ ...s, total: filesToProcess.length }));
+    return filesToProcess;
+  }
 
-        this.stateManager.setState(StartupState.Initializing);
-        const config = this.configManager.getConfig();
+  /**
+   * Check if auto-generate should run based on settings
+   */
+  private shouldRunAutoGenerate(): boolean {
+    const settings = this.settingsService.getSettings();
+    return settings.frontMatter.autoGenerate;
+  }
 
-        this.completionTimeout = window.setTimeout(() => {
-            if (this.shouldRunAutoGenerate()) {
-                this.completeStartup();
-            }
-        }, config.startupDelay);
+  /**
+   * Validate required services exist
+   */
+  private validateServices(): boolean {
+    return !!(
+      this.fileProcessor &&
+      this.fileScanner &&
+      this.settingsService
+    );
+  }
+
+  /**
+   * Get current state
+   */
+  public getState(): { state: ServiceState; error: ServiceError | null } {
+    const startupState = get(this.startupState);
+    return {
+      state: startupState.error ? ServiceState.Error : 
+             startupState.isProcessing ? ServiceState.Initializing : 
+             ServiceState.Ready,
+      error: startupState.error ? new ServiceError(this.serviceName, startupState.error) : null
+    };
+  }
+
+  /**
+   * Clean up resources
+   */
+  protected async destroyInternal(): Promise<void> {
+    if (this.startupTimeout) {
+      clearTimeout(this.startupTimeout);
     }
-
-    /**
-     * Run startup generation process
-     */
-    public async runStartupGenerate(): Promise<void> {
-        if (this.isUnloading) return;
-
-        try {
-            if (!this.validateServices()) {
-                throw new Error('Required services not initialized');
-            }
-
-            if (!this.shouldRunAutoGenerate()) {
-                this.completeStartup();
-                return;
-            }
-
-            // Scan files
-            this.stateManager.setState(StartupState.Scanning);
-            const filesToProcess = await this.scanVaultFiles();
-
-            if (filesToProcess.length > 0) {
-                await this.processFiles(filesToProcess);
-            } else {
-                this.completeStartup();
-            }
-        } catch (error) {
-            this.handleError('Startup generation failed:', error);
-            this.stateManager.setState(StartupState.Error);
-        }
-    }
-
-    /**
-     * Scan vault for files needing processing
-     */
-    private async scanVaultFiles(): Promise<TFile[]> {
-        const allFiles = this.app.vault.getMarkdownFiles();
-
-        const filesToProcess: TFile[] = [];
-        let processedCount = 0;
-
-        for (const file of allFiles) {
-            if (await this.shouldProcessFile(file)) {
-                filesToProcess.push(file);
-            }
-
-            processedCount++;
-            this.stateManager.emitProgress(processedCount, allFiles.length);
-        }
-
-        return filesToProcess;
-    }
-
-    /**
-     * Process files using BatchProcessor
-     */
-    private async processFiles(files: TFile[]): Promise<void> {
-        if (this.isUnloading) return;
-
-        this.stateManager.setState(StartupState.Processing);
-
-        try {
-            await this.batchProcessor.generate({
-                files,
-                generateFrontMatter: true,
-                generateWikilinks: true
-            });
-        } catch (error) {
-            this.handleError('Error processing files:', error);
-        } finally {
-            this.completeStartup();
-        }
-    }
-
-    /**
-     * Check if file should be processed based on existing front matter
-     */
-    private async shouldProcessFile(file: TFile): Promise<boolean> {
-        if (this.isUnloading) return false;
-
-        try {
-            const hasFrontMatter = await this.fileScanner.hasFrontMatter(file);
-            return !hasFrontMatter;
-        } catch (error) {
-            this.handleError(`Error checking file ${file.path}:`, error);
-            return false;
-        }
-    }
-
-    /**
-     * Check if auto-generate should run
-     */
-    private shouldRunAutoGenerate(): boolean {
-        if (this.isUnloading) return false;
-
-        return this.settingsService.getSettings().frontMatter.autoGenerate &&
-               this.stateManager.getState() !== StartupState.Completed;
-    }
-
-    /**
-     * Validate required services
-     */
-    private validateServices(): boolean {
-        return !!(
-            this.fileProcessor &&
-            this.settingsService &&
-            this.databaseService &&
-            this.aiService &&
-            this.batchProcessor
-        );
-    }
-
-    /**
-     * Complete startup process
-     */
-    private completeStartup(): void {
-        if (this.isUnloading) return;
-
-        if (this.completionTimeout) {
-            clearTimeout(this.completionTimeout);
-            this.completionTimeout = undefined;
-        }
-
-        this.stateManager.setState(StartupState.Completed);
-        this.stateManager.emitEvent('completed');
-    }
-
-    /**
-     * Handle errors consistently
-     */
-    private handleError(message: string, error: unknown): void {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.error(message, error);
-
-        if (error instanceof Error) {
-            this.stateManager.emitEvent('error', error);
-        }
-
-        if (!this.isUnloading) {
-        }
-    }
-
-    /**
-     * Get current startup state
-     */
-    public getCurrentState(): StartupState {
-        return this.stateManager.getState();
-    }
-
-    /**
-     * Subscribe to state events with proper typing
-     */
-    public on<K extends keyof StartupStateEvents>(
-        event: K,
-        callback: StartupStateEvents[K]
-    ): void {
-        if (!this.isUnloading) {
-            this.stateManager.on(event, callback);
-        }
-    }
-
-    /**
-     * Clean up resources
-     */
-    public destroy(): void {
-        this.isUnloading = true;
-
-        if (this.completionTimeout) {
-            clearTimeout(this.completionTimeout);
-            this.completionTimeout = undefined;
-        }
-
-        this.stateManager.destroy();
-        this.queueManager.destroy();
-        this.configManager.destroy();
-    }
+    this.startupState.set({ isProcessing: false, processed: 0, total: 0 });
+  }
 }

@@ -1,6 +1,6 @@
-import { AIProvider, AIAdapter } from '../../models/AIModels';
+import { AIProvider, AIAdapter } from '@type/ai.types';
 import { AdapterRegistry } from './AdapterRegistry';
-import { AIServiceError } from './AIServiceError';
+import { ServiceError } from '@services/core/ServiceError';
 
 /**
  * Handles AI provider connection testing and status management
@@ -17,7 +17,7 @@ export class AIConnectionService {
             const testModel = adapter.getAvailableModels()[0];
             return await adapter.testConnection("Return the word 'OK'.", testModel);
         } catch (error) {
-            throw new AIServiceError(`Failed to test connection for provider ${provider}`, error);
+            throw new ServiceError(`Failed to test connection for provider ${provider}`, (error as Error).message);
         }
     }
 
@@ -50,7 +50,7 @@ export class AIConnectionService {
         try {
             return this.getAdapter(provider).getAvailableModels();
         } catch (error) {
-            throw new AIServiceError(`Failed to get models for provider ${provider}`, error);
+            throw new ServiceError(`Failed to get models for provider ${provider}`, (error as Error).message);
         }
     }
 
@@ -63,7 +63,7 @@ export class AIConnectionService {
             adapter.setApiKey(apiKey);
             return await adapter.validateApiKey();
         } catch (error) {
-            throw new AIServiceError(`Failed to validate API key for provider ${provider}`, error);
+            throw new ServiceError(`Failed to validate API key for provider ${provider}`, (error as Error).message);
         }
     }
 }

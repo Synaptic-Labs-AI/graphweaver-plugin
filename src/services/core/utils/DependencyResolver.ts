@@ -1,7 +1,7 @@
-// src/services/core/DependencyResolver.ts
+// src/services/core/utils/DependencyResolver.ts
 
 import { ServiceError } from "../ServiceError";
-import { ServiceRegistration } from "src/types/ServiceTypes";
+import { ServiceRegistration } from "../../../types/services.types";
 
 /**
  * Utility class to resolve service dependencies and calculate initialization order

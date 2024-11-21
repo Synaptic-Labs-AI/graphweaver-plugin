@@ -1,7 +1,8 @@
 import { Notice, requestUrl, RequestUrlResponse } from 'obsidian';
-import { AIProvider, AIResponse, AIAdapter, AIModel, AIModelMap } from '../models/AIModels';
-import { SettingsService } from '../services/SettingsService';
-import { JsonValidationService } from '../services/JsonValidationService';
+import { AIProvider, AIResponse, AIAdapter, AIModel } from '@type/ai.types';
+import { AIModelMap } from '@type/aiModels';
+import { SettingsService } from '@services/SettingsService';
+import { JsonValidationService } from '@services/JsonValidationService';
 
 export class AnthropicAdapter implements AIAdapter {
     public apiKey: string;

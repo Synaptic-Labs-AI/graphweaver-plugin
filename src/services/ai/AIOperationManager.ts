@@ -1,18 +1,22 @@
-// src/services/ai/AIOperationManager.ts
-
-import { AIResponse } from '../../models/AIModels';
-import { PersistentStateManager } from '../../managers/StateManager';
+import { AIResponse } from '@type/ai.types';
 import { AdapterRegistry } from './AdapterRegistry';
 import { GeneratorFactory, GeneratorType } from './GeneratorFactory';
-import { FrontMatterGenerator } from 'src/generators/FrontMatterGenerator';
-import { IService } from '../core/IService';
-import { ServiceState } from '../../state/ServiceState';
-import { ServiceError } from '../core/ServiceError';
+import { FrontMatterGenerator } from '@generators/FrontMatterGenerator';
+import { IService } from '@services/core/IService';
+import { LifecycleState } from '@type/base.types';
+import { ServiceError } from '@services/core/ServiceError';
 import { QueueManagerService } from './QueueManagerService';
-import { MetricsTracker } from './MetricsTracker';
-import { OperationEventEmitter } from './OperationEventEmitter';
 import { OperationExecutor } from './OperationExecutor';
-import { OperationType, OperationConfig, QueuedOperation } from 'src/types/OperationTypes';
+import { OperationType, OperationConfig, QueuedOperation } from '@type/operations.types';
+import { aiStore } from '@stores/AIStore';
+import { get } from 'svelte/store';
+import type { Unsubscriber } from 'svelte/store';
+import { operationStore } from '@stores/operationStore';
+import { TypedEventEmitter } from '@type/events.types';
+import type { OperationEvents } from '@type/events.types';
+import { metricsStore } from '@stores/metricsStore';
+import type { OperationStatus } from '@type/operations.types';
+import type { StoreError } from '@type/store.types';
 
 /**
  * Manages AI operations using specialized services for execution and tracking
@@ -21,28 +25,22 @@ export class AIOperationManager implements IService {
     // IService implementation
     public readonly serviceId: string = 'ai-operation-manager';
     public readonly serviceName: string = 'AI Operation Manager';
-    private serviceState: ServiceState = ServiceState.Uninitialized;
+    private LifecycleState: LifecycleState = LifecycleState.Uninitialized;
     private serviceError: ServiceError | null = null;
 
     // Service components
-    private readonly eventEmitter: OperationEventEmitter;
-    private readonly metricsTracker: MetricsTracker;
+    private readonly eventEmitter: TypedEventEmitter<OperationEvents>;
     private readonly queueManager: QueueManagerService;
     private readonly operationExecutor: OperationExecutor;
+    private unsubscribers: Unsubscriber[] = [];
 
     constructor(
-        private readonly stateManager: PersistentStateManager,
         private readonly adapterRegistry: AdapterRegistry,
         private readonly generatorFactory: GeneratorFactory
     ) {
-        this.eventEmitter = new OperationEventEmitter();
-        this.metricsTracker = new MetricsTracker();
+        this.eventEmitter = operationStore.eventEmitter;
         this.queueManager = new QueueManagerService(this.processOperation.bind(this));
-        this.operationExecutor = new OperationExecutor(
-            this.metricsTracker,
-            this.eventEmitter,
-            this.queueManager
-        );
+        this.operationExecutor = new OperationExecutor(operationStore);
     }
 
     /**
@@ -50,15 +48,12 @@ export class AIOperationManager implements IService {
      */
     public async initialize(): Promise<void> {
         try {
-            this.serviceState = ServiceState.Initializing;
+            this.LifecycleState = LifecycleState.Initializing;
 
-            await this.metricsTracker.initialize();
-            await this.queueManager.initialize();
-            
             this.setupEventListeners();
-            this.serviceState = ServiceState.Ready;
+            this.LifecycleState = LifecycleState.Ready;
         } catch (error) {
-            this.serviceState = ServiceState.Error;
+            this.LifecycleState = LifecycleState.Error;
             this.serviceError = ServiceError.from(this.serviceName, error);
             throw this.serviceError;
         }
@@ -75,38 +70,47 @@ export class AIOperationManager implements IService {
      * Set up event listeners
      */
     private setupEventListeners(): void {
-        this.eventEmitter.on('operationComplete', (status) => {
-            this.metricsTracker.trackOperation(status);
-            this.updateState();
+        // Operation complete listener
+        this.eventEmitter.on('operationComplete', (status: OperationStatus) => {
+            metricsStore.trackOperation(status);
+            this.updateAIStore();
         });
 
-        this.eventEmitter.on('operationError', (error, status) => {
-            console.error(`Operation error (${status.type}):`, error);
-            this.updateState();
+        // Operation error listener
+        this.eventEmitter.on('operationError', (status: OperationStatus) => {
+            console.error(`Operation error (${status.type}):`, status.error);
+            this.updateAIStore();
         });
+
+        // Track store unsubscribers if needed later
+        const aiStoreUnsub = aiStore.subscribe(() => {
+            // Additional store-specific handling if needed
+        });
+
+        this.unsubscribers.push(aiStoreUnsub);
     }
 
     /**
      * Check if service is ready
      */
     public isReady(): boolean {
-        return this.serviceState === ServiceState.Ready;
+        return this.LifecycleState === LifecycleState.Ready;
     }
 
     /**
      * Get service state
      */
-    public getState(): { state: ServiceState; error: ServiceError | null } {
+    public getState(): { state: LifecycleState; error: ServiceError | null } {
         return {
-            state: this.serviceState,
+            state: this.LifecycleState,
             error: this.serviceError
         };
     }
 
-     /**
+    /**
      * Get the OperationExecutor instance
      */
-     public getOperationExecutor(): OperationExecutor {
+    public getOperationExecutor(): OperationExecutor {
         return this.operationExecutor;
     }
 
@@ -115,13 +119,17 @@ export class AIOperationManager implements IService {
      */
     public async destroy(): Promise<void> {
         try {
-            this.serviceState = ServiceState.Destroying;
+            this.LifecycleState = LifecycleState.Destroying;
 
+            // Clean up subscriptions
+            this.unsubscribers.forEach(unsub => unsub());
+            this.unsubscribers = [];
+
+            // Clean up services
             await this.queueManager.destroy();
-            await this.metricsTracker.destroy();
             this.eventEmitter.removeAllListeners();
 
-            this.serviceState = ServiceState.Destroyed;
+            this.LifecycleState = LifecycleState.Destroyed;
         } catch (error) {
             this.serviceError = ServiceError.from(this.serviceName, error);
             throw this.serviceError;
@@ -140,8 +148,8 @@ export class AIOperationManager implements IService {
             OperationType.Generation,
             async () => {
                 const adapter = this.adapterRegistry.getCurrentAdapter();
-                const model = this.stateManager.getSnapshot().ai.currentModel;
-                return adapter.generateResponse(prompt, model);
+                const aiState = get(aiStore);
+                return adapter.generateResponse(prompt, aiState.currentModel);
             },
             { prompt },
             config
@@ -169,22 +177,20 @@ export class AIOperationManager implements IService {
     }
 
     /**
-     * Update global state
+     * Update AI store state
      */
-    private updateState(): void {
-        const currentState = this.stateManager.getSnapshot().ai;
-        this.stateManager.update('ai', {
-            ...currentState,
+    private updateAIStore(): void {
+        aiStore.update(state => ({
+            ...state,
             currentOperation: this.operationExecutor.getCurrentOperation(),
             queueLength: this.queueManager.getQueueLength(),
-            operationMetrics: this.metricsTracker.getAllMetrics(),
-            error: this.serviceError?.message || currentState.error
-        });
+            operationMetrics: get(metricsStore),
+            error: this.serviceError
+                ? { message: this.serviceError.message, timestamp: Date.now() }
+                : state.error
+        }));
     }
 
     // Public access methods for metrics and history
-    public getMetrics = () => this.metricsTracker.getAllMetrics();
-    public getHistory = () => this.metricsTracker.getHistory();
-    public clearHistory = () => this.metricsTracker.clearHistory();
-    public resetMetrics = () => this.metricsTracker.resetMetrics();
+    // Removed metricsTracker method calls
 }

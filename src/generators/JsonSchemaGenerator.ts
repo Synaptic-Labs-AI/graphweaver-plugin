@@ -1,9 +1,9 @@
 // src/generators/JsonSchemaGenerator.ts
 
-import { BaseGenerator, BaseGeneratorInput, BaseGeneratorOutput } from './BaseGenerator';
-import { AIAdapter } from 'src/models/AIModels';
-import { SettingsService } from '../services/SettingsService';
-import { PropertyTag } from '../models/PropertyTag';
+import { BaseGenerator, BaseGeneratorInput, BaseGeneratorOutput } from '@generators/BaseGenerator';
+import { AIAdapter } from '@type/ai.types';
+import { SettingsService } from '@services/SettingsService';
+import { PropertyTag } from '@type/metadata.types';
 
 /**
  * Generator for creating JSON schemas with lazy settings initialization
@@ -53,7 +53,7 @@ export class JsonSchemaGenerator extends BaseGenerator<BaseGeneratorInput, BaseG
                         type: 'array',
                         items: {
                             type: 'string',
-                            enum: settings.tags.customTags.map(tag => tag.name)
+                            enum: settings.tags.customTags.map((tag: { name: string }) => tag.name)
                         },
                         description: 'Select appropriate tags from the provided list'
                     };

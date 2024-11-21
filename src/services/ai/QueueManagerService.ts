@@ -1,8 +1,7 @@
 // src/services/ai/QueueManagerService.ts
 
-import { CoreService } from '../core/CoreService';
-import { OperationType, OperationStatus, QueuedOperation } from 'src/types/OperationTypes';
-import { ServiceState } from '../../state/ServiceState';
+import { CoreService } from "@services/core/CoreService";
+import { OperationType, QueuedOperation } from '../../types/operations.types';
 
 export class QueueManagerService extends CoreService {
     private operationQueue: QueuedOperation[] = [];
@@ -39,6 +38,9 @@ export class QueueManagerService extends CoreService {
 
         this.operationQueue.push(operation);
         this.sortQueue();
+        
+        // Update stores instead of maintaining internal state
+        operationStore.updateQueue(this.operationQueue.length);
     }
 
     /**
@@ -86,12 +88,14 @@ export class QueueManagerService extends CoreService {
         }
 
         this.isProcessing = true;
+        operationStore.updateProgress(0);
 
         try {
             const operation = this.operationQueue[0];
             await this.processOperation(operation);
             // Remove processed operation
             this.operationQueue = this.operationQueue.filter(op => op.id !== operation.id);
+            operationStore.updateQueue(this.operationQueue.length);
         } finally {
             this.isProcessing = false;
         }

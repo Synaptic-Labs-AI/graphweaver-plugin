@@ -1,8 +1,8 @@
 // src/managers/DatabaseManager.ts
 
-import { App } from 'obsidian';
-import { DatabaseService } from '../services/DatabaseService';
-import { ServiceError } from '../services/core/ServiceError';
+import { App, Plugin } from 'obsidian';
+import { DatabaseService } from '@services/DatabaseService';
+import { ServiceError } from '@services/core/ServiceError';
 
 /**
  * DatabaseManager is responsible for managing the DatabaseService,
@@ -12,18 +12,9 @@ export class DatabaseManager {
     public app: App;
     public databaseService: DatabaseService;
 
-    constructor(app: App) {
-        this.app = app;
-        this.databaseService = new DatabaseService(
-            async () => {
-                // Load callback: Read data from the file
-                return await this.loadDatabaseData();
-            },
-            async (data: any) => {
-                // Save callback: Write data to the file
-                await this.saveDatabaseData(data);
-            }
-        );
+    constructor(private plugin: Plugin) {
+        this.app = plugin.app;
+        this.databaseService = new DatabaseService(plugin);
     }
 
     /**
@@ -31,7 +22,7 @@ export class DatabaseManager {
      */
     public async initialize(): Promise<void> {
         try {
-            await this.databaseService.initializeInternal();
+            await this.databaseService.initialize(); // Call the public initialize method
         } catch (error) {
             console.error('DatabaseManager: Failed to initialize DatabaseService', error);
             throw new ServiceError(

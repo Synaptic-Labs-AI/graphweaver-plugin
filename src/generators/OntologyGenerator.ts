@@ -1,10 +1,10 @@
 // src/generators/OntologyGenerator.ts
 
-import { BaseGenerator } from './BaseGenerator';
-import { AIAdapter } from 'src/models/AIModels';
-import { SettingsService } from '../services/SettingsService';
-import { Tag } from '../models/PropertyTag';
-import { OntologyInput, OntologyResult } from '../models/OntologyTypes';
+import { BaseGenerator } from '@generators/BaseGenerator';
+import { AIAdapter } from '@type/ai.types';
+import { SettingsService } from '@services/SettingsService';
+import { Tag } from '@type/metadata.types';
+import { OntologyInput, OntologyResult } from '@type/ontology.types';
 
 /**
  * Generator class responsible for creating ontologies based on provided input.

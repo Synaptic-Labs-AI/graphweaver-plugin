@@ -1,6 +1,6 @@
 // src/services/core/IService.ts
 
-import { ServiceState } from "src/state/ServiceState";
+import { ServiceState } from "@type/services.types";
 import { ServiceError } from './ServiceError';
 
 /**

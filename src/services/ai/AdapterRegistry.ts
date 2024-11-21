@@ -1,17 +1,19 @@
-import { AIProvider, AIAdapter, AIModel, AIModelMap } from '../../models/AIModels';
-import { OpenAIAdapter } from "../../adapters/OpenAIAdapter";
-import { AnthropicAdapter } from "../../adapters/AnthropicAdapter";
-import { GeminiAdapter } from "../../adapters/GeminiAdapter";
-import { GroqAdapter } from "../../adapters/GroqAdapter";
-import { OpenRouterAdapter } from "../../adapters/OpenRouterAdapter";
-import { LMStudioAdapter } from "../../adapters/LMStudioAdapter";
+import { AIProvider, AIAdapter, AIModel } from '@type/ai.types';
+import { AIModelMap } from '@type/aiModels';
+import { OpenAIAdapter } from "@adapters/OpenAIAdapter";
+import { AnthropicAdapter } from "@adapters/AnthropicAdapter";
+import { GeminiAdapter } from "@adapters/GeminiAdapter";
+import { GroqAdapter } from "@adapters/GroqAdapter";
+import { OpenRouterAdapter } from "@adapters/OpenRouterAdapter";
+import { LMStudioAdapter } from "@adapters/LMStudioAdapter";
 import { SettingsService } from "../SettingsService";
-import { JsonValidationService } from "../JsonValidationService";
-import { PersistentStateManager } from "../../managers/StateManager";
-import { PluginState } from "../../state/PluginState";
-import { IService } from '../core/IService';
-import { ServiceState } from '../../state/ServiceState';
-import { ServiceError } from '../core/ServiceError';
+import { JsonValidationService } from '@services/JsonValidationService';
+import { IService } from '@services/core/IService';
+import { LifecycleState } from '@type/base.types';import { ServiceError } from '@services/core/ServiceError';
+import { aiStore } from '@stores/AIStore';
+import { settingsStore } from '@stores/SettingStore';
+import type { Unsubscriber } from 'svelte/store';
+import { get } from 'svelte/store';
 
 /**
  * Interface for adapter status tracking
@@ -26,32 +28,41 @@ interface AdapterStatus {
 
 /**
  * Manages AI provider adapters lifecycle and state
- * Provides centralized adapter access and health monitoring
  */
 export class AdapterRegistry implements IService {
     // IService implementation
     public readonly serviceId = 'adapter-registry';
     public readonly serviceName = 'Adapter Registry';
-    private serviceState: ServiceState = ServiceState.Uninitialized;
+    private LifecycleState: LifecycleState = LifecycleState.Uninitialized;
     private serviceError: ServiceError | null = null;
 
     // Adapter management
     private adapters: Map<AIProvider, AIAdapter>;
     private adapterStatus: Map<AIProvider, AdapterStatus>;
-    public currentProvider: AIProvider;
-    private stateSnapshot: PluginState;
-    private unsubscribeCallbacks: (() => void)[] = [];
+    private currentProvider: AIProvider;
+    private unsubscribers: Unsubscriber[] = [];
     private isUnloading = false;
 
     constructor(
-        private stateManager: PersistentStateManager,
         private settingsService: SettingsService,
         private jsonValidationService: JsonValidationService
     ) {
         this.adapters = new Map();
         this.adapterStatus = new Map();
-        this.stateSnapshot = this.stateManager.getSnapshot();
-        this.currentProvider = this.stateSnapshot.settings.aiProvider;
+        
+        // Get initial provider from settings store
+        const settings = get(settingsStore);
+        this.currentProvider = settings.aiProvider.selected;
+    }
+
+    /**
+     * Get current service state
+     */
+    public getState(): { state: LifecycleState; error: ServiceError | null } {
+        return {
+            state: this.LifecycleState,
+            error: this.serviceError
+        };
     }
 
     /**
@@ -59,12 +70,12 @@ export class AdapterRegistry implements IService {
      */
     public async initialize(): Promise<void> {
         try {
-            this.serviceState = ServiceState.Initializing;
+            this.LifecycleState = LifecycleState.Initializing;
             await this.initializeAdapters();
-            await this.setupSubscriptions();
-            this.serviceState = ServiceState.Ready;
+            this.setupSubscriptions();
+            this.LifecycleState = LifecycleState.Ready;
         } catch (error) {
-            this.serviceState = ServiceState.Error;
+            this.LifecycleState = LifecycleState.Error;
             this.serviceError = error instanceof ServiceError ? error : 
                 new ServiceError(this.serviceName, 'Failed to initialize adapters');
             throw this.serviceError;
@@ -75,7 +86,7 @@ export class AdapterRegistry implements IService {
      * Check if service is ready
      */
     public isReady(): boolean {
-        return this.serviceState === ServiceState.Ready && !this.isUnloading;
+        return this.LifecycleState === LifecycleState.Ready && !this.isUnloading;
     }
 
     /**
@@ -86,16 +97,15 @@ export class AdapterRegistry implements IService {
 
         try {
             this.isUnloading = true;
-            this.serviceState = ServiceState.Destroying;
+            this.LifecycleState = LifecycleState.Destroying;
 
             // Clean up subscriptions
-            this.unsubscribeCallbacks.forEach(unsubscribe => unsubscribe());
-            this.unsubscribeCallbacks = [];
+            this.unsubscribers.forEach(unsubscribe => unsubscribe());
+            this.unsubscribers = [];
 
-            // Clean up adapters with proper type checking for callable
+            // Clean up adapters
             const cleanupPromises = Array.from(this.adapters.values())
                 .map(async (adapter) => {
-                    // Check both existence and that it's a callable function
                     if ('destroy' in adapter && 
                         adapter.destroy && 
                         typeof adapter.destroy === 'function') {
@@ -110,18 +120,15 @@ export class AdapterRegistry implements IService {
                     }
                 });
 
-            // Wait for all cleanup to complete
             await Promise.all(cleanupPromises);
-
-            // Clear adapter references
             this.adapters.clear();
             this.adapterStatus.clear();
 
-            this.updateState();
-            this.serviceState = ServiceState.Destroyed;
+            this.updateAIStore();
+            this.LifecycleState = LifecycleState.Destroyed;
 
         } catch (error) {
-            this.serviceState = ServiceState.Error;
+            this.LifecycleState = LifecycleState.Error;
             this.serviceError = error instanceof ServiceError ? error :
                 new ServiceError(this.serviceName, 'Failed to destroy adapters');
             throw this.serviceError;
@@ -129,13 +136,17 @@ export class AdapterRegistry implements IService {
     }
 
     /**
-     * Get current service state
+     * Set up store subscriptions
      */
-    public getState(): { state: ServiceState; error: ServiceError | null } {
-        return { 
-            state: this.serviceState, 
-            error: this.serviceError 
-        };
+    private setupSubscriptions(): void {
+        // Monitor settings changes
+        const settingsUnsub = settingsStore.subscribe(settings => {
+            if (!this.isUnloading && settings.aiProvider.selected !== this.currentProvider) {
+                void this.handleProviderChange(settings.aiProvider.selected);
+            }
+        });
+
+        this.unsubscribers.push(settingsUnsub);
     }
 
     /**
@@ -168,34 +179,13 @@ export class AdapterRegistry implements IService {
             }
         }
 
-        this.updateState();
-    }
-
-    /**
-     * Set up state subscriptions
-     */
-    private async setupSubscriptions(): Promise<void> {
-        // Settings subscription
-        const settingsUnsubscribe = this.stateManager.subscribe('settings', async (settings) => {
-            if (!this.isUnloading && settings.aiProvider !== this.currentProvider) {
-                await this.handleProviderChange(settings.aiProvider);
-            }
-        });
-        this.unsubscribeCallbacks.push(settingsUnsubscribe);
-
-        // AI state subscription
-        const aiStateUnsubscribe = this.stateManager.subscribe('ai', () => {
-            if (!this.isUnloading) {
-                this.stateSnapshot = this.stateManager.getSnapshot();
-            }
-        });
-        this.unsubscribeCallbacks.push(aiStateUnsubscribe);
+        this.updateAIStore();
     }
 
     /**
      * Handle provider changes
      */
-    public async handleProviderChange(newProvider: AIProvider): Promise<void> {
+    private async handleProviderChange(newProvider: AIProvider): Promise<void> {
         if (this.isUnloading) return;
 
         try {
@@ -210,20 +200,22 @@ export class AdapterRegistry implements IService {
             }
 
             this.currentProvider = newProvider;
-            this.updateState();
+            this.updateAIStore();
         } catch (error) {
             this.handleError(error as Error);
             
             if (!this.isUnloading) {
-                this.stateManager.update('settings', {
-                    aiProvider: this.currentProvider
-                });
+                settingsStore.update(settings => ({
+                    ...settings,
+                    aiProvider: {
+                        ...settings.aiProvider,
+                        selected: this.currentProvider
+                    }
+                }));
             }
         }
     }
 
-    // Rest of the public interface methods remain the same, but with isUnloading checks added
-    
     public getAdapter(provider: AIProvider): AIAdapter | undefined {
         return this.adapters.get(provider);
     }
@@ -273,7 +265,7 @@ export class AdapterRegistry implements IService {
         }
 
         try {
-            const models = this.getAvailableModels(provider);
+            const models = AIModelMap[provider] || [];
             if (models.length === 0) {
                 throw new Error(`No models available for provider: ${provider}`);
             }
@@ -300,7 +292,7 @@ export class AdapterRegistry implements IService {
         }
     }
 
-    public updateAdapterStatus(
+    private updateAdapterStatus(
         provider: AIProvider,
         status: Partial<AdapterStatus>
     ): void {
@@ -316,29 +308,26 @@ export class AdapterRegistry implements IService {
             ...status
         });
         
-        this.updateState();
+        this.updateAIStore();
     }
 
-    public getAvailableModels(provider: AIProvider): AIModel[] {
-        return AIModelMap[provider] || [];
-    }
-
-    private updateState(): void {
+    private updateAIStore(): void {
         if (this.isUnloading) return;
 
         const currentAdapter = this.adapters.get(this.currentProvider);
         const currentStatus = this.adapterStatus.get(this.currentProvider);
 
         if (currentAdapter && currentStatus) {
-            this.stateManager.update('ai', {
+            aiStore.update(state => ({
+                ...state,
                 isConnected: currentStatus.isConnected,
                 currentModel: currentAdapter.getApiKey() ? 
                     AIModelMap[this.currentProvider][0].apiName : '',
                 isProcessing: false,
                 provider: this.currentProvider,
-                availableModels: this.getAvailableModels(this.currentProvider),
+                availableModels: AIModelMap[this.currentProvider] || [],
                 error: currentStatus.lastError
-            });
+            }));
         }
     }
 
@@ -348,7 +337,8 @@ export class AdapterRegistry implements IService {
         console.error('AdapterRegistry error:', error);
         this.serviceError = new ServiceError(this.serviceName, error.message);
         
-        this.stateManager.update('ai', {
+        aiStore.update(state => ({
+            ...state,
             error: error.message,
             lastError: {
                 message: error.message,
@@ -356,7 +346,7 @@ export class AdapterRegistry implements IService {
             },
             isConnected: false,
             isProcessing: false
-        });
+        }));
     }
 
     // Utility methods
@@ -379,14 +369,11 @@ export class AdapterRegistry implements IService {
             .map(([provider]) => provider);
     }
 
-    public getAllAvailableModels(): { provider: AIProvider; model: AIModel }[] {
-        const models: { provider: AIProvider; model: AIModel }[] = [];
+    public getAllAvailableModels(): AIModel[] {
+        const allModels: AIModel[] = [];
         for (const provider of this.adapters.keys()) {
-            const providerModels = this.getAvailableModels(provider);
-            providerModels.forEach(model => {
-                models.push({ provider, model });
-            });
+            allModels.push(...(AIModelMap[provider] || []));
         }
-        return models;
+        return allModels;
     }
 }

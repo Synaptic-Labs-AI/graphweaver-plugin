@@ -1,19 +1,19 @@
 // src/services/ai/GeneratorFactory.ts
 
-import { BaseGenerator } from '../../generators/BaseGenerator';
-import { FrontMatterGenerator } from '../../generators/FrontMatterGenerator';
-import { WikilinkGenerator } from '../../generators/WikilinkGenerator';
-import { OntologyGenerator } from '../../generators/OntologyGenerator';
-import { JsonSchemaGenerator } from '../../generators/JsonSchemaGenerator';
-import { KnowledgeBloomGenerator } from '../../generators/KnowledgeBloomGenerator';
+import { get } from 'svelte/store';
+import { BaseGenerator } from '@generators/BaseGenerator';
+import { FrontMatterGenerator } from '@generators/FrontMatterGenerator';
+import { WikilinkGenerator } from '@generators/WikilinkGenerator';
+import { OntologyGenerator } from '@generators/OntologyGenerator';
+import { JsonSchemaGenerator } from '@generators/JsonSchemaGenerator';
+import { KnowledgeBloomGenerator } from '@generators/KnowledgeBloomGenerator';
 import { App } from 'obsidian';
-import { SettingsService } from '../SettingsService';
-import { PersistentStateManager } from '../../managers/StateManager';
+import { SettingsService } from '@services/SettingsService';
 import { AdapterRegistry } from './AdapterRegistry';
-import { IService } from '../core/IService';
-import { ServiceState } from '../../state/ServiceState';
-import { ServiceError } from '../core/ServiceError';
-import { WikilinkTextProcessor } from '../WikilinkTextProcessor';
+import { IService } from '@generators/BaseGenerator';
+import { LifecycleState } from '@type/base.types';import { ServiceError } from '@services/core/ServiceError';
+import { WikilinkTextProcessor } from '@services/WikilinkTextProcessor';
+import { aiStore } from '@stores/AIStore';
 
 /**
  * Available generator types
@@ -64,7 +64,7 @@ export class GeneratorFactory implements IService {
     // IService implementation
     public readonly serviceId = 'generator-factory';
     public readonly serviceName = 'Generator Factory Service';
-    protected serviceState: ServiceState = ServiceState.Uninitialized;
+    protected LifecycleState: LifecycleState = LifecycleState.Uninitialized;
     protected serviceError: ServiceError | null = null;
     protected isUnloading: boolean = false;
 
@@ -77,7 +77,6 @@ export class GeneratorFactory implements IService {
 
     constructor(
         public app: App,
-        public stateManager: PersistentStateManager,
         public settingsService: SettingsService,
         public adapterRegistry: AdapterRegistry,
         wikilinkProcessor: WikilinkTextProcessor
@@ -95,11 +94,11 @@ export class GeneratorFactory implements IService {
         }
 
         try {
-            this.serviceState = ServiceState.Initializing;
+            this.LifecycleState = LifecycleState.Initializing;
             await this.initializeEssentialGenerators();
-            this.serviceState = ServiceState.Ready;
+            this.LifecycleState = LifecycleState.Ready;
         } catch (error) {
-            this.serviceState = ServiceState.Error;
+            this.LifecycleState = LifecycleState.Error;
             this.serviceError = ServiceError.from(
                 this.serviceName,
                 error,
@@ -143,7 +142,7 @@ export class GeneratorFactory implements IService {
      * Check if service is ready
      */
     public isReady(): boolean {
-        return this.serviceState === ServiceState.Ready && !this.isUnloading;
+        return this.LifecycleState === LifecycleState.Ready && !this.isUnloading;
     }
 
     /**
@@ -154,11 +153,11 @@ export class GeneratorFactory implements IService {
 
         try {
             this.isUnloading = true;
-            this.serviceState = ServiceState.Destroying;
+            this.LifecycleState = LifecycleState.Destroying;
             await this.cleanup();
-            this.serviceState = ServiceState.Destroyed;
+            this.LifecycleState = LifecycleState.Destroyed;
         } catch (error) {
-            this.serviceState = ServiceState.Error;
+            this.LifecycleState = LifecycleState.Error;
             this.serviceError = ServiceError.from(
                 this.serviceName,
                 error,
@@ -187,9 +186,9 @@ export class GeneratorFactory implements IService {
         });
     }
 
-    public getState(): { state: ServiceState; error: ServiceError | null } {
+    public getState(): { state: LifecycleState; error: ServiceError | null } {
         return {
-            state: this.serviceState,
+            state: this.LifecycleState,
             error: this.serviceError
         };
     }
@@ -345,19 +344,18 @@ export class GeneratorFactory implements IService {
     }
 
     /**
-     * Update generator state and notify state manager
+     * Update generator state and notify store
      */
-    public updateState(type: GeneratorType, state: GeneratorState, error?: string): void {
+    private updateState(type: GeneratorType, state: GeneratorState, error?: string): void {
         if (this.isUnloading) return;
-
         this.states.set(type, state);
-        this.updateStateManager(type, error);
+        this.updateStore(type, error);
     }
 
     /**
-     * Update state manager with current generator status
+     * Update AI store with current generator status
      */
-    public updateStateManager(updatedType: GeneratorType, error?: string): void {
+    private updateStore(updatedType: GeneratorType, error?: string): void {
         if (this.isUnloading) return;
 
         const generatorStatuses: Record<GeneratorType, GeneratorStatus> = {} as Record<GeneratorType, GeneratorStatus>;
@@ -377,11 +375,11 @@ export class GeneratorFactory implements IService {
             };
         });
 
-        const currentState = this.stateManager.getSnapshot().ai;
-        this.stateManager.update('ai', {
-            ...currentState,
+        // Update the AI store
+        aiStore.update(state => ({
+            ...state,
             generators: generatorStatuses
-        });
+        }));
     }
 
     /**
@@ -398,7 +396,7 @@ export class GeneratorFactory implements IService {
             this.instances.delete(type);
             this.lastRun.delete(type);
             this.states.set(type, GeneratorState.NotInitialized);
-            this.updateStateManager(type);
+            this.updateStore(type);
         }
     }
 
@@ -430,9 +428,9 @@ export class GeneratorFactory implements IService {
     /**
      * Get service state information
      */
-    public getServiceState(): { state: ServiceState; error: ServiceError | null } {
+    public getLifecycleState(): { state: LifecycleState; error: ServiceError | null } {
         return {
-            state: this.serviceState,
+            state: this.LifecycleState,
             error: this.serviceError
         };
     }

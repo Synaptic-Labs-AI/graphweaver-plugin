@@ -1,18 +1,20 @@
-import { App } from 'obsidian';
-import { CoreService } from '../core/CoreService';
-import { ServiceError } from '../core/ServiceError';
-import { PersistentStateManager } from '../../managers/StateManager';
-import { SettingsService } from '../SettingsService';
-import { JsonValidationService } from '../JsonValidationService';
-import { DatabaseService } from '../DatabaseService';
-import { AIStateHandler, StateEvent } from './AIStateHandler';
+import { App, Notice } from 'obsidian';
+import { CoreService } from '@services/core/CoreService';
+import { ServiceError } from '@services/core/ServiceError';
+import { SettingsService } from '@services/SettingsService';
+import { JsonValidationService } from '@services/JsonValidationService';
+import { DatabaseService } from '@services/DatabaseService';
+import { AIState } from '@type/store.types';
 import { GeneratorFactory } from './GeneratorFactory';
 import { AdapterRegistry } from './AdapterRegistry';
 import { AIGenerationService } from './AIGenerationService';
-import { AIProvider, AIAdapter } from '../../models/AIModels';
-import { IConfigurableService, IReinitializableService } from '../core/IService';
+import { AIProvider, AIAdapter } from '@type/ai.types';
+import { IConfigurableService, IReinitializableService } from '@services/core/IService';
 import { AIOperationManager } from './AIOperationManager';
-import { WikilinkTextProcessor } from '../WikilinkTextProcessor';
+import { WikilinkTextProcessor } from '@services/WikilinkTextProcessor';
+import { aiStore } from '@stores/AIStore';
+import { settingsStore } from '@stores/SettingStore';
+import { get, type Unsubscriber } from 'svelte/store';
 
 /**
  * Configuration interface for AIService
@@ -24,26 +26,24 @@ export interface AIServiceConfig {
 }
 
 /**
- * Enhanced AIService that extends CoreService and implements additional interfaces
- * for configuration and reinitialization capabilities
+ * Enhanced AIService that coordinates AI functionality
  */
 export class AIService extends CoreService 
     implements IConfigurableService<AIServiceConfig>, IReinitializableService {
     
-    private generatorFactory: GeneratorFactory;
-    private adapterRegistry: AdapterRegistry;
-    private stateHandler: AIStateHandler;
-    private generationService: AIGenerationService | null = null;
+    protected generatorFactory: GeneratorFactory;
+    protected generationService!: AIGenerationService; // Use definite assignment
+    protected adapterRegistry: AdapterRegistry; // Add missing property
     private config: AIServiceConfig;
+    private unsubscribers: Unsubscriber[] = [];
 
     constructor(
-        private app: App,
-        private operationManager: AIOperationManager,
-        private settingsService: SettingsService,
-        private jsonValidationService: JsonValidationService,
-        private databaseService: DatabaseService,
-        private stateManager: PersistentStateManager,
-        private wikilinkProcessor: WikilinkTextProcessor,
+        protected app: App,
+        protected operationManager: AIOperationManager,
+        protected settingsService: SettingsService,
+        protected jsonValidationService: JsonValidationService,
+        protected databaseService: DatabaseService,
+        protected wikilinkProcessor: WikilinkTextProcessor,
         config: Partial<AIServiceConfig> = {}
     ) {
         super('ai-service', 'AI Service');
@@ -53,29 +53,42 @@ export class AIService extends CoreService
             debug: false,
             ...config
         };
+
+        // Initialize AdapterRegistry first
+        this.adapterRegistry = new AdapterRegistry(
+            settingsService,
+            jsonValidationService
+        );
+
+        // Create generator factory with correct arguments
+        this.generatorFactory = new GeneratorFactory(
+            app,
+            settingsService, 
+            this.adapterRegistry,
+            wikilinkProcessor
+        );
     }
 
     /**
      * Initialize core components and services
-     * @throws ServiceError if initialization fails
      */
     protected async initializeInternal(): Promise<void> {
         try {
             // Initialize core components
-            this.initializeComponents();
-
-            // Initialize in dependency order
             await this.adapterRegistry.initialize();
             await this.generatorFactory.initialize();
 
             // Create generation service after generators are ready
             this.generationService = new AIGenerationService(this.generatorFactory);
 
-            // Update state handler
-            this.stateHandler.updateState(
-                { isInitialized: true },
-                StateEvent.StatusChanged
-            );
+            // Set up store subscriptions
+            this.setupSubscriptions();
+
+            // Update AI store initialization state
+            aiStore.update((state: AIState) => ({
+                ...state,
+                isInitialized: true
+            }));
 
         } catch (error) {
             throw new ServiceError(
@@ -91,20 +104,38 @@ export class AIService extends CoreService
      */
     private initializeComponents(): void {
         this.adapterRegistry = new AdapterRegistry(
-            this.stateManager,
             this.settingsService,
             this.jsonValidationService
         );
-
+    
+        // Fixed order to match GeneratorFactory constructor parameters
         this.generatorFactory = new GeneratorFactory(
-            this.app,
-            this.stateManager,
-            this.settingsService,
-            this.adapterRegistry,
-            this.wikilinkProcessor
+            this.app,                    // App
+            this.settingsService,        // SettingsService
+            this.adapterRegistry,        // AdapterRegistry
+            this.wikilinkProcessor       // WikilinkTextProcessor
         );
+    }
 
-        this.stateHandler = new AIStateHandler(this.stateManager);
+    /**
+     * Set up store subscriptions
+     */
+    private setupSubscriptions(): void {
+        // Monitor settings changes
+        const settingsUnsub = settingsStore.subscribe(settings => {
+            if (this.config.debug) {
+                console.log('🦇 AI Service settings update:', settings);
+            }
+        });
+
+        // Monitor AI state changes
+        const aiStoreUnsub = aiStore.subscribe(state => {
+            if (this.config.debug) {
+                console.log('🦇 AI Service state update:', state);
+            }
+        });
+
+        this.unsubscribers.push(settingsUnsub, aiStoreUnsub);
     }
 
     /**
@@ -112,11 +143,19 @@ export class AIService extends CoreService
      */
     protected async destroyInternal(): Promise<void> {
         try {
+            // Clean up subscriptions
+            this.unsubscribers.forEach(unsub => unsub());
+            this.unsubscribers = [];
+
             // Clean up in reverse initialization order
-            this.generationService = null;
             await this.generatorFactory?.resetAll();
             await this.adapterRegistry?.destroy();
-            this.stateHandler?.destroy();
+
+            // Update store state
+            aiStore.update(state => ({
+                ...state,
+                isInitialized: false
+            }));
         } catch (error) {
             throw new ServiceError(
                 this.serviceName,
@@ -128,14 +167,29 @@ export class AIService extends CoreService
 
     /**
      * Configure the service
-     * @param config Service configuration
      */
     public async configure(config: Partial<AIServiceConfig>): Promise<void> {
         this.config = { ...this.config, ...config };
         
         if (config.defaultProvider) {
-            await this.adapterRegistry.handleProviderChange(config.defaultProvider);
+            const currentProvider = this.getProviderFromStore();
+            if (currentProvider !== config.defaultProvider) {
+                await this.adapterRegistry.testConnection(config.defaultProvider);
+                this.updateAIStore({ provider: config.defaultProvider });
+            }
         }
+
+        if (this.config.debug) {
+            console.log('🦇 AI Service configured:', this.config);
+        }
+    }
+
+    /**
+     * Get current provider from store
+     */
+    private getProviderFromStore(): AIProvider {
+        const state = get(aiStore);
+        return state.provider;
     }
 
     /**
@@ -152,6 +206,7 @@ export class AIService extends CoreService
             await this.initialize();
             
             if (this.config.enableNotifications) {
+                new Notice('AI Service reinitialized successfully');
             }
         } catch (error) {
             throw new ServiceError(
@@ -160,6 +215,16 @@ export class AIService extends CoreService
                 error instanceof Error ? error : undefined
             );
         }
+    }
+
+    /**
+     * Update AI store state
+     */
+    private updateAIStore(update: Partial<Parameters<typeof aiStore.update>[0]>): void {
+        aiStore.update(state => ({
+            ...state,
+            ...update
+        }));
     }
 
     /**
@@ -173,7 +238,7 @@ export class AIService extends CoreService
      * Get the current provider
      */
     public getCurrentProvider(): AIProvider {
-        return this.adapterRegistry.currentProvider;
+        return this.getProviderFromStore();
     }
 
     /**
@@ -215,7 +280,15 @@ export class AIService extends CoreService
         }
 
         try {
-            return await this.adapterRegistry.testConnection(provider);
+            const result = await this.adapterRegistry.testConnection(provider);
+            if (this.config.enableNotifications) {
+                new Notice(
+                    result 
+                        ? `Successfully connected to ${provider}`
+                        : `Failed to connect to ${provider}`
+                );
+            }
+            return result;
         } catch (error) {
             this.handleError('Failed to test connection', error);
             return false;

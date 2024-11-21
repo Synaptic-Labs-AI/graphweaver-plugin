@@ -1,46 +1,72 @@
 import { App, Modal, setIcon } from 'obsidian';
-import { ProcessingStatus, ProcessingStats } from '../../types/ProcessingTypes';
-import { BaseAccordion } from '../accordions/BaseAccordion';
-import Chart from 'chart.js/auto';
+import { ProcessingStatus, ProcessingStats } from '../../types/processing.types';
+import BaseAccordion from '@components/accordions/BaseAccordion.svelte';
+import { Chart, ChartConfiguration, ChartData } from 'chart.js';
+import type { SettingsService } from '../../services/SettingsService';
+import type { AIService } from '@services/ai/AIService';
+
+interface SummaryStats {
+    totalProcessed: number;
+    totalErrors: number;
+    avgProcessingTime: number;
+    successRate: number;
+}
+
+interface ChartDataSet {
+    labels: string[];
+    processed: number[];
+    errors: number[];
+}
+
+interface AccordionOptions {
+    title: string;
+    description: string;
+    isOpen?: boolean;
+    app: App;
+    settingsService: SettingsService;
+    aiService: AIService;
+}
 
 export default class StatusHistoryModal extends Modal {
-    private chartContainer: HTMLElement;
-    private historyAccordion: HTMLElement;
+    private chartContainer!: HTMLElement;
+    private historyAccordion!: HTMLElement;
     private chart: Chart | null = null;
 
     constructor(
         app: App,
         private readonly currentStatus: ProcessingStatus,
-        private readonly recentStats: ProcessingStats[]
+        private readonly recentStats: ProcessingStats[],
+        private readonly settingsService: SettingsService,
+        private readonly aiService: AIService
     ) {
         super(app);
-        // Add the graphweaver-modal class to the modal container
         this.containerEl.addClass('graphweaver-modal');
     }
-    
+
     onOpen(): void {
         const { contentEl } = this;
         contentEl.empty();
-        
-        // Apply modal-specific classes
         contentEl.addClass('status-history-modal');
 
-        // Create modal content with proper structure
         const modalContent = contentEl.createDiv({ cls: 'modal-content' });
-
-        // Create header (fixed at top)
         this.createHeader(modalContent);
 
-        // Create scrollable container
-        const scrollableContent = modalContent.createDiv({ cls: 'modal-scrollable-content' });
+        const scrollableContent = modalContent.createDiv({ 
+            cls: 'modal-scrollable-content' 
+        });
 
-        // Add content sections inside scrollable area
         this.createSummaryStats(scrollableContent);
         this.createChartContainer(scrollableContent);
         this.createHistoryAccordion(scrollableContent);
-
-        // Initialize chart
         this.initializeChart();
+    }
+
+    onClose(): void {
+        if (this.chart) {
+            this.chart.destroy();
+            this.chart = null;
+        }
+        this.contentEl.empty();
     }
 
     private createHeader(containerEl: HTMLElement): void {
@@ -50,9 +76,8 @@ export default class StatusHistoryModal extends Modal {
             cls: 'modal-header-title'
         });
 
-        // Optional: Add a close button if not handled by Modal class
         const closeButton = header.createEl('button', { cls: 'modal-close' });
-        setIcon(closeButton, 'cross'); // Ensure 'cross' icon exists
+        setIcon(closeButton, 'cross');
         closeButton.addEventListener('click', () => this.close());
     }
 
@@ -60,35 +85,31 @@ export default class StatusHistoryModal extends Modal {
         const summaryEl = containerEl.createDiv({ cls: 'status-summary' });
         const stats = this.calculateSummaryStats();
         
-        const summaryItems = [
+        const summaryGrid = summaryEl.createDiv({ cls: 'summary-grid' });
+        
+        [
             { label: 'Total Files Processed', value: stats.totalProcessed },
             { label: 'Success Rate', value: `${stats.successRate.toFixed(1)}%` },
             { label: 'Average Processing Time', value: `${stats.avgProcessingTime.toFixed(1)}s` },
             { label: 'Total Errors', value: stats.totalErrors }
-        ];
-
-        const summaryGrid = summaryEl.createDiv({ cls: 'summary-grid' });
-        
-        summaryItems.forEach(item => {
+        ].forEach(item => {
             const itemEl = summaryGrid.createDiv({ cls: 'summary-item' });
             itemEl.createSpan({ text: item.label, cls: 'summary-label' });
             itemEl.createSpan({ text: item.value.toString(), cls: 'summary-value' });
         });
     }
 
-    private calculateSummaryStats() {
-        const stats = {
+    private calculateSummaryStats(): SummaryStats {
+        const stats = this.recentStats.reduce((acc, stat) => ({
+            totalProcessed: acc.totalProcessed + stat.processedFiles,
+            totalErrors: acc.totalErrors + stat.errorFiles,
+            totalTime: acc.totalTime + (stat.averageProcessingTime * stat.processedFiles),
+            successCount: acc.successCount + (stat.processedFiles - stat.errorFiles)
+        }), {
             totalProcessed: 0,
             totalErrors: 0,
             totalTime: 0,
             successCount: 0
-        };
-
-        this.recentStats.forEach(stat => {
-            stats.totalProcessed += stat.processedFiles;
-            stats.totalErrors += stat.errorFiles;
-            stats.totalTime += stat.averageProcessingTime * stat.processedFiles;
-            stats.successCount += stat.processedFiles - stat.errorFiles;
         });
 
         return {
@@ -100,18 +121,39 @@ export default class StatusHistoryModal extends Modal {
     }
 
     private createChartContainer(containerEl: HTMLElement): void {
-        this.chartContainer = containerEl.createDiv({ 
-            cls: 'chart-container' 
-        });
-        
+        this.chartContainer = containerEl.createDiv({ cls: 'chart-container' });
         const canvas = this.chartContainer.createEl('canvas', {
             cls: 'processing-history-chart'
         });
 
-        // Optional: Add fallback text if Chart.js fails to load
         if (!canvas.getContext('2d')) {
-            this.chartContainer.createEl('p', { text: 'Your browser does not support HTML5 canvas.' });
+            this.chartContainer.createEl('p', { 
+                text: 'Your browser does not support HTML5 canvas.' 
+            });
         }
+    }
+
+    private prepareChartData(): ChartDataSet {
+        const dailyStats = new Map<string, { processed: number; errors: number }>();
+        
+        this.recentStats.forEach(stat => {
+            const date = new Date(stat.startTime).toLocaleDateString();
+            const existing = dailyStats.get(date) || { processed: 0, errors: 0 };
+            
+            dailyStats.set(date, {
+                processed: existing.processed + stat.processedFiles,
+                errors: existing.errors + stat.errorFiles
+            });
+        });
+
+        const sortedDates = Array.from(dailyStats.keys())
+            .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+
+        return {
+            labels: sortedDates,
+            processed: sortedDates.map(date => dailyStats.get(date)?.processed || 0),
+            errors: sortedDates.map(date => dailyStats.get(date)?.errors || 0)
+        };
     }
 
     private initializeChart(): void {
@@ -122,8 +164,7 @@ export default class StatusHistoryModal extends Modal {
         if (!ctx) return;
 
         const chartData = this.prepareChartData();
-
-        this.chart = new Chart(ctx, {
+        const config: ChartConfiguration = {
             type: 'line',
             data: {
                 labels: chartData.labels,
@@ -191,59 +232,43 @@ export default class StatusHistoryModal extends Modal {
                     }
                 }
             }
-        });
-    }
-
-    private prepareChartData() {
-        const dailyStats = new Map<string, { processed: number; errors: number }>();
-        
-        this.recentStats.forEach(stat => {
-            const date = new Date(stat.startTime).toLocaleDateString();
-            const existing = dailyStats.get(date) || { processed: 0, errors: 0 };
-            
-            dailyStats.set(date, {
-                processed: existing.processed + stat.processedFiles,
-                errors: existing.errors + stat.errorFiles
-            });
-        });
-
-        const sortedDates = Array.from(dailyStats.keys()).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-        return {
-            labels: sortedDates,
-            processed: sortedDates.map(date => dailyStats.get(date)?.processed || 0),
-            errors: sortedDates.map(date => dailyStats.get(date)?.errors || 0)
         };
+
+        this.chart = new Chart(ctx, config);
     }
 
     private createHistoryAccordion(containerEl: HTMLElement): void {
-        this.historyAccordion = containerEl.createDiv({ 
-            cls: 'history-container'
-        });
-
+        this.historyAccordion = containerEl.createDiv({ cls: 'history-container' });
         const accordion = new HistoryAccordion(
             this.historyAccordion, 
+            this.recentStats,
             this.app,
-            this.recentStats
+            this.settingsService,
+            this.aiService
         );
         accordion.render();
-    }
-
-    onClose(): void {
-        if (this.chart) {
-            this.chart.destroy();
-            this.chart = null;
-        }
-        this.contentEl.empty();
     }
 }
 
 class HistoryAccordion extends BaseAccordion {
     constructor(
         containerEl: HTMLElement,
-        app: App,
-        private readonly historyData: ProcessingStats[]
+        private readonly historyData: ProcessingStats[],
+        private readonly app: App,
+        private readonly settingsService: SettingsService,
+        private readonly aiService: AIService
     ) {
-        super(containerEl, app);
+        super({
+            target: containerEl,
+            props: {
+                title: 'Processing History',
+                description: 'Detailed history of processing tasks',
+                isOpen: true,
+                app,
+                settingsService,
+                aiService
+            }
+        });
     }
 
     public render(): void {
@@ -263,22 +288,16 @@ class HistoryAccordion extends BaseAccordion {
             return;
         }
 
-        // Create table container for scrolling
         const tableContainer = historyContent.createDiv({ 
             cls: 'history-table-container' 
         });
 
-        const table = tableContainer.createEl('table', { 
-            cls: 'history-table' 
-        });
-
-        // Create table header
+        const table = tableContainer.createEl('table', { cls: 'history-table' });
         const headerRow = table.createEl('tr');
-        ['Date', 'Files Processed', 'Errors', 'Success Rate', 'Avg. Time'].forEach(header => {
-            headerRow.createEl('th', { text: header });
-        });
+        
+        ['Date', 'Files Processed', 'Errors', 'Success Rate', 'Avg. Time']
+            .forEach(header => headerRow.createEl('th', { text: header }));
 
-        // Create table body with proper classes
         this.historyData.forEach(stat => {
             const row = table.createEl('tr');
             

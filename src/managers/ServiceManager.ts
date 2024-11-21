@@ -1,156 +1,134 @@
-// src/managers/ServiceManager.ts
-
-import { App } from 'obsidian';
-import { ServiceRegistry } from '../services/core/ServiceRegistry';
-import { ServiceError } from '../services/core/ServiceError';
-import { ServiceState } from '../state/ServiceState';
-import { IService } from '../services/core/IService';
-import { ServiceRegistrationConfig, RegistrationStatus } from '../types/ServiceTypes';
-
-/**
- * Manager state interface
- */
-interface ManagerState {
-    state: ServiceState;
-    error: ServiceError | null;
-    registeredServices: number;
-    initializedServices: number;
-    pendingServices: string[];
-    failedServices: Array<{ id: string; error: ServiceError }>;
-}
+import type { Plugin } from 'obsidian';
+import { 
+    RegistrationStatus, 
+    ServiceState,
+    ServiceRegistration,
+    RegistrationError
+} from '@type/services.types';
+import { ServiceRegistry } from '@registrations/ServiceRegistrations';
+import { ServiceError } from '@services/core/ServiceError';
+import type { IService } from '@services/core/IService';
+import type { InitializationStatus } from '@type/services.types';
+import { TypedEventEmitter, ServiceEvents } from '@type/events.types';
 
 /**
- * Manages service lifecycle and dependencies
- * Provides centralized access to all plugin services
+ * Manages service lifecycle and initialization
  */
-export class ServiceManager {
-    private registry: ServiceRegistry;
+export class ServiceManager extends TypedEventEmitter<ServiceEvents> {
+    private static instance: ServiceManager | null = null;
+    private readonly registry: ServiceRegistry;
     private state: ServiceState = ServiceState.Uninitialized;
     private error: ServiceError | null = null;
-    private isUnloading: boolean = false;
+    private isUnloading = false;
 
-    constructor(private app: App) {
-        this.registry = new ServiceRegistry();
+    private readonly CONFIG = {
+        MAX_RETRIES: 3,
+        RETRY_DELAY: 5000,
+        INIT_TIMEOUT: 30000
+    };
+
+    private constructor(private plugin: Plugin) {
+        super();
+        this.registry = ServiceRegistry.getInstance();
+        this.setupErrorHandlers();
     }
 
-    /**
-     * Register a service with its dependencies
-     * @param config Service registration configuration
-     */
-    public registerService<T extends IService>(config: ServiceRegistrationConfig<T>): void {
-        if (this.isUnloading) {
-            throw new ServiceError(
-                'ServiceManager',
-                'Cannot register services while unloading'
-            );
+    public static getInstance(plugin?: Plugin): ServiceManager {
+        if (!ServiceManager.instance) {
+            if (!plugin) {
+                throw new Error('Plugin instance required for initialization');
+            }
+            ServiceManager.instance = new ServiceManager(plugin);
         }
+        return ServiceManager.instance;
+    }
 
+    public async registerService<T extends IService>(
+        id: string,
+        serviceInstance: T | Promise<T>,
+        dependencies: string[] = []
+    ): Promise<void> {
+        console.log(`🦇 [ServiceManager] Registering service: ${id}`);
+        
         try {
-            this.registry.register(config);
+            const instance = await Promise.resolve(serviceInstance);
+            await this.registry.registerService(id, instance, dependencies);
+            
+            const registration: ServiceRegistration<IService> = {
+                id,
+                name: instance.serviceName,
+                instance,
+                dependencies,
+                status: RegistrationStatus.Registered,
+                state: ServiceState.Uninitialized,
+                lastUpdated: Date.now(),
+                factory: undefined,
+                constructor: undefined,
+                hooks: undefined,
+                metadata: undefined
+            };
+
+            this.emit('registered', registration);
         } catch (error) {
-            this.handleError(`Failed to register service ${config.id}`, error);
+            const registrationError: RegistrationError = {
+                id,
+                error: new ServiceError('ServiceManager', 'Registration failed', error as Error),
+                timestamp: Date.now(),
+                recoverable: false
+            };
+            
+            this.emit('failed', registrationError);
             throw error;
         }
     }
 
-    /**
-     * Register multiple services at once
-     * @param configs Array of service registration configurations
-     */
-    public registerServices(configs: ServiceRegistrationConfig<IService>[]): void {
-        configs.forEach(config => this.registerService(config));
-    }
-
-    /**
-     * Initialize all registered services
-     */
     public async initializeServices(): Promise<void> {
         if (this.isUnloading) {
             throw new ServiceError('ServiceManager', 'Cannot initialize while unloading');
         }
 
-        if (!this.hasRegisteredServices()) {
+        if (!this.registry.hasRegisteredServices()) {
             throw new ServiceError('ServiceManager', 'No services registered');
         }
 
-        try {
-            this.state = ServiceState.Initializing;
-            await this.registry.initializeServices();
-            this.state = ServiceState.Ready;
-            this.error = null;
-        } catch (error) {
-            this.state = ServiceState.Error;
-            this.handleError('Service initialization failed', error);
-            throw error;
-        }
-    }
+        let retryCount = 0;
+        
+        const initializeWithRetry = async (): Promise<void> => {
+            try {
+                this.state = ServiceState.Initializing;
+                
+                await Promise.race([
+                    this.registry.initializeAll(),
+                    this.createTimeout()
+                ]);
 
-    /**
-     * Get an initialized service instance
-     * @param id Service ID
-     * @returns Service instance
-     */
-    public getService<T extends IService>(id: string): T {
-        if (this.isUnloading) {
-            throw new ServiceError('ServiceManager', 'Cannot get service while unloading');
-        }
-    
-        // Remove the check for this.state !== ServiceState.Ready
-    
-        try {
-            const serviceState = this.registry.getServiceState(id);
-    
-            if (serviceState.status !== RegistrationStatus.Initialized) {
-                throw new ServiceError('ServiceManager', `Service ${id} is not initialized`);
+                this.state = ServiceState.Ready;
+                this.emit('ready');
+            } catch (error) {
+                if (retryCount < this.CONFIG.MAX_RETRIES) {
+                    retryCount++;
+                    console.log(`🦇 [ServiceManager] Retry ${retryCount}/${this.CONFIG.MAX_RETRIES}`);
+                    await new Promise(resolve => setTimeout(resolve, this.CONFIG.RETRY_DELAY));
+                    return initializeWithRetry();
+                }
+                
+                this.state = ServiceState.Error;
+                this.handleError('Initialization failed', error);
+                throw error;
             }
-    
-            const service = this.registry.getService<T>(id);
-            return service;
-        } catch (error) {
-            this.handleError(`Failed to get service ${id}`, error);
-            throw error;
-        }
-    }
-
-    /**
-     * Clean up all services and resources
-     */
-    public async destroy(): Promise<void> {
-        if (this.isUnloading) return;
-
-        this.isUnloading = true;
-        this.state = ServiceState.Destroying;
-
-        try {
-            await this.registry.destroyServices();
-            this.state = ServiceState.Destroyed;
-        } catch (error) {
-            this.handleError('Service cleanup failed', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Get detailed manager state
-     * @returns Current manager state
-     */
-    public getState(): ManagerState {
-        const status = this.registry.getInitializationStatus();
-        return {
-            state: this.state,
-            error: this.error,
-            registeredServices: status.totalServices,
-            initializedServices: status.initializedServices,
-            pendingServices: status.pendingServices,
-            failedServices: status.failedServices
         };
+
+        await initializeWithRetry();
     }
 
-    /**
-     * Get service registration status
-     * @param id Service ID
-     * @returns Service state details
-     */
+    public getService<T extends IService>(id: string): T {
+        return this.registry.getService<T>(id);
+    }
+
+    public hasService(id: string): boolean {
+        return this.registry.getServiceState(id).registered;
+    }
+
     public getServiceState(id: string): {
         registered: boolean;
         status: RegistrationStatus;
@@ -160,33 +138,68 @@ export class ServiceManager {
         return this.registry.getServiceState(id);
     }
 
-    /**
-     * Check if manager has registered services
-     * @returns Boolean indicating if services are registered
-     */
-    public hasRegisteredServices(): boolean {
-        return this.registry.hasRegisteredServices();
+    public getState(): ServiceState {
+        return this.state;
     }
 
-    /**
-     * Check if services are ready
-     * @returns Boolean indicating if services are ready
-     */
-    public isReady(): boolean {
-        return this.state === ServiceState.Ready && !this.isUnloading;
+    public getError(): ServiceError | null {
+        return this.error;
     }
 
-    /**
-     * Handle errors consistently
-     * @param message Error message
-     * @param error Error object
-     */
+    public async unload(): Promise<void> {
+        if (this.isUnloading) return;
+
+        this.isUnloading = true;
+        this.state = ServiceState.Destroying;
+
+        try {
+            const services = Array.from(this.registry.getRegisteredServices());
+            
+            await Promise.all(services.reverse().map(async service => {
+                try {
+                    const serviceId = service.service.serviceId;
+                    await service.service.destroy();
+                    this.emit('destroyed', serviceId);
+                } catch (error) {
+                    console.error(`🦇 [ServiceManager] Unload failed for ${service.id}:`, error);
+                }
+            }));
+            
+            this.state = ServiceState.Destroyed;
+        } catch (error) {
+            this.state = ServiceState.Error;
+            this.handleError('Unload failed', error);
+            throw error;
+        } finally {
+            this.isUnloading = false;
+        }
+    }
+
+    private createTimeout(): Promise<never> {
+        return new Promise((_, reject) => {
+            setTimeout(() => {
+                reject(new ServiceError(
+                    'ServiceManager',
+                    `Initialization timed out after ${this.CONFIG.INIT_TIMEOUT}ms`
+                ));
+            }, this.CONFIG.INIT_TIMEOUT);
+        });
+    }
+
+    private setupErrorHandlers(): void {
+        window.addEventListener('unhandledrejection', event => {
+            this.handleError('Unhandled promise rejection', event.reason);
+        });
+
+        window.addEventListener('error', event => {
+            this.handleError('Unhandled error', event.error);
+        });
+    }
+
     private handleError(message: string, error: unknown): void {
-        const serviceError = error instanceof ServiceError 
-            ? error 
-            : ServiceError.from('ServiceManager', error);
-
-        console.error('ServiceManager:', message, serviceError.getDetails());
-        this.error = serviceError;
+        this.error = error instanceof ServiceError ? error :
+            new ServiceError('ServiceManager', message, error instanceof Error ? error : undefined);
+        
+        console.error(`🦇 [ServiceManager] ${message}:`, this.error);
     }
 }

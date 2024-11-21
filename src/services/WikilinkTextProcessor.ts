@@ -1,8 +1,7 @@
 // src/services/WikilinkTextProcessor.ts
 
 import { CoreService } from './core/CoreService';
-import { WikilinkPatterns, WikilinkConfig, WikilinkUtils, isAllowedSpecialChar } from 'src/generators/utils/WikilinkPatterns';
-
+import { WikilinkPatterns, WikilinkConfig, WikilinkUtils, isAllowedSpecialChar } from '@generators/utils/WikilinkPatterns';
 /**
  * Service for processing and validating wikilink text
  */

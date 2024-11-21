@@ -1,8 +1,8 @@
 // src/generators/BaseGenerator.ts
 
-import { AIAdapter, AIProvider } from 'src/models/AIModels';
-import { SettingsService } from '../services/SettingsService';
-import { PluginSettings } from '../settings/Settings';
+import { AIAdapter, AIProvider } from '@type/ai.types';
+import { SettingsService } from '@services/SettingsService';
+import { PluginSettings } from '@type/settings.types';
 
 /**
  * Base interface for all generator inputs

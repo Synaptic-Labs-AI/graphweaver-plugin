@@ -14,6 +14,7 @@ export interface InitializationStatus {
     initializedServices: number;
     pendingServices: string[];
     failedServices: RegistrationError[];
+    timestamp: number;
 }
 
 /**
