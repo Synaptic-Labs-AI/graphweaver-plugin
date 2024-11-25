@@ -17,6 +17,7 @@ import { processingStore } from '@stores/ProcessingStore';
 import { uiStore } from '@stores/UIStore';
 import { aiStore } from '@stores/AIStore';
 import { ServiceError } from '@services/core/ServiceError';
+import { utils } from '@stores/CoreStore';
 
 /**
  * Type guard to check if store has initialize method
@@ -118,9 +119,25 @@ async function initializeStore(
  */
 export async function initializeStores(config: StoreInitializationData): Promise<void> {
     try {
-        // Initialize core stores first
+        console.log('🦇 [StoreRegistrations] Starting store initialization...');
+        
+        // Initialize core store first
+        utils.initialize(config.plugin);
+        
+        // Initialize plugin store
         await initializePluginStore(config.plugin);
-        await initSettingsStore(config.plugin, config.data);
+        
+        // Initialize settings store with validation
+        try {
+            await initSettingsStore(config.plugin, config.data);
+        } catch (error) {
+            console.error('🦇 [StoreRegistrations] Settings store initialization failed:', error);
+            throw new ServiceError(
+                'StoreRegistrations',
+                'Failed to initialize settings store',
+                error instanceof Error ? error : undefined
+            );
+        }
 
         // Define remaining store initialization sequence
         const initSequence: StoreInitSequence[] = [

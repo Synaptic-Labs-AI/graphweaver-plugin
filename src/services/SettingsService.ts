@@ -2,14 +2,14 @@ import { Plugin } from 'obsidian';
 import { CoreService } from './core/CoreService';
 import { ServiceError } from './core/ServiceError';
 import type { 
-    PluginSettings, 
-    KnowledgeBloomSettings,
+    PluginSettings,
     SettingsEventMap,
     NestedSettingKey,
     NestedSettingValue,
     ISettingsHandler
 } from '@type/settings.types';
-import { settingsStore } from '@stores/SettingStore';
+import { KnowledgeBloomSettings } from '@type/ai.types';
+import { settingsStore, initializeSettingsStore } from '@stores/SettingStore';
 import { TypedEventEmitter } from '@type/events.types';
 
 /**
@@ -17,6 +17,7 @@ import { TypedEventEmitter } from '@type/events.types';
  */
 export class SettingsService extends CoreService implements ISettingsHandler {
     private eventEmitter: TypedEventEmitter<SettingsEventMap>;
+    private isInitialized = false;
 
     constructor(private plugin: Plugin) {
         super('settings-service', 'Settings Service');
@@ -28,18 +29,50 @@ export class SettingsService extends CoreService implements ISettingsHandler {
      */
     protected async initializeInternal(): Promise<void> {
         try {
-            // Initialize settings store
-            await settingsStore.initialize();
+            if (this.isInitialized) {
+                return;
+            }
+
+            if (!this.plugin) {
+                throw new ServiceError(
+                    this.serviceName,
+                    'Plugin instance not provided'
+                );
+            }
+
+            // Initialize settings store with proper error handling
+            try {
+                initializeSettingsStore(this.plugin);
+                await settingsStore.initialize();
+            } catch (error) {
+                throw ServiceError.from(
+                    this.serviceName,
+                    error,
+                    { context: 'Settings store initialization failed' }
+                );
+            }
             
-            // Subscribe to store changes
-            settingsStore.subscribe(settings => {
-                this.eventEmitter.emit('settingsChanged', settings);
-            });
+            // Subscribe to store changes with error handling
+            try {
+                settingsStore.subscribe(settings => {
+                    this.eventEmitter.emit('settingsChanged', settings);
+                });
+            } catch (error) {
+                throw ServiceError.from(
+                    this.serviceName,
+                    error,
+                    { context: 'Failed to subscribe to settings changes' }
+                );
+            }
+
+            this.isInitialized = true;
+            console.log('🦇 [SettingsService] Initialized successfully');
         } catch (error) {
-            throw new ServiceError(
+            console.error('🦇 [SettingsService] Initialization failed:', error);
+            throw ServiceError.from(
                 this.serviceName,
-                'Failed to initialize settings',
-                error instanceof Error ? error : undefined
+                error,
+                { context: 'Service initialization failed' }
             );
         }
     }
@@ -48,7 +81,13 @@ export class SettingsService extends CoreService implements ISettingsHandler {
      * Clean up service resources
      */
     protected async destroyInternal(): Promise<void> {
-        // No cleanup needed for settings service
+        try {
+            await settingsStore.destroy();
+            this.eventEmitter.removeAllListeners();
+            this.isInitialized = false;
+        } catch (error) {
+            console.error('🦇 [SettingsService] Cleanup failed:', error);
+        }
     }
 
     /**

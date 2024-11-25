@@ -1,45 +1,8 @@
-<!--src/components/modals/EditTagsModal.svelte-->
-
-<script context="module" lang="ts">
-  import { Modal, App, Setting, Notice } from 'obsidian';
-  import type { Tag } from '@type/metadata.types';
-  import TagEditor from './TagEditor.svelte';
-
-  export class EditTagsModal extends Modal {
-    private component!: TagEditor;
-    private readonly tags: Tag[];
-    private readonly onSubmit: (tags: Tag[]) => void;
-    
-    constructor(app: App, tags: Tag[], onSubmit: (tags: Tag[]) => void) {
-      super(app);
-      this.tags = tags;
-      this.onSubmit = onSubmit;
-    }
-
-    onOpen(): void {
-      this.titleEl.setText('Edit Tags');
-      
-      this.component = new TagEditor({
-        target: this.contentEl,
-        props: {
-          tags: this.tags,
-          onSubmit: this.onSubmit,
-          onClose: () => this.close()
-        }
-      });
-    }
-
-    onClose(): void {
-      if (this.component) {
-        this.component.$destroy();
-      }
-      this.contentEl.empty();
-    }
-  }
-</script>
-
+<!--src/components/modals/TagEditor.svelte-->
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { Setting, Notice } from 'obsidian';
+  import type { Tag } from '@type/metadata.types';
 
   export let tags: Tag[];
   export let onSubmit: (tags: Tag[]) => void;

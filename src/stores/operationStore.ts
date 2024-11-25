@@ -2,7 +2,7 @@ import { derived, writable, get } from 'svelte/store';
 import type { OperationStatus, OperationMetrics, OperationType } from '@type/operations.types';
 import { TypedEventEmitter } from '@type/events.types';
 import type { OperationEvents } from '@type/events.types';
-import { createInitialMetrics, updateMetrics } from '@stores/metricsStore';
+import { createInitialMetrics, updateMetrics } from '@stores/MetricsStore';
 
 interface OperationState {
     currentOperation: OperationStatus | null;

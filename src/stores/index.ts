@@ -35,8 +35,7 @@ export {
     SettingsStoreImpl,
     settingsStore,
     initializeSettingsStore,
-    initializeDerivedStores,
-    updateNestedSetting
+    initializeDerivedStores
 } from './SettingStore';
 
 // UI store exports

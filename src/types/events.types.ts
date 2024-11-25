@@ -8,6 +8,7 @@ import type { IService } from '@services/core/IService';
 import type { ServiceRegistration, RegistrationError } from './services.types';
 import { EventHandler } from './base.types';
 import type { OperationStatus } from './operations.types';
+import { ComponentEvents } from './component.types';
 
 /**
  * Service lifecycle events interface
@@ -82,4 +83,11 @@ export class TypedEventEmitter<T extends Record<string, GenericEventHandler>> im
         }
         return this;
     }
+}
+
+/**
+ * Common event handlers for accordion interactions
+ */
+export interface AccordionEvents extends ComponentEvents {
+    onToggle?: (isOpen: boolean) => void;
 }

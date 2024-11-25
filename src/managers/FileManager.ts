@@ -19,7 +19,7 @@ import type { Notification } from '@type/store.types';
 export class FileManager implements IService {
     public readonly serviceId = 'file-manager';
     public readonly serviceName = 'File Manager';
-    private serviceState: ServiceState = ServiceState.Uninitialized;
+    private LifecycleState: LifecycleState = LifecycleState.Uninitialized;
     private serviceError: ServiceError | null = null;
     private unloading = false;
 
@@ -45,14 +45,14 @@ export class FileManager implements IService {
 
     public async initialize(): Promise<void> {
         try {
-            this.serviceState = ServiceState.Initializing;
+            this.LifecycleState = LifecycleState.Initializing;
             this.app.vault.on('create', this.handleFileModify.bind(this) as (...args: unknown[]) => unknown);
             this.app.vault.on('modify', this.handleFileModify.bind(this) as (...args: unknown[]) => unknown);
-            this.serviceState = ServiceState.Ready;
+            this.LifecycleState = LifecycleState.Ready;
         } catch (error) {
             this.serviceError = error instanceof Error ? 
                 new ServiceError(this.serviceName, error.message) : null;
-            this.serviceState = ServiceState.Error;
+            this.LifecycleState = LifecycleState.Error;
             throw error;
         }
     }
@@ -61,15 +61,15 @@ export class FileManager implements IService {
         this.unloading = true;
         this.app.vault.off('create', this.handleFileModify.bind(this) as (...args: unknown[]) => unknown);
         this.app.vault.off('modify', this.handleFileModify.bind(this) as (...args: unknown[]) => unknown);
-        this.serviceState = ServiceState.Destroyed;
+        this.LifecycleState = LifecycleState.Destroyed;
     }
 
     public isReady(): boolean {
-        return this.serviceState === ServiceState.Ready && !this.unloading;
+        return this.LifecycleState === LifecycleState.Ready && !this.unloading;
     }
 
-    public getState(): { state: ServiceState; error: ServiceError | null } {
-        return { state: this.serviceState, error: this.serviceError };
+    public getState(): { state: LifecycleState; error: ServiceError | null } {
+        return { state: this.LifecycleState, error: this.serviceError };
     }
 
     private async handleFileModify(file: TAbstractFile): Promise<void> {
@@ -207,6 +207,7 @@ export class FileManager implements IService {
                 app: this.app,
                 aiService: this.aiService,
                 settingsService: this.settingsService,
+                onComplete: undefined,
                 onClose: () => {
                     uiStore.popModal();
                 }

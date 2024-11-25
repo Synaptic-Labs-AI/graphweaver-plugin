@@ -9,6 +9,7 @@ import type {
     CommandResult,
     CommandEvents
 } from '@type/commands.types';
+import { ServiceRegistry } from '@registrations/ServiceRegistrations';
 
 /**
  * Manages plugin commands and their lifecycle
@@ -30,12 +31,32 @@ export class CommandManager extends TypedEventEmitter<CommandEvents> implements 
      */
     public async initialize(): Promise<void> {
         try {
+            if (this.state !== LifecycleState.Uninitialized) {
+                console.log('🦇 [CommandManager] Already initialized');
+                return;
+            }
+
+            console.log('🦇 [CommandManager] Starting initialization...');
             this.state = LifecycleState.Initializing;
+
+            // Wait for service registry initialization
+            const registry = ServiceRegistry.getInstance();
+            if (!registry.hasRegisteredServices()) {
+                throw new ServiceError(
+                    this.serviceName,
+                    'Service registry must be initialized before command manager'
+                );
+            }
+
+            // Register commands after ensuring prerequisites
             await this.registerDefaultCommands();
+            
+            console.log('🦇 [CommandManager] Initialization complete');
             this.state = LifecycleState.Ready;
         } catch (error) {
             this.state = LifecycleState.Error;
             this.error = ServiceError.from(this.serviceName, error);
+            console.error('🦇 [CommandManager] Initialization failed:', this.error);
             throw this.error;
         }
     }
@@ -140,41 +161,56 @@ export class CommandManager extends TypedEventEmitter<CommandEvents> implements 
     /**
      * Register default plugin commands
      */
-    private async registerDefaultCommands(): Promise<void> {
-        const defaultCommands: PluginCommand[] = [
-            {
-                id: 'generate-frontmatter',
-                name: 'Generate Front Matter',
-                checkCallback: (checking: boolean) => this.validateActiveFile(checking)
-            },
-            {
-                id: 'generate-wikilinks',
-                name: 'Generate Wikilinks',
-                checkCallback: (checking: boolean) => this.validateActiveFile(checking)
-            },
-            {
-                id: 'generate-knowledge-bloom',
-                name: 'Generate Knowledge Bloom',
-                checkCallback: (checking: boolean) => {
-                    if (!this.validateActiveFile(checking)) return false;
-                    
-                    // Additional validation could go here
-                    // For example, checking if AI service is ready
-                    return true;
+    public async registerDefaultCommands(): Promise<void> {
+        try {
+            console.log('🦇 [CommandManager] Registering default commands...');
+            const defaultCommands: PluginCommand[] = [
+                {
+                    id: 'generate-frontmatter',
+                    name: 'Generate Front Matter',
+                    checkCallback: (checking: boolean) => this.validateActiveFile(checking)
+                },
+                {
+                    id: 'generate-wikilinks',
+                    name: 'Generate Wikilinks',
+                    checkCallback: (checking: boolean) => this.validateActiveFile(checking)
+                },
+                {
+                    id: 'generate-knowledge-bloom',
+                    name: 'Generate Knowledge Bloom',
+                    checkCallback: (checking: boolean) => {
+                        if (!this.validateActiveFile(checking)) return false;
+                        
+                        // Additional validation could go here
+                        // For example, checking if AI service is ready
+                        return true;
+                    }
+                },
+                {
+                    id: 'batch-process-files',
+                    name: 'Batch Process Files',
+                    checkCallback: (checking: boolean) => {
+                        // Batch processing doesn't require an active file
+                        return true;
+                    }
                 }
-            },
-            {
-                id: 'batch-process-files',
-                name: 'Batch Process Files',
-                checkCallback: (checking: boolean) => {
-                    // Batch processing doesn't require an active file
-                    return true;
+            ];
+
+            for (const command of defaultCommands) {
+                try {
+                    this.registerCommand(command);
+                } catch (error) {
+                    console.error(`�� [CommandManager] Failed to register command ${command.id}:`, error);
+                    throw error;
                 }
             }
-        ];
-
-        for (const command of defaultCommands) {
-            this.registerCommand(command);
+            console.log('🦇 [CommandManager] Default commands registered successfully');
+        } catch (error) {
+            throw new ServiceError(
+                this.serviceName,
+                'Failed to register default commands',
+                error instanceof Error ? error : new Error(String(error))
+            );
         }
     }
 

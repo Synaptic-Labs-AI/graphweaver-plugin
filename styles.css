@@ -1,332 +1,285 @@
-/* 🎨 Theme Variables
-   ============================================= */
-   .graphweaver-plugin {
-    /* Spacing */
-    --gw-spacing-xs: 0.25rem;
-    --gw-spacing-sm: 0.5rem;
-    --gw-spacing-md: 1rem;
-    --gw-spacing-lg: 1.5rem;
-    --gw-spacing-xl: 2rem;
-  
-    /* Border Radius */
-    --gw-border-radius-sm: 4px;
-    --gw-border-radius-md: 8px;
-    --gw-border-radius-lg: 12px;
-  
-    /* Typography */
-    --gw-font-small: 0.875rem;
-    --gw-font-base: 1rem;
-    --gw-font-large: 1.125rem;
-    --gw-font-xl: 1.25rem;
-    --gw-line-height: 1.5;
-  
-    /* Transitions */
-    --gw-transition-fast: 0.2s ease;
-    --gw-transition-normal: 0.3s ease;
-  
-    /* Shadows */
-    --gw-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
-    --gw-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-    --gw-shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.1);
-  
-    /* Z-index layers */
-    --gw-z-dropdown: 100;
-    --gw-z-modal: 1000;
-  }
-  
-  /* 🎭 Base Layout
-     ============================================= */
-  .graphweaver-plugin {
-    width: 100%;
-    height: 100%;
-    color: var(--text-normal);
-    font-size: var(--gw-font-base);
-    line-height: var(--gw-line-height);
-  }
-  
-  /* 📦 Accordion Components
-   ============================================= */
-.graphweaver-plugin .gw-accordion {
-  background-color: var(--background-primary);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--gw-border-radius-md);
-  margin-bottom: var(--gw-spacing-md);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+/* styles.css */
+
+/*=======================
+  1. CSS Variables
+========================*/
+:root {
+  /* Spacing */
+  --size-1: 0.25rem;    /* 4px */
+  --size-2: 0.5rem;     /* 8px */
+  --size-4: 1rem;       /* 16px */
+  --size-6: 1.5rem;     /* 24px */
+  --size-8: 2rem;       /* 32px */
+  --size-12: 3rem;      /* 48px */
+  --size-16: 4rem;      /* 64px */
+
+  /* Typography */
+  --font-ui-smaller: 0.875rem;
+  --font-ui-small: 0.925rem;
+  --font-ui-medium: 1rem;
+  --font-ui-large: 1.125rem;
+  --font-ui-xl: 1.25rem;
+  --font-ui-xxl: 1.5rem;
+
+  /* Font Weights */
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-bold: 600;
 }
 
-.graphweaver-plugin .gw-accordion-header {
-  background-color: var(--background-secondary);
-  padding: var(--gw-spacing-sm) var(--gw-spacing-md);
+/*=======================
+2. Plugin Container
+========================*/
+.graphweaver-plugin-settings {
+  padding: var(--size-4);
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/*=======================
+3. Header Styles
+========================*/
+.settings-header {
+  position: relative;
+  margin-bottom: var(--size-12);
+  padding: var(--size-8) var(--size-4);
+}
+
+.header-content {
+  position: relative;
+  z-index: 1;
+}
+
+.header-title {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: var(--size-4);
+  margin-bottom: var(--size-4);
+}
+
+.header-title h2 {
+  margin: 0;
+  color: var(--text-normal);
+  font-size: var(--font-ui-xxl);
+  font-weight: var(--font-bold);
+  line-height: 1.2;
+}
+
+.plugin-version {
+  padding: var(--size-1) var(--size-2);
+  background: var(--background-modifier-success);
+  color: var(--text-on-accent);
+  border-radius: var(--radius-s);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium);
+}
+
+.header-divider {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+      to right,
+      var(--background-modifier-border),
+      var(--interactive-accent),
+      var(--background-modifier-border)
+  );
+}
+
+/*=======================
+4. Accordion Base
+========================*/
+.graphweaver-accordion {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-primary);
+  margin-bottom: var(--size-4);
+  width: 100%;
+}
+
+.graphweaver-accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--size-2) var(--size-4);
   cursor: pointer;
   user-select: none;
-  border-bottom: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  border-radius: var(--radius-s);
+  width: 100%;
 }
 
-.graphweaver-plugin .gw-accordion-header:hover {
+.graphweaver-accordion-header:hover {
   background-color: var(--background-modifier-hover);
 }
 
-.graphweaver-plugin .gw-accordion-title-wrapper {
+.graphweaver-accordion-content {
+  padding: var(--size-4);
+  border-top: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+}
+
+.graphweaver-accordion-toggle {
+  padding: var(--size-1);
+  color: var(--text-muted);
+  font-size: 1.1em;
+}
+
+/*=======================
+5. Setting Items
+========================*/
+.setting-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: var(--size-4) 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.setting-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.setting-item:first-child {
+  padding-top: 0;
+}
+
+.setting-item-info {
+  flex: 1;
+  padding-right: var(--size-4);
+}
+
+.setting-item-name,
+.setting-item-heading {
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-medium);
+  color: var(--text-normal);
+  margin: 0;
+  margin-bottom: var(--size-1);
+}
+
+.setting-item-description {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.setting-item-control {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: var(--gw-spacing-sm);
+  gap: var(--size-2);
 }
 
-.graphweaver-plugin .gw-accordion-title {
-  font-size: var(--gw-font-large);
-  font-weight: 600;
-  color: var(--text-normal);
-}
-
-.graphweaver-plugin .gw-accordion-description {
-  padding: var(--gw-spacing-sm) var(--gw-spacing-md);
-  color: var(--text-muted);
-  font-size: var(--gw-font-small);
-  border-bottom: 1px solid var(--background-modifier-border);
-}
-
-.graphweaver-plugin .gw-accordion-toggle {
-  color: var(--text-muted);
-  transition: transform var(--gw-transition-normal);
-}
-
-.graphweaver-plugin .gw-accordion-open .gw-accordion-toggle {
-  transform: rotate(90deg);
-}
-
-/* Accordion Content */
-.graphweaver-plugin .gw-accordion-content {
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
-  transition: max-height var(--gw-transition-normal), 
-              opacity var(--gw-transition-normal),
-              padding var(--gw-transition-normal);
-  padding: 0;
-}
-
-.graphweaver-plugin .gw-accordion-open .gw-accordion-content {
-  max-height: none;
-  opacity: 1;
-  padding: var(--gw-spacing-lg);
-}
-
-.graphweaver-plugin .gw-accordion-content-inner {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gw-spacing-md);
-}
-
-/* Model Selection Styles */
-.graphweaver-plugin .model-selection {
-  margin-bottom: var(--gw-spacing-lg);
-}
-
-.graphweaver-plugin .setting-item {
-  display: flex;
-  flex-direction: column;
-  padding: var(--gw-spacing-sm) 0;
-  border-bottom: 1px solid var(--background-modifier-border);
-}
-
-.graphweaver-plugin .setting-item:last-child {
-  border-bottom: none;
-}
-
-.graphweaver-plugin .setting-item-control {
-  width: 100%;
-}
-
-/* Ensure dropdowns and inputs are visible */
-.graphweaver-plugin select,
-.graphweaver-plugin .dropdown,
-.graphweaver-plugin input[type="text"] {
-  width: 100%;
-  background-color: var(--background-primary);
+/*=======================
+6. Form Elements
+========================*/
+input[type="text"],
+input[type="password"],
+input[type="number"],
+textarea {
+  background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
-  border-radius: var(--gw-border-radius-sm);
-  padding: var(--gw-spacing-sm) var(--gw-spacing-md);
+  border-radius: var(--radius-s);
   color: var(--text-normal);
-  margin: var(--gw-spacing-xs) 0;
-  min-height: 2.5rem;
+  font-size: var(--font-ui-small);
+  padding: var(--size-2);
+  width: 100%;
+  max-width: 240px;
 }
 
-/* Links within accordions */
-.graphweaver-plugin .gw-accordion a {
-  color: var(--text-accent);
-  text-decoration: none;
+textarea {
+  min-height: 100px;
+  resize: vertical;
 }
 
-.graphweaver-plugin .gw-accordion a:hover {
-  text-decoration: underline;
-}
-
-/* Test Connection Button */
-.graphweaver-plugin .test-connection {
-  margin-top: var(--gw-spacing-md);
-}
-
-/* Button styling */
-.graphweaver-plugin button {
-  background-color: var(--interactive-accent);
+button {
+  background: var(--interactive-accent);
   color: var(--text-on-accent);
-  padding: var(--gw-spacing-sm) var(--gw-spacing-md);
-  border-radius: var(--gw-border-radius-sm);
   border: none;
+  border-radius: var(--radius-s);
+  padding: var(--size-2) var(--size-4);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium);
   cursor: pointer;
-  font-size: var(--gw-font-base);
 }
 
-.graphweaver-plugin button:hover {
-  background-color: var(--interactive-accent-hover);
+button:hover:not(:disabled) {
+  background: var(--interactive-accent-hover);
 }
-  
-  /* 📝 Settings and Forms
-     ============================================= */
-  .graphweaver-plugin .setting-item {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gw-spacing-sm);
-    padding: var(--gw-spacing-md) 0;
-    border-bottom: 1px solid var(--background-modifier-border);
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/*=======================
+7. Error States
+========================*/
+.error-message {
+  color: var(--text-error);
+  background: var(--background-modifier-error);
+  padding: var(--size-2) var(--size-4);
+  border-radius: var(--radius-s);
+  font-size: var(--font-ui-small);
+  margin-bottom: var(--size-4);
+}
+
+/*=======================
+8. Dark Mode
+========================*/
+.theme-dark .graphweaver-plugin-settings {
+  background: var(--background-primary);
+}
+
+.theme-dark .graphweaver-accordion {
+  background: var(--background-primary-alt);
+}
+
+.theme-dark .settings-header {
+  background: linear-gradient(
+      180deg,
+      var(--background-primary) 0%,
+      var(--background-primary-alt) 100%
+  );
+}
+
+/*=======================
+9. Responsive Design
+========================*/
+@media (max-width: 768px) {
+  .graphweaver-plugin-settings {
+      padding: var(--size-2);
   }
-  
-  .graphweaver-plugin .setting-item:last-child {
-    border-bottom: none;
+
+  .settings-header {
+      padding: var(--size-4);
+      margin-bottom: var(--size-8);
   }
-  
-  .graphweaver-plugin .setting-item-info {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gw-spacing-xs);
+
+  .header-title h2 {
+      font-size: var(--font-ui-large);
   }
-  
-  .graphweaver-plugin .setting-item-name {
-    font-weight: 600;
-    color: var(--text-normal);
+
+  input[type="text"],
+  input[type="password"],
+  input[type="number"] {
+      max-width: 100%;
   }
-  
-  .graphweaver-plugin .setting-item-description {
-    color: var(--text-muted);
-    font-size: var(--gw-font-small);
-    line-height: 1.5;
-  }
-  
-  .graphweaver-plugin .setting-item-control {
-    width: 100%;
-    margin-top: var(--gw-spacing-sm);
-  }
-  
-  /* 🔤 Input Elements
-     ============================================= */
-  .graphweaver-plugin input[type="text"],
-  .graphweaver-plugin textarea {
-    width: 100%;
-    background-color: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-    border-radius: var(--gw-border-radius-sm);
-    padding: var(--gw-spacing-sm) var(--gw-spacing-md);
-    color: var(--text-normal);
-    font-size: var(--gw-font-base);
-    line-height: var(--gw-line-height);
-    transition: border-color var(--gw-transition-fast);
-  }
-  
-  .graphweaver-plugin input[type="text"]:focus,
-  .graphweaver-plugin textarea:focus {
-    border-color: var(--interactive-accent);
-    outline: none;
-    box-shadow: 0 0 0 2px var(--background-modifier-border-hover);
-  }
-  
-  .graphweaver-plugin textarea {
-    min-height: 120px;
-    resize: vertical;
-  }
-  
-  /* 🔽 Dropdowns
-     ============================================= */
-  .graphweaver-plugin select,
-  .graphweaver-plugin .dropdown {
-    width: 100%;
-    background-color: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-    border-radius: var(--gw-border-radius-sm);
-    padding: var(--gw-spacing-sm) var(--gw-spacing-md);
-    color: var(--text-normal);
-    font-size: var(--gw-font-base);
-    line-height: var(--gw-line-height);
-    cursor: pointer;
-    min-height: 2.5rem;
-  }
-  
-  /* 🔘 Buttons
-     ============================================= */
-  .graphweaver-plugin .gw-button-container {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gw-spacing-sm);
-    margin-top: var(--gw-spacing-lg);
-    padding-top: var(--gw-spacing-lg);
-    border-top: 1px solid var(--background-modifier-border);
-  }
-  
-  .graphweaver-plugin .gw-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--gw-spacing-sm) var(--gw-spacing-lg);
-    border-radius: var(--gw-border-radius-sm);
-    font-size: var(--gw-font-base);
-    font-weight: 500;
-    cursor: pointer;
-    transition: all var(--gw-transition-fast);
-    min-height: 2.5rem;
-    width: 100%;
-  }
-  
-  .graphweaver-plugin .gw-button-primary {
-    background-color: var(--interactive-accent);
-    color: var(--text-on-accent);
-    border: none;
-  }
-  
-  .graphweaver-plugin .gw-button-primary:hover {
-    background-color: var(--interactive-accent-hover);
-  }
-  
-  .graphweaver-plugin .gw-button-secondary {
-    background-color: var(--background-secondary);
-    color: var(--text-normal);
-    border: 1px solid var(--background-modifier-border);
-  }
-  
-  .graphweaver-plugin .gw-button-secondary:hover {
-    background-color: var(--background-modifier-hover);
-  }
-  
-  /* 📱 Responsive Design
-     ============================================= */
-  @media screen and (max-width: 768px) {
-    .graphweaver-plugin .gw-accordion-header,
-    .graphweaver-plugin .gw-accordion-content {
-      padding: var(--gw-spacing-md);
-    }
-    
-    .graphweaver-plugin .setting-item {
-      padding: var(--gw-spacing-md) 0;
-    }
-    
-    .graphweaver-plugin input[type="text"],
-    .graphweaver-plugin textarea,
-    .graphweaver-plugin select,
-    .graphweaver-plugin .dropdown {
-      font-size: var(--gw-font-base);
-      padding: var(--gw-spacing-sm);
-    }
-  }
+}
+
+/*=======================
+10. Animations
+========================*/
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.graphweaver-plugin-settings {
+  animation: fadeIn 0.3s ease-out;
+}

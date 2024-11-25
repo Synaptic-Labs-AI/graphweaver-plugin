@@ -11,10 +11,10 @@ import { OperationType, OperationConfig, QueuedOperation } from '@type/operation
 import { aiStore } from '@stores/AIStore';
 import { get } from 'svelte/store';
 import type { Unsubscriber } from 'svelte/store';
-import { operationStore } from '@stores/operationStore';
+import { operationStore } from '@stores/OperationStore';
 import { TypedEventEmitter } from '@type/events.types';
 import type { OperationEvents } from '@type/events.types';
-import { metricsStore } from '@stores/metricsStore';
+import { metricsStore } from '@stores/MetricsStore';
 import type { OperationStatus } from '@type/operations.types';
 import type { StoreError } from '@type/store.types';
 

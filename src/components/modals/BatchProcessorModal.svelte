@@ -1,75 +1,99 @@
-//BatchProcessorModal.svelte
+<!-- src/components/modals/BatchProcessorModal.svelte -->
 <script context="module" lang="ts">
-  import { Modal, type App } from 'obsidian';
   import type { ProcessingStats } from '@type/processing.types';
-  import type { SvelteComponent } from 'svelte';
-
-  export class BatchProcessorModal extends Modal {
-    private component!: SvelteComponent;
-    private settingsService: SettingsService;
-    
-    constructor(app: App, settingsService: SettingsService) {
-      super(app);
-      this.settingsService = settingsService;
-    }
-
-    onOpen(): void {
-      const { contentEl } = this;
-      contentEl.empty();
-
-      this.component = new (this.constructor as any)({
-        target: contentEl,
-        props: {
-          app: this.app,
-          settingsService: this.settingsService,
-          onClose: () => this.close()
-        }
-      });
-    }
-
-    onClose(): void {
-      this.component.$destroy();
-      const { contentEl } = this;
-      contentEl.empty();
-    }
-  }
 </script>
 
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { BatchProcessor } from '@generators/BatchProcessor';
   import { CoreService } from '@services/core/CoreService';
-  import { ProcessingStateEnum } from '@type/processing.types';
+  import { 
+    ProcessingStateEnum, 
+    type ProcessingStatus,
+    type IProcessingStatusBar 
+  } from '@type/processing.types';
   import { TFile, TFolder, Notice, Setting } from 'obsidian';
-  import { SettingsService } from '@services/SettingsService';
+  import type { FileNode } from '@type/component.types';
+  import type { UIState } from '@type/store.types';
+  import type { BatchProcessorModalProps } from '@type/component.types';
 
-  interface FileNode {
-    name: string;
-    path: string;
-    type: 'file' | 'folder';
-    children?: FileNode[];
-    selected: boolean;
-    expanded?: boolean;
-    level: number;
+  // Simplified props
+  export let app: BatchProcessorModalProps['app'];
+  export let settingsService: BatchProcessorModalProps['settingsService'];
+  export let aiService: BatchProcessorModalProps['aiService'];
+  export let generationService: BatchProcessorModalProps['generationService'];
+  export let onClose: BatchProcessorModalProps['onClose'];
+  export let onProcessComplete: BatchProcessorModalProps['onProcessComplete'];
+
+  // State management
+  let fileTree: FileNode[] = [];
+  let selection = {
+    paths: new Set<string>(),
+    expanded: new Set<string>()
+  };
+
+  // Extend UIState with processing-specific fields
+  interface ProcessingUIState extends UIState {
+    file: string;
+    progress: number;
+    isProcessing: boolean;
   }
-  export let app: App;
-  export let onClose: () => void;
-  export let settingsService: SettingsService;
 
-  let selectedPaths = new Set<string>();
-  let expandedFolders = new Set<string>();
-  let vaultStructure: FileNode[] = [];
-  let isProcessing = false;
-  let currentFile = '';
-  let progress = 0;
-  let processingState: ProcessingStateEnum = ProcessingStateEnum.IDLE;
-  let processor: BatchProcessor;
   let containerEl: HTMLElement;
+  let processor: BatchProcessor;
 
-  const statusBar = {
-    updateFromState: (update: { currentFile: string | null; progress: number; status: any }) => {
-      currentFile = update.currentFile || '';
-      progress = update.progress;
+  // Initialize UI state with all required fields
+  let uiState: ProcessingUIState = {
+    isInitialized: true,
+    darkMode: false,
+    activeAccordion: null,
+    notifications: [],
+    lastInteraction: Date.now(),
+    modalStack: [],
+    lastUpdated: Date.now(),
+    file: '',
+    progress: 0,
+    isProcessing: false
+  };
+
+  // Processing state using imported type
+  let processing: ProcessingStatus = {
+    state: {
+      isProcessing: false,
+      currentFile: null,
+      queue: [],
+      progress: 0,
+      state: ProcessingStateEnum.IDLE,
+      filesQueued: 0,
+      filesProcessed: 0,
+      filesRemaining: 0,
+      errors: [],
+      error: null,
+      startTime: null,
+      estimatedTimeRemaining: null
+    },
+    filesQueued: 0,
+    filesProcessed: 0,
+    filesRemaining: 0,
+    currentFile: undefined,
+    startTime: 0,
+    errors: []
+  };
+
+  const statusBar: IProcessingStatusBar = {
+    updateFromState: (state: { 
+      currentFile: string | null; 
+      progress: number; 
+      status: ProcessingStatus;
+    }): void => {
+      if (state.currentFile !== null) {
+        uiState.file = state.currentFile;
+      }
+      uiState.progress = state.progress;
+      uiState.isProcessing = state.status.state.isProcessing;
+      Object.assign(processing, state.status);
+      uiState = { ...uiState }; // Trigger Svelte reactivity
+      processing = processing;
     }
   };
 
@@ -101,10 +125,15 @@
       statusBar
     );
 
-    processor.on('stateChanged', ({ state, currentFile: file, progress: prog }) => {
-      processingState = state.state;
-      currentFile = file || '';
-      progress = prog || 0;
+    processor.on('stateChanged', ({ state, currentFile, progress }) => {
+      processing.state.state = state;
+      processing.currentFile = currentFile ?? undefined;
+      processing.state.progress = progress;
+      uiState.progress = progress;
+      uiState.file = currentFile ?? '';
+      uiState.lastUpdated = Date.now();
+      uiState = { ...uiState };
+      processing = processing;
     });
 
     processor.on('error', ({ filePath, error }) => {
@@ -112,9 +141,9 @@
     });
   }
 
-  function buildVaultStructure(): void {
+  function buildVaultStructure(): FileNode[] {
     const rootFolder = app.vault.getRoot();
-    vaultStructure = rootFolder.children
+    return rootFolder.children
       .filter((child): child is TFolder | TFile => child instanceof TFolder || child instanceof TFile)
       .map(child => createNode(child, 0));
   }
@@ -138,12 +167,12 @@
         .filter((child): child is TFolder | TFile => child instanceof TFolder || child instanceof TFile)
         .map(child => createNode(child, level + 1)),
       selected: false,
-      expanded: expandedFolders.has(item.path),
+      expanded: selection.expanded.has(item.path),
       level
     };
   }
 
-  function renderFileTree(container: HTMLElement, nodes: FileNode[]): void {
+  function renderNodes(container: HTMLElement, nodes: FileNode[]): void {
     nodes.forEach(node => {
       const itemSetting = new Setting(container)
         .setClass('file-tree-item')
@@ -169,34 +198,36 @@
         if (node.expanded && node.children) {
           const childContainer = container.createDiv('folder-children');
           childContainer.style.marginLeft = '20px';
-          renderFileTree(childContainer, node.children);
+          renderNodes(childContainer, node.children);
         }
       }
     });
   }
 
-  function refreshFileTree(): void {
+  function renderFileTree(): void {
     if (!containerEl) return;
-    
     containerEl.empty();
-    renderFileTree(containerEl, vaultStructure);
+    
+    const tree = buildVaultStructure();
+    fileTree = tree;
+    renderNodes(containerEl, tree);
   }
 
   function handleSelection(node: FileNode, selected: boolean): void {
     node.selected = selected;
     
     if (selected) {
-      selectedPaths.add(node.path);
+      selection.paths.add(node.path);
     } else {
-      selectedPaths.delete(node.path);
+      selection.paths.delete(node.path);
     }
-    selectedPaths = selectedPaths;
+    selection.paths = selection.paths;
 
     if (node.type === 'folder' && node.children) {
       node.children.forEach(child => handleSelection(child, selected));
     }
 
-    refreshFileTree();
+    renderFileTree();
   }
 
   function toggleFolder(node: FileNode): void {
@@ -205,27 +236,29 @@
     node.expanded = !node.expanded;
     
     if (node.expanded) {
-      expandedFolders.add(node.path);
+      selection.expanded.add(node.path);
     } else {
-      expandedFolders.delete(node.path);
+      selection.expanded.delete(node.path);
     }
-    expandedFolders = expandedFolders;
+    selection.expanded = selection.expanded;
 
-    refreshFileTree();
+    renderFileTree();
   }
 
   async function handleProcess(): Promise<void> {
-    if (selectedPaths.size === 0) {
+    if (selection.paths.size === 0) {
       new Notice('No files selected for processing');
       return;
     }
 
     try {
-      isProcessing = true;
+      uiState.isProcessing = true;
+      uiState.lastUpdated = Date.now();
+      uiState = { ...uiState };
       
       const settings = settingsService.getSettings();
       const result = await processor.process({
-        files: Array.from(selectedPaths),
+        files: Array.from(selection.paths),
         generateFrontMatter: settings.frontMatter.autoGenerate,
         generateWikilinks: settings.advanced.generateWikilinks
       });
@@ -236,7 +269,9 @@
       console.error('Error processing files:', error);
       new Notice(`Error processing files: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
-      isProcessing = false;
+      uiState.isProcessing = false;
+      uiState.lastUpdated = Date.now();
+      uiState = { ...uiState };
     }
   }
 
@@ -259,16 +294,16 @@
 
     <div class="modal-scrollable-content" bind:this={containerEl}></div>
 
-    {#if isProcessing}
+    {#if uiState.isProcessing}
       <div class="processing-status">
         <div class="progress-bar">
-          <div class="progress-fill" style="width: {progress}%"></div>
+          <div class="progress-fill" style="width: {uiState.progress}%"></div>
         </div>
         <div class="status-text">
-          {#if currentFile}
-            Processing: {currentFile}
+          {#if uiState.file}
+            Processing: {uiState.file}
           {:else}
-            {processingState}
+            {processing.state.state}
           {/if}
         </div>
       </div>
@@ -277,20 +312,20 @@
     <footer class="modal-footer">
       <div class="footer-content">
         <span class="selection-count">
-          {selectedPaths.size} items selected
+          {selection.paths.size} items selected
         </span>
         <div class="button-container">
           <button
             class="mod-cta"
             on:click={handleProcess}
-            disabled={isProcessing || selectedPaths.size === 0}
+            disabled={uiState.isProcessing || selection.paths.size === 0}
           >
-            {isProcessing ? 'Processing...' : 'Process Selected'}
+            {uiState.isProcessing ? 'Processing...' : 'Process Selected'}
           </button>
           <button
             class="mod-cancel"
             on:click={onClose}
-            disabled={isProcessing}
+            disabled={uiState.isProcessing}
           >
             Cancel
           </button>

@@ -6,6 +6,7 @@ import { createEnhancedStore } from './StoreUtils';
 import { AIProvider, type AIModel } from '@type/ai.types';
 import { OperationType, type OperationStatus } from '@type/operations.types';
 import { utils as coreUtils } from './CoreStore';
+import { AIModelUtils } from '@type/aiModels';
 
 // Define state events
 export enum StateEvent {
@@ -19,7 +20,10 @@ export enum StateEvent {
     OperationCompleted = 'operationCompleted',
     OperationFailed = 'operationFailed',
     ErrorOccurred = 'errorOccurred',
-    StatusChanged = 'statusChanged'
+    StatusChanged = 'statusChanged',
+    KnowledgeBloomStarted = 'knowledgeBloomStarted',
+    KnowledgeBloomCompleted = 'knowledgeBloomCompleted',
+    KnowledgeBloomFailed = 'knowledgeBloomFailed'
 }
 
 // Create initial operation metrics
@@ -34,13 +38,7 @@ const createInitialOperationMetrics = () => {
     }), {} as Record<OperationType, { count: number; averageTime: number; errorCount: number }>);
 };
 
-export interface AIState {
-    // ...existing properties...
-    error?: ServiceError | StoreError;
-    // ...existing properties...
-}
-
-export function createAIStore(initialState: AIState = {
+const defaultInitialState: AIState = {
     isInitialized: false,
     isConnected: false,
     currentModel: '',
@@ -53,8 +51,16 @@ export function createAIStore(initialState: AIState = {
         errorRate: { total: 0, errors: 0, rate: 0 },
         operationMetrics: createInitialOperationMetrics()
     },
-    stateHistory: []
-}): AIStore {
+    stateHistory: [],
+    lastUpdated: Date.now(),
+    knowledgeBloom: {
+        isGenerating: false,
+        selectedModel: '',
+        userPrompt: ''
+    }
+};
+
+export function createAIStore(initialState: AIState = defaultInitialState): AIStore {
     const store = createEnhancedStore<AIState>(initialState);
     const eventSubscribers = new Map<StateEvent, Set<(transition: StateTransition) => void>>();
 
@@ -91,12 +97,24 @@ export function createAIStore(initialState: AIState = {
     return {
         ...store,
         setProvider: (provider: AIProvider) => {
-            recordTransition(StateEvent.ProviderChanged, { provider });
+            const models = AIModelUtils.getModelsForProvider(provider);
+            if (!models.length) {
+                throw new Error(`No models available for provider: ${provider}`);
+            }
+            recordTransition(StateEvent.ProviderChanged, { 
+                provider,
+                availableModels: models,
+                currentModel: models[0].apiName
+            });
         },
         updateConnection: (isConnected: boolean) => {
             recordTransition(StateEvent.ConnectionChanged, { isConnected });
         },
         setModel: (model: string) => {
+            const modelInfo = AIModelUtils.getModelByApiName(model);
+            if (!modelInfo) {
+                throw new Error(`Invalid model: ${model}`);
+            }
             recordTransition(StateEvent.ModelChanged, { currentModel: model });
         },
         setInitialized: (isInitialized: boolean) => {
@@ -109,7 +127,9 @@ export function createAIStore(initialState: AIState = {
             recordTransition(StateEvent.ModelsUpdated, { availableModels: models });
         },
         setError: (error: string | undefined) => {
-            recordTransition(StateEvent.ErrorOccurred, { error });
+            recordTransition(StateEvent.ErrorOccurred, { 
+                error: error ? { message: error, timestamp: Date.now() } : undefined 
+            });
         },
         setLastResponse: (response: string | undefined) => {
             store.update(state => ({ ...state, lastResponse: response }));
@@ -131,7 +151,10 @@ export function createAIStore(initialState: AIState = {
         },
         reportError: (error: Error, metadata?: Record<string, any>) => {
             recordTransition(StateEvent.ErrorOccurred, {
-                error: error.message,
+                error: {
+                    message: error.message,
+                    timestamp: Date.now()
+                },
                 lastError: {
                     message: error.message,
                     timestamp: Date.now()
@@ -158,6 +181,35 @@ export function createAIStore(initialState: AIState = {
                 ...state,
                 performanceMetrics: initialState.performanceMetrics
             }));
+        },
+        setKnowledgeBloomGenerating: (isGenerating: boolean) => {
+            recordTransition(
+                isGenerating ? StateEvent.KnowledgeBloomStarted : StateEvent.KnowledgeBloomCompleted,
+                { knowledgeBloom: { ...get(store).knowledgeBloom, isGenerating } }
+            );
+        },
+
+        updateKnowledgeBloomSettings: (settings: Partial<AIState['knowledgeBloom']>) => {
+            store.update(state => ({
+                ...state,
+                knowledgeBloom: {
+                    ...state.knowledgeBloom,
+                    ...settings
+                }
+            }));
+        },
+
+        recordKnowledgeBloomGeneration: (noteCount: number) => {
+            store.update(state => ({
+                ...state,
+                knowledgeBloom: {
+                    ...state.knowledgeBloom,
+                    lastGenerated: {
+                        timestamp: Date.now(),
+                        noteCount
+                    }
+                }
+            }));
         }
     };
 }
@@ -172,4 +224,12 @@ export const aiStatus = derived(aiStore, ($store) => ({
     provider: $store.provider,
     availableModels: $store.availableModels,
     hasError: !!$store.error
+}));
+
+// Add Knowledge Bloom specific derived store
+export const knowledgeBloomStatus = derived(aiStore, ($store) => ({
+    isGenerating: $store.knowledgeBloom.isGenerating,
+    selectedModel: $store.knowledgeBloom.selectedModel,
+    userPrompt: $store.knowledgeBloom.userPrompt,
+    lastGenerated: $store.knowledgeBloom.lastGenerated
 }));

@@ -4,7 +4,7 @@ import { ServiceError } from '@services/core/ServiceError';
 import { SettingsService } from '@services/SettingsService';
 import { JsonValidationService } from '@services/JsonValidationService';
 import { DatabaseService } from '@services/DatabaseService';
-import { AIState } from '@type/store.types';
+import { AIModelUtils } from '@type/aiModels';
 import { GeneratorFactory } from './GeneratorFactory';
 import { AdapterRegistry } from './AdapterRegistry';
 import { AIGenerationService } from './AIGenerationService';
@@ -36,6 +36,7 @@ export class AIService extends CoreService
     protected adapterRegistry: AdapterRegistry; // Add missing property
     private config: AIServiceConfig;
     private unsubscribers: Unsubscriber[] = [];
+    private isInitializing = false;
 
     constructor(
         protected app: App,
@@ -78,17 +79,25 @@ export class AIService extends CoreService
             await this.adapterRegistry.initialize();
             await this.generatorFactory.initialize();
 
-            // Create generation service after generators are ready
-            this.generationService = new AIGenerationService(this.generatorFactory);
+            // Validate provider setup
+            const provider = this.getProviderFromStore();
+            const models = AIModelUtils.getModelsForProvider(provider);
+            if (!models.length) {
+                throw new Error(`No models available for provider: ${provider}`);
+            }
 
-            // Set up store subscriptions
-            this.setupSubscriptions();
-
-            // Update AI store initialization state
-            aiStore.update((state: AIState) => ({
+            // Update store with valid models
+            aiStore.update(state => ({
                 ...state,
+                availableModels: models,
+                currentModel: models[0].apiName,
                 isInitialized: true
             }));
+
+            // Create generation service after validation
+            this.generationService = new AIGenerationService(this.generatorFactory);
+            
+            this.setupSubscriptions();
 
         } catch (error) {
             throw new ServiceError(
@@ -196,25 +205,37 @@ export class AIService extends CoreService
      * Reinitialize the service
      */
     public async reinitialize(): Promise<void> {
-        if (!this.isReady()) {
-            throw new ServiceError(this.serviceName, 'Cannot reinitialize when not ready');
+        if (this.isInitializing) {
+            throw new ServiceError('AI Service', 'Service is already initializing');
         }
-
+        
         try {
-            await this.destroy();
-            this.initializeComponents();
+            this.isInitializing = true;
+            await this.waitForDependencies();
             await this.initialize();
-            
-            if (this.config.enableNotifications) {
-                new Notice('AI Service reinitialized successfully');
-            }
-        } catch (error) {
-            throw new ServiceError(
-                this.serviceName,
-                'Failed to reinitialize AI service',
-                error instanceof Error ? error : undefined
-            );
+        } finally {
+            this.isInitializing = false;
         }
+    }
+
+    private async waitForDependencies(): Promise<void> {
+        // Wait for required services to be ready
+        const maxAttempts = 50;
+        const interval = 100;
+        
+        for (let i = 0; i < maxAttempts; i++) {
+            if (this.checkDependenciesReady()) {
+                return;
+            }
+            await new Promise(resolve => setTimeout(resolve, interval));
+        }
+        throw new ServiceError('AI Service', 'Dependencies failed to initialize');
+    }
+
+    private checkDependenciesReady(): boolean {
+        return this.settingsService?.isReady() && 
+               this.operationManager?.isReady() &&
+               this.databaseService?.isReady();
     }
 
     /**

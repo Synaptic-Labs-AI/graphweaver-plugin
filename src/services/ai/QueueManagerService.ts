@@ -2,6 +2,7 @@
 
 import { CoreService } from "@services/core/CoreService";
 import { OperationType, QueuedOperation } from '../../types/operations.types';
+import { operationStore } from '@stores/OperationStore';  // Add this import
 
 export class QueueManagerService extends CoreService {
     private operationQueue: QueuedOperation[] = [];

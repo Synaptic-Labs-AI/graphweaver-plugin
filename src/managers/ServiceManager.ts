@@ -1,14 +1,13 @@
 import type { Plugin } from 'obsidian';
 import { 
-    RegistrationStatus, 
-    ServiceState,
+    RegistrationStatus,
     ServiceRegistration,
     RegistrationError
 } from '@type/services.types';
+import { LifecycleState } from '@type/base.types';
 import { ServiceRegistry } from '@registrations/ServiceRegistrations';
 import { ServiceError } from '@services/core/ServiceError';
 import type { IService } from '@services/core/IService';
-import type { InitializationStatus } from '@type/services.types';
 import { TypedEventEmitter, ServiceEvents } from '@type/events.types';
 
 /**
@@ -17,7 +16,7 @@ import { TypedEventEmitter, ServiceEvents } from '@type/events.types';
 export class ServiceManager extends TypedEventEmitter<ServiceEvents> {
     private static instance: ServiceManager | null = null;
     private readonly registry: ServiceRegistry;
-    private state: ServiceState = ServiceState.Uninitialized;
+    private state: LifecycleState = LifecycleState.Uninitialized;
     private error: ServiceError | null = null;
     private isUnloading = false;
 
@@ -51,16 +50,34 @@ export class ServiceManager extends TypedEventEmitter<ServiceEvents> {
         console.log(`🦇 [ServiceManager] Registering service: ${id}`);
         
         try {
+            // Validate service instance
+            if (!serviceInstance) {
+                throw new ServiceError('ServiceManager', `Invalid service instance for ${id}`);
+            }
+
             const instance = await Promise.resolve(serviceInstance);
+            
+            // Validate service interface implementation
+            if (!instance.initialize || !instance.destroy) {
+                throw new ServiceError('ServiceManager', 
+                    `Service ${id} missing required interface methods`);
+            }
+            
+            // Check for duplicate registration
+            if (this.registry.hasService(id)) {
+                throw new ServiceError('ServiceManager', 
+                    `Service ${id} already registered`);
+            }
+
             await this.registry.registerService(id, instance, dependencies);
             
             const registration: ServiceRegistration<IService> = {
                 id,
-                name: instance.serviceName,
+                name: instance.serviceName || id,
                 instance,
                 dependencies,
                 status: RegistrationStatus.Registered,
-                state: ServiceState.Uninitialized,
+                state: LifecycleState.Uninitialized,
                 lastUpdated: Date.now(),
                 factory: undefined,
                 constructor: undefined,
@@ -72,13 +89,15 @@ export class ServiceManager extends TypedEventEmitter<ServiceEvents> {
         } catch (error) {
             const registrationError: RegistrationError = {
                 id,
-                error: new ServiceError('ServiceManager', 'Registration failed', error as Error),
+                error: ServiceError.from('ServiceManager', error, {
+                    context: `Failed to register service: ${id}`
+                }),
                 timestamp: Date.now(),
                 recoverable: false
             };
             
             this.emit('failed', registrationError);
-            throw error;
+            throw registrationError.error;
         }
     }
 
@@ -95,14 +114,14 @@ export class ServiceManager extends TypedEventEmitter<ServiceEvents> {
         
         const initializeWithRetry = async (): Promise<void> => {
             try {
-                this.state = ServiceState.Initializing;
+                this.state = LifecycleState.Initializing;
                 
                 await Promise.race([
                     this.registry.initializeAll(),
                     this.createTimeout()
                 ]);
 
-                this.state = ServiceState.Ready;
+                this.state = LifecycleState.Ready;
                 this.emit('ready');
             } catch (error) {
                 if (retryCount < this.CONFIG.MAX_RETRIES) {
@@ -112,7 +131,7 @@ export class ServiceManager extends TypedEventEmitter<ServiceEvents> {
                     return initializeWithRetry();
                 }
                 
-                this.state = ServiceState.Error;
+                this.state = LifecycleState.Error;
                 this.handleError('Initialization failed', error);
                 throw error;
             }
@@ -129,7 +148,7 @@ export class ServiceManager extends TypedEventEmitter<ServiceEvents> {
         return this.registry.getServiceState(id).registered;
     }
 
-    public getServiceState(id: string): {
+    public getLifecycleState(id: string): {
         registered: boolean;
         status: RegistrationStatus;
         dependencies: string[];
@@ -138,7 +157,7 @@ export class ServiceManager extends TypedEventEmitter<ServiceEvents> {
         return this.registry.getServiceState(id);
     }
 
-    public getState(): ServiceState {
+    public getState(): LifecycleState {
         return this.state;
     }
 
@@ -150,7 +169,7 @@ export class ServiceManager extends TypedEventEmitter<ServiceEvents> {
         if (this.isUnloading) return;
 
         this.isUnloading = true;
-        this.state = ServiceState.Destroying;
+        this.state = LifecycleState.Destroying;
 
         try {
             const services = Array.from(this.registry.getRegisteredServices());
@@ -165,9 +184,9 @@ export class ServiceManager extends TypedEventEmitter<ServiceEvents> {
                 }
             }));
             
-            this.state = ServiceState.Destroyed;
+            this.state = LifecycleState.Destroyed;
         } catch (error) {
-            this.state = ServiceState.Error;
+            this.state = LifecycleState.Error;
             this.handleError('Unload failed', error);
             throw error;
         } finally {

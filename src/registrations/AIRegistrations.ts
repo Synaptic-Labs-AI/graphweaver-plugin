@@ -13,8 +13,6 @@ import { DatabaseService } from '@services/DatabaseService';
 import { WikilinkTextProcessor } from '@services/WikilinkTextProcessor';
 
 // AI Services
-import { MetricsTracker } from '@services/ai/MetricsTracker';
-import { OperationEventEmitter } from '@services/ai/OperationEventEmitter';
 import { AdapterRegistry } from '@services/ai/AdapterRegistry';
 import { GeneratorFactory } from '@services/ai/GeneratorFactory';
 import { QueueManagerService } from '@services/ai/QueueManagerService';
@@ -44,16 +42,6 @@ interface ServiceContext {
  * AI service configurations
  */
 const AI_SERVICES: ServiceConfig[] = [
-    {
-        id: 'metricsTracker',
-        name: 'Metrics Tracker',
-        factory: () => new MetricsTracker()
-    },
-    {
-        id: 'operationEventEmitter',
-        name: 'Operation Event Emitter',
-        factory: () => new OperationEventEmitter()
-    },
     {
         id: 'adapterRegistry',
         name: 'AI Adapter Registry',

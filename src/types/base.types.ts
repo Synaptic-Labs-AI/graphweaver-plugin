@@ -19,11 +19,14 @@ export interface BaseStatus {
 }
 
 // Common validation result
-export interface ValidationResult {
-    isValid: boolean;
-    errors?: string[];
-    metadata?: Record<string, unknown>;
+
+export interface ValidationResult<T = any> {
+    valid: boolean;
+    value?: T;
+    error?: string;
+    fixes?: string[];
 }
+
 
 // Common lifecycle state enum
 export enum LifecycleState {

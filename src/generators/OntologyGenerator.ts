@@ -4,7 +4,7 @@ import { BaseGenerator } from '@generators/BaseGenerator';
 import { AIAdapter } from '@type/ai.types';
 import { SettingsService } from '@services/SettingsService';
 import { Tag } from '@type/metadata.types';
-import { OntologyInput, OntologyResult } from '@type/ontology.types';
+import { OntologyInput, OntologyResult } from '@type/component.types';
 
 /**
  * Generator class responsible for creating ontologies based on provided input.
@@ -116,28 +116,24 @@ Suggest enough tags to form a comprehensive ontology for this knowledge base.
                     return {
                         name: String(name).trim(),
                         description: String((value as any).description).trim(),
-                        type: (value as any).type || 'string', // Default to 'string' if type not provided
-                        required: (value as any).required !== undefined ? Boolean((value as any).required) : false, // Default to false
-                        multipleValues: (value as any).multipleValues !== undefined ? Boolean((value as any).multipleValues) : false // Default to false
+                        type: 'string',
+                        required: false,
+                        multipleValues: false
                     };
-                } else {
-                    console.warn(`Unexpected format for tag ${name}:`, value);
-                    return null;
                 }
+                return null;
             })
-            .filter((tag): tag is Tag => 
-                tag !== null && typeof tag.name === 'string' && tag.name.length > 0 && 
-                typeof tag.description === 'string' && tag.description.length > 0 &&
-                typeof tag.type === 'string' &&
-                typeof tag.required === 'boolean' &&
-                typeof tag.multipleValues === 'boolean'
-            );
+            .filter((tag): tag is Tag => tag !== null);
 
         if (suggestedTags.length === 0) {
             throw new Error('No valid tags found in AI response');
         }
 
-        return { suggestedTags };
+        // Return both tags and empty properties array to match OntologyResult interface
+        return { 
+            tags: suggestedTags,
+            properties: [] 
+        };
     }
 
     /**
@@ -171,7 +167,7 @@ Suggest enough tags to form a comprehensive ontology for this knowledge base.
                Array.isArray(input.tags) &&
                typeof input.provider === 'string' &&
                typeof input.modelApiName === 'string' &&
-               typeof input.userContext === 'string';
+               (!input.userContext || typeof input.userContext === 'string');
     }
 
     /**

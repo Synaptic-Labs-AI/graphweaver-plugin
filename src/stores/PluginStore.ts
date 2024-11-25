@@ -1,10 +1,12 @@
 // src/stores/PluginStore.ts
+import type { App, Plugin } from 'obsidian';
 import { derived, get } from 'svelte/store';
 import type { PluginStore as IPluginStore, PluginState } from '@type/store.types';
 import { core, utils as coreUtils } from './CoreStore';
 import { DEFAULT_PLUGIN_STATE } from '@type/store.types';
 import type { StoreUpdate } from '@type/store.types';
-import { createPersistedStore } from './StoreUtils';
+import { createBaseStore } from './StoreUtils';
+import { DEFAULT_SETTINGS } from '@type/settings.types';
 
 /**
  * PluginStore - Manages global plugin state
@@ -18,11 +20,16 @@ export class PluginStore implements IPluginStore {
     public update;
 
     private constructor() {
-        // Create store first
-        this.store = createPersistedStore<PluginState>(
-            PluginStore.STORAGE_KEY,
-            structuredClone(DEFAULT_PLUGIN_STATE)
-        );
+        // Create store with complete initial state
+        this.store = createBaseStore<PluginState>({
+            plugin: null,
+            app: null,
+            settings: DEFAULT_SETTINGS,
+            processing: DEFAULT_PLUGIN_STATE.processing,
+            ai: DEFAULT_PLUGIN_STATE.ai,
+            ui: DEFAULT_PLUGIN_STATE.ui,
+            files: DEFAULT_PLUGIN_STATE.files
+        });
 
         // Bind store methods
         this.subscribe = this.store.subscribe;
@@ -121,23 +128,63 @@ export class PluginStore implements IPluginStore {
     private handleError(message: string, error: unknown): void {
         coreUtils.reportError(message, 'error', { error });
     }
+
+    private sanitizeState(state: PluginState): PluginState {
+        return {
+            ...state,
+            plugin: state.plugin, // Keep the full plugin instance
+            app: state.app ? {
+                workspace: {
+                    activeLeaf: state.app.workspace?.activeLeaf,
+                    config: state.app.workspace?.config
+                }
+            } : null
+        };
+    }
 }
 
 // Create singleton instance
 export const pluginStore = PluginStore.getInstance();
 
-// Derived stores with type safety
-export const settingsState = derived(pluginStore, $store => $store.settings);
-export const processingState = derived(pluginStore, $store => $store.processing);
-export const aiState = derived(pluginStore, $store => $store.ai);
-export const uiState = derived(pluginStore, $store => $store.ui);
-export const filesState = derived(pluginStore, $store => $store.files);
+// Derived stores with explicit typing
+export const settingsState = derived<typeof pluginStore, PluginState['settings']>(
+    pluginStore, 
+    $store => ($store as PluginState).settings
+);
 
-// Plugin status derived store  
-export const pluginStatus = derived(pluginStore, ($store) => ({
-    isInitialized: $store.ai.isInitialized,
-    isProcessing: $store.processing.isProcessing,
-    hasErrors: $store.processing.errors.length > 0 || !!$store.ai.error,
-    activeSection: $store.ui.activeAccordion,
-    serviceState: pluginStore.getSnapshot()
-}));
+export const processingState = derived<typeof pluginStore, PluginState['processing']>(
+    pluginStore, 
+    $store => ($store as PluginState).processing
+);
+
+export const aiState = derived<typeof pluginStore, PluginState['ai']>(
+    pluginStore, 
+    $store => ($store as PluginState).ai
+);
+
+export const uiState = derived<typeof pluginStore, PluginState['ui']>(
+    pluginStore, 
+    $store => ($store as PluginState).ui
+);
+
+export const filesState = derived<typeof pluginStore, PluginState['files']>(
+    pluginStore, 
+    $store => ($store as PluginState).files
+);
+
+export const pluginStatus = derived<typeof pluginStore, {
+    isInitialized: boolean;
+    isProcessing: boolean;
+    hasErrors: boolean;
+    activeSection: string | null;
+    serviceState: PluginState;
+}>(pluginStore, ($store) => {
+    const state = $store as PluginState;
+    return {
+        isInitialized: state.ai.isInitialized,
+        isProcessing: state.processing.isProcessing,
+        hasErrors: state.processing.errors.length > 0 || !!state.ai.error,
+        activeSection: state.ui.activeAccordion,
+        serviceState: pluginStore.getSnapshot()
+    };
+});

@@ -5,10 +5,10 @@ import { createPersistedStore } from './StoreUtils';
 import { core, utils as coreUtils } from './CoreStore';
 import { 
     ServiceRegistration, 
-    ServiceState, 
     RegistrationStatus 
 } from '@type/services.types';
 import { ServiceError } from '@services/core/ServiceError';
+import { LifecycleState } from '@type/base.types';
 
 interface ServiceStoreState {
     registrations: Map<string, ServiceRegistration>;
@@ -80,7 +80,7 @@ export class ServiceStore {
                 const updatedService = {
                     ...service,
                     status: RegistrationStatus.Registered,
-                    state: ServiceState.Uninitialized
+                    state: LifecycleState.Uninitialized
                 };
                 
                 state.registrations.set(service.id, updatedService);
@@ -100,7 +100,7 @@ export class ServiceStore {
                 }
 
                 state.initializing.add(serviceId);
-                service.state = ServiceState.Initializing;
+                service.state = LifecycleState.Initializing;
                 return state;
             });
 
@@ -109,7 +109,7 @@ export class ServiceStore {
                 if (service) {
                     state.initializing.delete(serviceId);
                     state.initialized.add(serviceId);
-                    service.state = ServiceState.Ready;
+                    service.state = LifecycleState.Ready;
                     service.status = RegistrationStatus.Initialized;
                 }
                 return state;
@@ -118,7 +118,7 @@ export class ServiceStore {
             this.store.update(state => {
                 const service = state.registrations.get(serviceId);
                 if (service) {
-                    service.state = ServiceState.Error;
+                    service.state = LifecycleState.Error;
                     service.status = RegistrationStatus.Failed;
                     state.failed.set(serviceId, error as ServiceError);
                 }

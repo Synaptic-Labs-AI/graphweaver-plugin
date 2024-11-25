@@ -2,13 +2,7 @@
 
 import { AIProvider } from "@type/ai.types";
 import { PropertyTag, Tag } from "@type/metadata.types";
-
-export interface KnowledgeBloomSettings {
-    outputFolder: string;
-    overwriteExisting: boolean;
-    defaultPrompt: string;
-    selectedModel: string; // Added
-}
+import { KnowledgeBloomSettings } from "@type/ai.types";
 
 export interface PluginSettings {
     aiProvider: {
@@ -81,8 +75,6 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     },
     knowledgeBloom: {
         selectedModel: 'string',
-        outputFolder: '',
-        overwriteExisting: false,
         defaultPrompt: 'Generate a comprehensive note about {LINK}. Include key concepts, definitions, and relevant examples if applicable.'
     }
 };

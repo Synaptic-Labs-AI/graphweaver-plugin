@@ -326,7 +326,10 @@ export class AdapterRegistry implements IService {
                 isProcessing: false,
                 provider: this.currentProvider,
                 availableModels: AIModelMap[this.currentProvider] || [],
-                error: currentStatus.lastError
+                error: currentStatus.lastError ? {
+                    message: currentStatus.lastError,
+                    timestamp: Date.now()
+                } : undefined
             }));
         }
     }
@@ -339,7 +342,10 @@ export class AdapterRegistry implements IService {
         
         aiStore.update(state => ({
             ...state,
-            error: error.message,
+            error: {
+                message: error.message,
+                timestamp: Date.now()
+            },
             lastError: {
                 message: error.message,
                 timestamp: Date.now()

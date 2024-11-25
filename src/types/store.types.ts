@@ -16,8 +16,7 @@ import {
     GeneratorStatus
 } from '@services/ai/GeneratorFactory';
 import type { Plugin } from 'obsidian';
-import { BaseError, BaseStatus } from './base.types';
-import type { ServiceError } from '@services/core/ServiceError';
+import { BaseError, LifecycleState } from './base.types';
 
 // Add StoreError interface
 export interface StoreError extends BaseError {
@@ -141,8 +140,9 @@ export interface PerformanceMetrics {
  */
 export interface StoreState {
     isInitialized: boolean;
-    error?: StoreError;
-    lastUpdated: number;
+    lifecycle?: LifecycleState;
+    error?: StoreError | null;
+    lastUpdated?: number;
 }
 
 /**
@@ -168,6 +168,15 @@ export interface AIState extends StoreState {
     queueLength?: number;
     lastOperation?: OperationStatus;
     stateHistory: StateTransition[];
+    knowledgeBloom: {
+        isGenerating: boolean;
+        selectedModel: string;
+        userPrompt: string;
+        lastGenerated?: {
+            timestamp: number;
+            noteCount: number;
+        };
+    };
 }
 
 /**
@@ -201,8 +210,18 @@ export interface FilesState {
 /**
  * Plugin state interface
  */
+interface WorkspaceState {
+    activeLeaf?: any;
+    config?: any;
+}
+
+interface AppState {
+    workspace?: WorkspaceState;
+}
+
 export interface PluginState {
     plugin: Plugin | null;
+    app: AppState | null;
     settings: PluginSettings;
     processing: ProcessingState;
     ai: AIState;
@@ -220,6 +239,7 @@ export interface PluginState {
  */
 export const DEFAULT_PLUGIN_STATE: PluginState = {
     plugin: null,
+    app: null,
     settings: DEFAULT_SETTINGS,
     processing: {
         isProcessing: false,
@@ -242,6 +262,11 @@ export const DEFAULT_PLUGIN_STATE: PluginState = {
         isProcessing: false,
         provider: AIProvider.OpenAI,
         availableModels: [] as AIModel[],
+        knowledgeBloom: {
+            isGenerating: false,
+            selectedModel: '',
+            userPrompt: ''
+        },
         generators: Object.values(GeneratorType).reduce(
             (acc, type) => ({
                 ...acc,
@@ -304,7 +329,7 @@ export const DEFAULT_PLUGIN_STATE: PluginState = {
         currentOperation: null,
         queueLength: 0,
         lastOperation: undefined,
-        stateHistory: [],
+        stateHistory: [] as StateTransition[], // Make this mutable
         lastUpdated: Date.now() // Add this line
     },
     ui: {
@@ -417,6 +442,9 @@ export interface AIStore extends BaseStore<AIState> {
     getStateHistory: () => StateTransition[];
     clearHistory: () => void;
     resetMetrics: () => void;
+    setKnowledgeBloomGenerating: (isGenerating: boolean) => void;
+    updateKnowledgeBloomSettings: (settings: Partial<AIState['knowledgeBloom']>) => void;
+    recordKnowledgeBloomGeneration: (noteCount: number) => void;
 }
 
 /**

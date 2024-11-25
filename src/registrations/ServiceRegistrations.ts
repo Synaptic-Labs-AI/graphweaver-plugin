@@ -160,25 +160,79 @@ export class ServiceRegistry {
     ): Promise<void> {
         console.log(`🦇 [ServiceRegistry] Registering service: ${id}`);
         
-        if (this.services.has(id)) {
-            throw new ServiceError(
+        try {
+            if (!this.isInitialized) {
+                throw new ServiceError(
+                    'ServiceRegistry',
+                    'Registry not initialized. Call initializeRegistry() first.'
+                );
+            }
+
+            // Validate service instance
+            if (!instance) {
+                throw new ServiceError(
+                    'ServiceRegistry',
+                    `Invalid service instance for ${id}`
+                );
+            }
+
+            // Check for circular dependencies
+            if (this.hasCircularDependency(id, dependencies)) {
+                throw new ServiceError(
+                    'ServiceRegistry',
+                    `Circular dependency detected for service ${id}`
+                );
+            }
+
+            // Validate required methods
+            if (!this.validateServiceInterface(instance)) {
+                throw new ServiceError(
+                    'ServiceRegistry',
+                    `Service ${id} missing required interface methods`
+                );
+            }
+
+            this.services.set(id, {
+                instance,
+                dependencies,
+                error: undefined
+            });
+
+            console.log(`🦇 [ServiceRegistry] Successfully registered service: ${id}`);
+        } catch (error) {
+            const serviceError = ServiceError.from(
                 'ServiceRegistry',
-                `Service ${id} already registered`,
-                'SERVICE_ALREADY_REGISTERED'
+                error,
+                { context: `Failed to register service: ${id}` }
             );
+            console.error('🦇 [ServiceRegistry] Registration error:', serviceError);
+            throw serviceError;
+        }
+    }
+
+    private validateServiceInterface(service: any): boolean {
+        return typeof service.initialize === 'function' &&
+               typeof service.destroy === 'function' &&
+               typeof service.serviceName === 'string';
+    }
+
+    private hasCircularDependency(
+        serviceId: string,
+        dependencies: string[],
+        visited: Set<string> = new Set()
+    ): boolean {
+        if (visited.has(serviceId)) return true;
+        visited.add(serviceId);
+
+        for (const depId of dependencies) {
+            const service = this.services.get(depId);
+            if (service && this.hasCircularDependency(depId, service.dependencies, visited)) {
+                return true;
+            }
         }
 
-        this.services.set(id, {
-            instance,
-            dependencies,
-            error: undefined
-        });
-        
-        if (dependencies.length === 0) {
-            this.initializedServices.add(id);
-        }
-        
-        console.log(`🦇 [ServiceRegistry] Available services: ${Array.from(this.services.keys()).join(', ')}`);
+        visited.delete(serviceId);
+        return false;
     }
 
     public async initializeAll(): Promise<void> {

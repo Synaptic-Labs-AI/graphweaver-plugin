@@ -17,8 +17,9 @@ import path from 'path';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
-import { checkbox } from '@inquirer/prompts';
+import readline from 'readline';
 import minimatch from 'minimatch';
+import * as p from '@clack/prompts';
 
 // Load environment variables
 dotenv.config();
@@ -185,42 +186,36 @@ const isExcluded = (name, isDir) => {
 };
 
 /**
- * Format choices with indentation based on depth
- *
- * @param {Array} items - List of file and directory objects
- * @returns {Array} - List of formatted choices for inquirer
+ * Format choices for clack multiselect
  */
 const formatChoices = (items) => {
   return items.map(item => ({
-    name: `${'  '.repeat(item.depth)}${item.isDirectory ? '📁' : '📄'} ${item.name}`,
     value: item.path,
-    checked: false
+    label: `${'  '.repeat(item.depth)}${item.isDirectory ? '��' : '📄'} ${item.name}`,
   }));
 };
 
 /**
- * Launch interactive selection using inquirer
- *
- * @param {Array} allItems - Complete list of all file and directory objects
- * @returns {Array} - List of selected file/directory paths
+ * Launch interactive selection using clack
  */
 const launchInteractiveSelection = async (allItems) => {
   console.log('Launching interactive selection mode...');
-
+  
   const choices = formatChoices(allItems);
+  
+  const selected = await p.multiselect({
+    message: 'Select files and directories to analyze',
+    options: choices,
+    required: true,
+    cursorAt: 0,
+  });
 
-  try {
-    const selected = await checkbox({
-      message: 'Select files and directories to include in the analysis:',
-      choices,
-      validate: (answer) => answer.length > 0 || 'You must select at least one item.'
-    });
-
-    return selected;
-  } catch (err) {
-    console.error('Selection error:', err.message);
+  if (p.isCancel(selected) || !selected || selected.length === 0) {
+    p.cancel('No items selected.');
     process.exit(1);
   }
+
+  return selected;
 };
 
 /**
@@ -608,123 +603,60 @@ const main = async () => {
       }
     }
 
-    sections['Directory'] = '```\n' + directoryTree + '\n```';
-    console.log('Generated directory tree.');
+    sections['Directory'] = directoryTree;
 
-    // Collect files and their contents
-    console.log('Collecting files and their contents...');
+    // Collect and analyze code files
+    console.log('Collecting and analyzing files...');
     const fileData = {};
-
-    for (const filePath of filesToProcess) {
-      const relativePath = path.relative(process.cwd(), path.resolve(process.cwd(), filePath)).split(path.sep).join('/');
-      const content = await readFileContent(filePath);
-      if (content !== null) {
-        fileData[relativePath] = { content };
-      }
+    sections['Code Files'] = ''; // Initialize code files section
+    
+    for (const file of filesToProcess) {
+        const content = await readFileContent(file);
+        if (content !== null) {
+            fileData[file] = {
+                content: content
+            };
+            // Add file to Code Files section with full path
+            const language = path.extname(file).substring(1) || 'plaintext';
+            sections['Code Files'] += `### ${file}\n\n\`\`\`${language}\n${content}\n\`\`\`\n\n`;
+        }
     }
 
-    // Analyze codebase using LLM
-    console.log('Analyzing codebase...');
-    const analysis = await analyzeCodebase(directoryTree, fileData);
-    sections['Analysis'] = analysis || 'No analysis was generated.';
-    console.log('Completed analysis.');
+    // Generate analysis using LLM
+    sections['Analysis'] = await analyzeCodebase(directoryTree, fileData);
 
-    // Prepare Code Files section
-    console.log('Preparing Code Files section...');
-    let codeFilesContent = '';
-    for (const [relativePath, data] of Object.entries(fileData)) {
-      codeFilesContent += `## ${relativePath}\n\n`;
-      const fileExtension = path.extname(relativePath).substring(1) || 'plaintext';
-      codeFilesContent += '```' + fileExtension + '\n' + data.content + '\n```\n\n';
-    }
-    sections['Code Files'] = codeFilesContent;
-    console.log('Prepared Code Files section.');
+    // Generate final report with all sections
+    console.log('Generating final report...');
+    const tableOfContents = generateTableOfContents(Object.keys(sections));
+    
+    // Combine all sections into final report - order matters here
+    const finalReport = [
+        `# Code Analysis Report\n\n`,
+        `Generated on: ${timestamp}\n\n`,
+        tableOfContents,
+        `# Directory\n\n${sections['Directory']}\n\n`,
+        `# Analysis\n\n${sections['Analysis']}\n\n`,
+        `# Code Files\n\n${sections['Code Files']}`
+    ].join('');
 
-    // Add timestamp to the report
-    const generationTime = new Date();
-    const formattedGenerationTime = generationTime.toLocaleString();
-    sections['Report Generated On'] = `*Generated on ${formattedGenerationTime}*\n`;
-    console.log('Added timestamp to the report.');
-
-    // Generate table of contents
-    console.log('Generating table of contents...');
-    const toc = generateTableOfContents(Object.keys(sections));
-    console.log('Generated table of contents.');
-
-    // Write all content to the output file
-    console.log('Writing content to the output file...');
-    let finalContent = toc;
-    for (const sectionName of ['Report Generated On', 'Directory', 'Analysis', 'Code Files']) {
-      finalContent += `# ${sectionName}\n\n`;
-      finalContent += sections[sectionName];
-      finalContent += '\n\n';
-    }
-    await fs.writeFile(outputFile, finalContent, 'utf8');
-
-    console.log(`File '${outputFile}' has been successfully created.`);
-  } catch (err) {
-    console.error(`An error occurred: ${err.message}`);
-  }
+    // Write the final report
+    await fs.writeFile(outputFile, finalReport, 'utf8');
+    console.log(`Analysis complete! Report saved to: ${outputFile}`);
+} catch (error) {
+    console.error('Error:', error);
+    process.exit(1);
+}
 };
 
-/**
- * Check if a path is a directory
- *
- * @param {string} target - Path to check
- * @returns {boolean} - True if directory, false otherwise
- */
-const isDirectory = async (target) => {
-  try {
-    const stats = await fs.stat(target);
-    return stats.isDirectory();
-  } catch {
-    return false;
-  }
-};
-
-/**
- * Generate directory tree using improved ASCII characters
- *
- * @param {string} dir - The directory path to start from
- * @param {string} prefix - The prefix for the current level
- * @returns {string} - The formatted directory tree as a string
- */
-const generateDirectoryTree = async (dir, prefix = '') => {
-  let tree = '';
-  let items;
-
-  try {
-    items = await fs.readdir(dir, { withFileTypes: true });
-  } catch (err) {
-    console.error(`Error reading directory ${dir}:`, err.message);
-    return tree;
-  }
-
-  // Filter and sort items
-  items = items.filter(item => !isExcluded(item.name, item.isDirectory()));
-  items.sort((a, b) => {
-    if (a.isDirectory() && !b.isDirectory()) return -1;
-    if (!a.isDirectory() && b.isDirectory()) return 1;
-    return a.name.localeCompare(b.name);
-  });
-
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    const isLast = i === items.length - 1;
-    const connector = isLast ? '└── ' : '├── ';
-    tree += `${prefix}${connector}${item.name}\n`;
-
-    if (item.isDirectory()) {
-      const newPrefix = prefix + (isLast ? '    ' : '│   ');
-      tree += await generateDirectoryTree(path.join(dir, item.name), newPrefix);
+// Helper function to check if path is a directory
+async function isDirectory(filepath) {
+    try {
+        const stats = await fs.stat(filepath);
+        return stats.isDirectory();
+    } catch (error) {
+        return false;
     }
-  }
+}
 
-  return tree;
-};
-
-// Execute the main function
-main().catch(err => {
-  console.error(`An unexpected error occurred: ${err.message}`);
-  process.exit(1);
-});
+// Run the main function
+main();

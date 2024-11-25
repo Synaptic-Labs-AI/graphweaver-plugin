@@ -1,6 +1,7 @@
 import { CoreService } from '@services/core/CoreService';
 import { ServiceError } from '@services/core/ServiceError';
 import { IConfigurableService } from '@services/core/IService';
+import type { ValidationResult } from '@type/base.types';
 
 /**
  * Configuration options for JSON validation

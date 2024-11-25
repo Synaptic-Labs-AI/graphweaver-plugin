@@ -141,12 +141,12 @@ export class StartupGenerateService extends CoreService {
   /**
    * Get current state
    */
-  public getState(): { state: ServiceState; error: ServiceError | null } {
+  public getState(): { state: LifecycleState; error: ServiceError | null } {
     const startupState = get(this.startupState);
     return {
-      state: startupState.error ? ServiceState.Error : 
-             startupState.isProcessing ? ServiceState.Initializing : 
-             ServiceState.Ready,
+      state: startupState.error ? LifecycleState.Error : 
+             startupState.isProcessing ? LifecycleState.Initializing : 
+             LifecycleState.Ready,
       error: startupState.error ? new ServiceError(this.serviceName, startupState.error) : null
     };
   }

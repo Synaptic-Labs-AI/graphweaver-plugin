@@ -1,6 +1,6 @@
 // src/services/core/IService.ts
 
-import { ServiceState } from "@type/services.types";
+import { LifecycleState } from "@type/base.types";
 import { ServiceError } from './ServiceError';
 
 /**
@@ -39,9 +39,9 @@ export interface IService {
 
     /**
      * Get current service state
-     * @returns Current ServiceState and error if present
+     * @returns Current LifecycleState and error if present
      */
-    getState(): { state: ServiceState; error: ServiceError | null };
+    getState(): { state: LifecycleState; error: ServiceError | null };
 }
 
 /**

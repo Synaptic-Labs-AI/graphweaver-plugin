@@ -14,7 +14,6 @@ var __getOwnPropSymbols = Object.getOwnPropertySymbols;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __propIsEnum = Object.prototype.propertyIsEnumerable;
-var __reflectGet = Reflect.get;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __spreadValues = (a, b) => {
   for (var prop in b || (b = {}))
@@ -56,7 +55,6 @@ var __publicField = (obj, key, value) => {
   __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
   return value;
 };
-var __superGet = (cls, obj, key) => __reflectGet(__getProtoOf(cls), key, obj);
 var __async = (__this, __arguments, generator) => {
   return new Promise((resolve, reject) => {
     var fulfilled = (value) => {
@@ -77,2543 +75,6 @@ var __async = (__this, __arguments, generator) => {
     step((generator = generator.apply(__this, __arguments)).next());
   });
 };
-
-// node_modules/tailwind-merge/dist/bundle-cjs.js
-var require_bundle_cjs = __commonJS({
-  "node_modules/tailwind-merge/dist/bundle-cjs.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, Symbol.toStringTag, {
-      value: "Module"
-    });
-    var CLASS_PART_SEPARATOR = "-";
-    var createClassGroupUtils = (config) => {
-      const classMap = createClassMap(config);
-      const {
-        conflictingClassGroups,
-        conflictingClassGroupModifiers
-      } = config;
-      const getClassGroupId = (className) => {
-        const classParts = className.split(CLASS_PART_SEPARATOR);
-        if (classParts[0] === "" && classParts.length !== 1) {
-          classParts.shift();
-        }
-        return getGroupRecursive(classParts, classMap) || getGroupIdForArbitraryProperty(className);
-      };
-      const getConflictingClassGroupIds = (classGroupId, hasPostfixModifier) => {
-        const conflicts = conflictingClassGroups[classGroupId] || [];
-        if (hasPostfixModifier && conflictingClassGroupModifiers[classGroupId]) {
-          return [...conflicts, ...conflictingClassGroupModifiers[classGroupId]];
-        }
-        return conflicts;
-      };
-      return {
-        getClassGroupId,
-        getConflictingClassGroupIds
-      };
-    };
-    var getGroupRecursive = (classParts, classPartObject) => {
-      var _a;
-      if (classParts.length === 0) {
-        return classPartObject.classGroupId;
-      }
-      const currentClassPart = classParts[0];
-      const nextClassPartObject = classPartObject.nextPart.get(currentClassPart);
-      const classGroupFromNextClassPart = nextClassPartObject ? getGroupRecursive(classParts.slice(1), nextClassPartObject) : void 0;
-      if (classGroupFromNextClassPart) {
-        return classGroupFromNextClassPart;
-      }
-      if (classPartObject.validators.length === 0) {
-        return void 0;
-      }
-      const classRest = classParts.join(CLASS_PART_SEPARATOR);
-      return (_a = classPartObject.validators.find(({
-        validator
-      }) => validator(classRest))) == null ? void 0 : _a.classGroupId;
-    };
-    var arbitraryPropertyRegex = /^\[(.+)\]$/;
-    var getGroupIdForArbitraryProperty = (className) => {
-      if (arbitraryPropertyRegex.test(className)) {
-        const arbitraryPropertyClassName = arbitraryPropertyRegex.exec(className)[1];
-        const property = arbitraryPropertyClassName == null ? void 0 : arbitraryPropertyClassName.substring(0, arbitraryPropertyClassName.indexOf(":"));
-        if (property) {
-          return "arbitrary.." + property;
-        }
-      }
-    };
-    var createClassMap = (config) => {
-      const {
-        theme,
-        prefix
-      } = config;
-      const classMap = {
-        nextPart: /* @__PURE__ */ new Map(),
-        validators: []
-      };
-      const prefixedClassGroupEntries = getPrefixedClassGroupEntries(Object.entries(config.classGroups), prefix);
-      prefixedClassGroupEntries.forEach(([classGroupId, classGroup]) => {
-        processClassesRecursively(classGroup, classMap, classGroupId, theme);
-      });
-      return classMap;
-    };
-    var processClassesRecursively = (classGroup, classPartObject, classGroupId, theme) => {
-      classGroup.forEach((classDefinition) => {
-        if (typeof classDefinition === "string") {
-          const classPartObjectToEdit = classDefinition === "" ? classPartObject : getPart(classPartObject, classDefinition);
-          classPartObjectToEdit.classGroupId = classGroupId;
-          return;
-        }
-        if (typeof classDefinition === "function") {
-          if (isThemeGetter(classDefinition)) {
-            processClassesRecursively(classDefinition(theme), classPartObject, classGroupId, theme);
-            return;
-          }
-          classPartObject.validators.push({
-            validator: classDefinition,
-            classGroupId
-          });
-          return;
-        }
-        Object.entries(classDefinition).forEach(([key, classGroup2]) => {
-          processClassesRecursively(classGroup2, getPart(classPartObject, key), classGroupId, theme);
-        });
-      });
-    };
-    var getPart = (classPartObject, path) => {
-      let currentClassPartObject = classPartObject;
-      path.split(CLASS_PART_SEPARATOR).forEach((pathPart) => {
-        if (!currentClassPartObject.nextPart.has(pathPart)) {
-          currentClassPartObject.nextPart.set(pathPart, {
-            nextPart: /* @__PURE__ */ new Map(),
-            validators: []
-          });
-        }
-        currentClassPartObject = currentClassPartObject.nextPart.get(pathPart);
-      });
-      return currentClassPartObject;
-    };
-    var isThemeGetter = (func) => func.isThemeGetter;
-    var getPrefixedClassGroupEntries = (classGroupEntries, prefix) => {
-      if (!prefix) {
-        return classGroupEntries;
-      }
-      return classGroupEntries.map(([classGroupId, classGroup]) => {
-        const prefixedClassGroup = classGroup.map((classDefinition) => {
-          if (typeof classDefinition === "string") {
-            return prefix + classDefinition;
-          }
-          if (typeof classDefinition === "object") {
-            return Object.fromEntries(Object.entries(classDefinition).map(([key, value]) => [prefix + key, value]));
-          }
-          return classDefinition;
-        });
-        return [classGroupId, prefixedClassGroup];
-      });
-    };
-    var createLruCache = (maxCacheSize) => {
-      if (maxCacheSize < 1) {
-        return {
-          get: () => void 0,
-          set: () => {
-          }
-        };
-      }
-      let cacheSize = 0;
-      let cache = /* @__PURE__ */ new Map();
-      let previousCache = /* @__PURE__ */ new Map();
-      const update2 = (key, value) => {
-        cache.set(key, value);
-        cacheSize++;
-        if (cacheSize > maxCacheSize) {
-          cacheSize = 0;
-          previousCache = cache;
-          cache = /* @__PURE__ */ new Map();
-        }
-      };
-      return {
-        get(key) {
-          let value = cache.get(key);
-          if (value !== void 0) {
-            return value;
-          }
-          if ((value = previousCache.get(key)) !== void 0) {
-            update2(key, value);
-            return value;
-          }
-        },
-        set(key, value) {
-          if (cache.has(key)) {
-            cache.set(key, value);
-          } else {
-            update2(key, value);
-          }
-        }
-      };
-    };
-    var IMPORTANT_MODIFIER = "!";
-    var createParseClassName = (config) => {
-      const {
-        separator,
-        experimentalParseClassName
-      } = config;
-      const isSeparatorSingleCharacter = separator.length === 1;
-      const firstSeparatorCharacter = separator[0];
-      const separatorLength = separator.length;
-      const parseClassName = (className) => {
-        const modifiers = [];
-        let bracketDepth = 0;
-        let modifierStart = 0;
-        let postfixModifierPosition;
-        for (let index = 0; index < className.length; index++) {
-          let currentCharacter = className[index];
-          if (bracketDepth === 0) {
-            if (currentCharacter === firstSeparatorCharacter && (isSeparatorSingleCharacter || className.slice(index, index + separatorLength) === separator)) {
-              modifiers.push(className.slice(modifierStart, index));
-              modifierStart = index + separatorLength;
-              continue;
-            }
-            if (currentCharacter === "/") {
-              postfixModifierPosition = index;
-              continue;
-            }
-          }
-          if (currentCharacter === "[") {
-            bracketDepth++;
-          } else if (currentCharacter === "]") {
-            bracketDepth--;
-          }
-        }
-        const baseClassNameWithImportantModifier = modifiers.length === 0 ? className : className.substring(modifierStart);
-        const hasImportantModifier = baseClassNameWithImportantModifier.startsWith(IMPORTANT_MODIFIER);
-        const baseClassName = hasImportantModifier ? baseClassNameWithImportantModifier.substring(1) : baseClassNameWithImportantModifier;
-        const maybePostfixModifierPosition = postfixModifierPosition && postfixModifierPosition > modifierStart ? postfixModifierPosition - modifierStart : void 0;
-        return {
-          modifiers,
-          hasImportantModifier,
-          baseClassName,
-          maybePostfixModifierPosition
-        };
-      };
-      if (experimentalParseClassName) {
-        return (className) => experimentalParseClassName({
-          className,
-          parseClassName
-        });
-      }
-      return parseClassName;
-    };
-    var sortModifiers = (modifiers) => {
-      if (modifiers.length <= 1) {
-        return modifiers;
-      }
-      const sortedModifiers = [];
-      let unsortedModifiers = [];
-      modifiers.forEach((modifier) => {
-        const isArbitraryVariant = modifier[0] === "[";
-        if (isArbitraryVariant) {
-          sortedModifiers.push(...unsortedModifiers.sort(), modifier);
-          unsortedModifiers = [];
-        } else {
-          unsortedModifiers.push(modifier);
-        }
-      });
-      sortedModifiers.push(...unsortedModifiers.sort());
-      return sortedModifiers;
-    };
-    var createConfigUtils = (config) => __spreadValues({
-      cache: createLruCache(config.cacheSize),
-      parseClassName: createParseClassName(config)
-    }, createClassGroupUtils(config));
-    var SPLIT_CLASSES_REGEX = /\s+/;
-    var mergeClassList = (classList, configUtils) => {
-      const {
-        parseClassName,
-        getClassGroupId,
-        getConflictingClassGroupIds
-      } = configUtils;
-      const classGroupsInConflict = [];
-      const classNames = classList.trim().split(SPLIT_CLASSES_REGEX);
-      let result = "";
-      for (let index = classNames.length - 1; index >= 0; index -= 1) {
-        const originalClassName = classNames[index];
-        const {
-          modifiers,
-          hasImportantModifier,
-          baseClassName,
-          maybePostfixModifierPosition
-        } = parseClassName(originalClassName);
-        let hasPostfixModifier = Boolean(maybePostfixModifierPosition);
-        let classGroupId = getClassGroupId(hasPostfixModifier ? baseClassName.substring(0, maybePostfixModifierPosition) : baseClassName);
-        if (!classGroupId) {
-          if (!hasPostfixModifier) {
-            result = originalClassName + (result.length > 0 ? " " + result : result);
-            continue;
-          }
-          classGroupId = getClassGroupId(baseClassName);
-          if (!classGroupId) {
-            result = originalClassName + (result.length > 0 ? " " + result : result);
-            continue;
-          }
-          hasPostfixModifier = false;
-        }
-        const variantModifier = sortModifiers(modifiers).join(":");
-        const modifierId = hasImportantModifier ? variantModifier + IMPORTANT_MODIFIER : variantModifier;
-        const classId = modifierId + classGroupId;
-        if (classGroupsInConflict.includes(classId)) {
-          continue;
-        }
-        classGroupsInConflict.push(classId);
-        const conflictGroups = getConflictingClassGroupIds(classGroupId, hasPostfixModifier);
-        for (let i = 0; i < conflictGroups.length; ++i) {
-          const group = conflictGroups[i];
-          classGroupsInConflict.push(modifierId + group);
-        }
-        result = originalClassName + (result.length > 0 ? " " + result : result);
-      }
-      return result;
-    };
-    function twJoin() {
-      let index = 0;
-      let argument;
-      let resolvedValue;
-      let string = "";
-      while (index < arguments.length) {
-        if (argument = arguments[index++]) {
-          if (resolvedValue = toValue(argument)) {
-            string && (string += " ");
-            string += resolvedValue;
-          }
-        }
-      }
-      return string;
-    }
-    var toValue = (mix) => {
-      if (typeof mix === "string") {
-        return mix;
-      }
-      let resolvedValue;
-      let string = "";
-      for (let k = 0; k < mix.length; k++) {
-        if (mix[k]) {
-          if (resolvedValue = toValue(mix[k])) {
-            string && (string += " ");
-            string += resolvedValue;
-          }
-        }
-      }
-      return string;
-    };
-    function createTailwindMerge(createConfigFirst, ...createConfigRest) {
-      let configUtils;
-      let cacheGet;
-      let cacheSet;
-      let functionToCall = initTailwindMerge;
-      function initTailwindMerge(classList) {
-        const config = createConfigRest.reduce((previousConfig, createConfigCurrent) => createConfigCurrent(previousConfig), createConfigFirst());
-        configUtils = createConfigUtils(config);
-        cacheGet = configUtils.cache.get;
-        cacheSet = configUtils.cache.set;
-        functionToCall = tailwindMerge;
-        return tailwindMerge(classList);
-      }
-      function tailwindMerge(classList) {
-        const cachedResult = cacheGet(classList);
-        if (cachedResult) {
-          return cachedResult;
-        }
-        const result = mergeClassList(classList, configUtils);
-        cacheSet(classList, result);
-        return result;
-      }
-      return function callTailwindMerge() {
-        return functionToCall(twJoin.apply(null, arguments));
-      };
-    }
-    var fromTheme = (key) => {
-      const themeGetter = (theme) => theme[key] || [];
-      themeGetter.isThemeGetter = true;
-      return themeGetter;
-    };
-    var arbitraryValueRegex = /^\[(?:([a-z-]+):)?(.+)\]$/i;
-    var fractionRegex = /^\d+\/\d+$/;
-    var stringLengths = /* @__PURE__ */ new Set(["px", "full", "screen"]);
-    var tshirtUnitRegex = /^(\d+(\.\d+)?)?(xs|sm|md|lg|xl)$/;
-    var lengthUnitRegex = /\d+(%|px|r?em|[sdl]?v([hwib]|min|max)|pt|pc|in|cm|mm|cap|ch|ex|r?lh|cq(w|h|i|b|min|max))|\b(calc|min|max|clamp)\(.+\)|^0$/;
-    var colorFunctionRegex = /^(rgba?|hsla?|hwb|(ok)?(lab|lch))\(.+\)$/;
-    var shadowRegex = /^(inset_)?-?((\d+)?\.?(\d+)[a-z]+|0)_-?((\d+)?\.?(\d+)[a-z]+|0)/;
-    var imageRegex = /^(url|image|image-set|cross-fade|element|(repeating-)?(linear|radial|conic)-gradient)\(.+\)$/;
-    var isLength = (value) => isNumber(value) || stringLengths.has(value) || fractionRegex.test(value);
-    var isArbitraryLength = (value) => getIsArbitraryValue(value, "length", isLengthOnly);
-    var isNumber = (value) => Boolean(value) && !Number.isNaN(Number(value));
-    var isArbitraryNumber = (value) => getIsArbitraryValue(value, "number", isNumber);
-    var isInteger = (value) => Boolean(value) && Number.isInteger(Number(value));
-    var isPercent = (value) => value.endsWith("%") && isNumber(value.slice(0, -1));
-    var isArbitraryValue = (value) => arbitraryValueRegex.test(value);
-    var isTshirtSize = (value) => tshirtUnitRegex.test(value);
-    var sizeLabels = /* @__PURE__ */ new Set(["length", "size", "percentage"]);
-    var isArbitrarySize = (value) => getIsArbitraryValue(value, sizeLabels, isNever);
-    var isArbitraryPosition = (value) => getIsArbitraryValue(value, "position", isNever);
-    var imageLabels = /* @__PURE__ */ new Set(["image", "url"]);
-    var isArbitraryImage = (value) => getIsArbitraryValue(value, imageLabels, isImage);
-    var isArbitraryShadow = (value) => getIsArbitraryValue(value, "", isShadow);
-    var isAny = () => true;
-    var getIsArbitraryValue = (value, label, testValue) => {
-      const result = arbitraryValueRegex.exec(value);
-      if (result) {
-        if (result[1]) {
-          return typeof label === "string" ? result[1] === label : label.has(result[1]);
-        }
-        return testValue(result[2]);
-      }
-      return false;
-    };
-    var isLengthOnly = (value) => (
-      // `colorFunctionRegex` check is necessary because color functions can have percentages in them which which would be incorrectly classified as lengths.
-      // For example, `hsl(0 0% 0%)` would be classified as a length without this check.
-      // I could also use lookbehind assertion in `lengthUnitRegex` but that isn't supported widely enough.
-      lengthUnitRegex.test(value) && !colorFunctionRegex.test(value)
-    );
-    var isNever = () => false;
-    var isShadow = (value) => shadowRegex.test(value);
-    var isImage = (value) => imageRegex.test(value);
-    var validators = /* @__PURE__ */ Object.defineProperty({
-      __proto__: null,
-      isAny,
-      isArbitraryImage,
-      isArbitraryLength,
-      isArbitraryNumber,
-      isArbitraryPosition,
-      isArbitraryShadow,
-      isArbitrarySize,
-      isArbitraryValue,
-      isInteger,
-      isLength,
-      isNumber,
-      isPercent,
-      isTshirtSize
-    }, Symbol.toStringTag, {
-      value: "Module"
-    });
-    var getDefaultConfig = () => {
-      const colors = fromTheme("colors");
-      const spacing = fromTheme("spacing");
-      const blur2 = fromTheme("blur");
-      const brightness = fromTheme("brightness");
-      const borderColor = fromTheme("borderColor");
-      const borderRadius = fromTheme("borderRadius");
-      const borderSpacing = fromTheme("borderSpacing");
-      const borderWidth = fromTheme("borderWidth");
-      const contrast = fromTheme("contrast");
-      const grayscale = fromTheme("grayscale");
-      const hueRotate = fromTheme("hueRotate");
-      const invert = fromTheme("invert");
-      const gap = fromTheme("gap");
-      const gradientColorStops = fromTheme("gradientColorStops");
-      const gradientColorStopPositions = fromTheme("gradientColorStopPositions");
-      const inset = fromTheme("inset");
-      const margin = fromTheme("margin");
-      const opacity = fromTheme("opacity");
-      const padding = fromTheme("padding");
-      const saturate = fromTheme("saturate");
-      const scale = fromTheme("scale");
-      const sepia = fromTheme("sepia");
-      const skew = fromTheme("skew");
-      const space2 = fromTheme("space");
-      const translate = fromTheme("translate");
-      const getOverscroll = () => ["auto", "contain", "none"];
-      const getOverflow = () => ["auto", "hidden", "clip", "visible", "scroll"];
-      const getSpacingWithAutoAndArbitrary = () => ["auto", isArbitraryValue, spacing];
-      const getSpacingWithArbitrary = () => [isArbitraryValue, spacing];
-      const getLengthWithEmptyAndArbitrary = () => ["", isLength, isArbitraryLength];
-      const getNumberWithAutoAndArbitrary = () => ["auto", isNumber, isArbitraryValue];
-      const getPositions = () => ["bottom", "center", "left", "left-bottom", "left-top", "right", "right-bottom", "right-top", "top"];
-      const getLineStyles = () => ["solid", "dashed", "dotted", "double", "none"];
-      const getBlendModes = () => ["normal", "multiply", "screen", "overlay", "darken", "lighten", "color-dodge", "color-burn", "hard-light", "soft-light", "difference", "exclusion", "hue", "saturation", "color", "luminosity"];
-      const getAlign = () => ["start", "end", "center", "between", "around", "evenly", "stretch"];
-      const getZeroAndEmpty = () => ["", "0", isArbitraryValue];
-      const getBreaks = () => ["auto", "avoid", "all", "avoid-page", "page", "left", "right", "column"];
-      const getNumberAndArbitrary = () => [isNumber, isArbitraryValue];
-      return {
-        cacheSize: 500,
-        separator: ":",
-        theme: {
-          colors: [isAny],
-          spacing: [isLength, isArbitraryLength],
-          blur: ["none", "", isTshirtSize, isArbitraryValue],
-          brightness: getNumberAndArbitrary(),
-          borderColor: [colors],
-          borderRadius: ["none", "", "full", isTshirtSize, isArbitraryValue],
-          borderSpacing: getSpacingWithArbitrary(),
-          borderWidth: getLengthWithEmptyAndArbitrary(),
-          contrast: getNumberAndArbitrary(),
-          grayscale: getZeroAndEmpty(),
-          hueRotate: getNumberAndArbitrary(),
-          invert: getZeroAndEmpty(),
-          gap: getSpacingWithArbitrary(),
-          gradientColorStops: [colors],
-          gradientColorStopPositions: [isPercent, isArbitraryLength],
-          inset: getSpacingWithAutoAndArbitrary(),
-          margin: getSpacingWithAutoAndArbitrary(),
-          opacity: getNumberAndArbitrary(),
-          padding: getSpacingWithArbitrary(),
-          saturate: getNumberAndArbitrary(),
-          scale: getNumberAndArbitrary(),
-          sepia: getZeroAndEmpty(),
-          skew: getNumberAndArbitrary(),
-          space: getSpacingWithArbitrary(),
-          translate: getSpacingWithArbitrary()
-        },
-        classGroups: {
-          // Layout
-          /**
-           * Aspect Ratio
-           * @see https://tailwindcss.com/docs/aspect-ratio
-           */
-          aspect: [{
-            aspect: ["auto", "square", "video", isArbitraryValue]
-          }],
-          /**
-           * Container
-           * @see https://tailwindcss.com/docs/container
-           */
-          container: ["container"],
-          /**
-           * Columns
-           * @see https://tailwindcss.com/docs/columns
-           */
-          columns: [{
-            columns: [isTshirtSize]
-          }],
-          /**
-           * Break After
-           * @see https://tailwindcss.com/docs/break-after
-           */
-          "break-after": [{
-            "break-after": getBreaks()
-          }],
-          /**
-           * Break Before
-           * @see https://tailwindcss.com/docs/break-before
-           */
-          "break-before": [{
-            "break-before": getBreaks()
-          }],
-          /**
-           * Break Inside
-           * @see https://tailwindcss.com/docs/break-inside
-           */
-          "break-inside": [{
-            "break-inside": ["auto", "avoid", "avoid-page", "avoid-column"]
-          }],
-          /**
-           * Box Decoration Break
-           * @see https://tailwindcss.com/docs/box-decoration-break
-           */
-          "box-decoration": [{
-            "box-decoration": ["slice", "clone"]
-          }],
-          /**
-           * Box Sizing
-           * @see https://tailwindcss.com/docs/box-sizing
-           */
-          box: [{
-            box: ["border", "content"]
-          }],
-          /**
-           * Display
-           * @see https://tailwindcss.com/docs/display
-           */
-          display: ["block", "inline-block", "inline", "flex", "inline-flex", "table", "inline-table", "table-caption", "table-cell", "table-column", "table-column-group", "table-footer-group", "table-header-group", "table-row-group", "table-row", "flow-root", "grid", "inline-grid", "contents", "list-item", "hidden"],
-          /**
-           * Floats
-           * @see https://tailwindcss.com/docs/float
-           */
-          float: [{
-            float: ["right", "left", "none", "start", "end"]
-          }],
-          /**
-           * Clear
-           * @see https://tailwindcss.com/docs/clear
-           */
-          clear: [{
-            clear: ["left", "right", "both", "none", "start", "end"]
-          }],
-          /**
-           * Isolation
-           * @see https://tailwindcss.com/docs/isolation
-           */
-          isolation: ["isolate", "isolation-auto"],
-          /**
-           * Object Fit
-           * @see https://tailwindcss.com/docs/object-fit
-           */
-          "object-fit": [{
-            object: ["contain", "cover", "fill", "none", "scale-down"]
-          }],
-          /**
-           * Object Position
-           * @see https://tailwindcss.com/docs/object-position
-           */
-          "object-position": [{
-            object: [...getPositions(), isArbitraryValue]
-          }],
-          /**
-           * Overflow
-           * @see https://tailwindcss.com/docs/overflow
-           */
-          overflow: [{
-            overflow: getOverflow()
-          }],
-          /**
-           * Overflow X
-           * @see https://tailwindcss.com/docs/overflow
-           */
-          "overflow-x": [{
-            "overflow-x": getOverflow()
-          }],
-          /**
-           * Overflow Y
-           * @see https://tailwindcss.com/docs/overflow
-           */
-          "overflow-y": [{
-            "overflow-y": getOverflow()
-          }],
-          /**
-           * Overscroll Behavior
-           * @see https://tailwindcss.com/docs/overscroll-behavior
-           */
-          overscroll: [{
-            overscroll: getOverscroll()
-          }],
-          /**
-           * Overscroll Behavior X
-           * @see https://tailwindcss.com/docs/overscroll-behavior
-           */
-          "overscroll-x": [{
-            "overscroll-x": getOverscroll()
-          }],
-          /**
-           * Overscroll Behavior Y
-           * @see https://tailwindcss.com/docs/overscroll-behavior
-           */
-          "overscroll-y": [{
-            "overscroll-y": getOverscroll()
-          }],
-          /**
-           * Position
-           * @see https://tailwindcss.com/docs/position
-           */
-          position: ["static", "fixed", "absolute", "relative", "sticky"],
-          /**
-           * Top / Right / Bottom / Left
-           * @see https://tailwindcss.com/docs/top-right-bottom-left
-           */
-          inset: [{
-            inset: [inset]
-          }],
-          /**
-           * Right / Left
-           * @see https://tailwindcss.com/docs/top-right-bottom-left
-           */
-          "inset-x": [{
-            "inset-x": [inset]
-          }],
-          /**
-           * Top / Bottom
-           * @see https://tailwindcss.com/docs/top-right-bottom-left
-           */
-          "inset-y": [{
-            "inset-y": [inset]
-          }],
-          /**
-           * Start
-           * @see https://tailwindcss.com/docs/top-right-bottom-left
-           */
-          start: [{
-            start: [inset]
-          }],
-          /**
-           * End
-           * @see https://tailwindcss.com/docs/top-right-bottom-left
-           */
-          end: [{
-            end: [inset]
-          }],
-          /**
-           * Top
-           * @see https://tailwindcss.com/docs/top-right-bottom-left
-           */
-          top: [{
-            top: [inset]
-          }],
-          /**
-           * Right
-           * @see https://tailwindcss.com/docs/top-right-bottom-left
-           */
-          right: [{
-            right: [inset]
-          }],
-          /**
-           * Bottom
-           * @see https://tailwindcss.com/docs/top-right-bottom-left
-           */
-          bottom: [{
-            bottom: [inset]
-          }],
-          /**
-           * Left
-           * @see https://tailwindcss.com/docs/top-right-bottom-left
-           */
-          left: [{
-            left: [inset]
-          }],
-          /**
-           * Visibility
-           * @see https://tailwindcss.com/docs/visibility
-           */
-          visibility: ["visible", "invisible", "collapse"],
-          /**
-           * Z-Index
-           * @see https://tailwindcss.com/docs/z-index
-           */
-          z: [{
-            z: ["auto", isInteger, isArbitraryValue]
-          }],
-          // Flexbox and Grid
-          /**
-           * Flex Basis
-           * @see https://tailwindcss.com/docs/flex-basis
-           */
-          basis: [{
-            basis: getSpacingWithAutoAndArbitrary()
-          }],
-          /**
-           * Flex Direction
-           * @see https://tailwindcss.com/docs/flex-direction
-           */
-          "flex-direction": [{
-            flex: ["row", "row-reverse", "col", "col-reverse"]
-          }],
-          /**
-           * Flex Wrap
-           * @see https://tailwindcss.com/docs/flex-wrap
-           */
-          "flex-wrap": [{
-            flex: ["wrap", "wrap-reverse", "nowrap"]
-          }],
-          /**
-           * Flex
-           * @see https://tailwindcss.com/docs/flex
-           */
-          flex: [{
-            flex: ["1", "auto", "initial", "none", isArbitraryValue]
-          }],
-          /**
-           * Flex Grow
-           * @see https://tailwindcss.com/docs/flex-grow
-           */
-          grow: [{
-            grow: getZeroAndEmpty()
-          }],
-          /**
-           * Flex Shrink
-           * @see https://tailwindcss.com/docs/flex-shrink
-           */
-          shrink: [{
-            shrink: getZeroAndEmpty()
-          }],
-          /**
-           * Order
-           * @see https://tailwindcss.com/docs/order
-           */
-          order: [{
-            order: ["first", "last", "none", isInteger, isArbitraryValue]
-          }],
-          /**
-           * Grid Template Columns
-           * @see https://tailwindcss.com/docs/grid-template-columns
-           */
-          "grid-cols": [{
-            "grid-cols": [isAny]
-          }],
-          /**
-           * Grid Column Start / End
-           * @see https://tailwindcss.com/docs/grid-column
-           */
-          "col-start-end": [{
-            col: ["auto", {
-              span: ["full", isInteger, isArbitraryValue]
-            }, isArbitraryValue]
-          }],
-          /**
-           * Grid Column Start
-           * @see https://tailwindcss.com/docs/grid-column
-           */
-          "col-start": [{
-            "col-start": getNumberWithAutoAndArbitrary()
-          }],
-          /**
-           * Grid Column End
-           * @see https://tailwindcss.com/docs/grid-column
-           */
-          "col-end": [{
-            "col-end": getNumberWithAutoAndArbitrary()
-          }],
-          /**
-           * Grid Template Rows
-           * @see https://tailwindcss.com/docs/grid-template-rows
-           */
-          "grid-rows": [{
-            "grid-rows": [isAny]
-          }],
-          /**
-           * Grid Row Start / End
-           * @see https://tailwindcss.com/docs/grid-row
-           */
-          "row-start-end": [{
-            row: ["auto", {
-              span: [isInteger, isArbitraryValue]
-            }, isArbitraryValue]
-          }],
-          /**
-           * Grid Row Start
-           * @see https://tailwindcss.com/docs/grid-row
-           */
-          "row-start": [{
-            "row-start": getNumberWithAutoAndArbitrary()
-          }],
-          /**
-           * Grid Row End
-           * @see https://tailwindcss.com/docs/grid-row
-           */
-          "row-end": [{
-            "row-end": getNumberWithAutoAndArbitrary()
-          }],
-          /**
-           * Grid Auto Flow
-           * @see https://tailwindcss.com/docs/grid-auto-flow
-           */
-          "grid-flow": [{
-            "grid-flow": ["row", "col", "dense", "row-dense", "col-dense"]
-          }],
-          /**
-           * Grid Auto Columns
-           * @see https://tailwindcss.com/docs/grid-auto-columns
-           */
-          "auto-cols": [{
-            "auto-cols": ["auto", "min", "max", "fr", isArbitraryValue]
-          }],
-          /**
-           * Grid Auto Rows
-           * @see https://tailwindcss.com/docs/grid-auto-rows
-           */
-          "auto-rows": [{
-            "auto-rows": ["auto", "min", "max", "fr", isArbitraryValue]
-          }],
-          /**
-           * Gap
-           * @see https://tailwindcss.com/docs/gap
-           */
-          gap: [{
-            gap: [gap]
-          }],
-          /**
-           * Gap X
-           * @see https://tailwindcss.com/docs/gap
-           */
-          "gap-x": [{
-            "gap-x": [gap]
-          }],
-          /**
-           * Gap Y
-           * @see https://tailwindcss.com/docs/gap
-           */
-          "gap-y": [{
-            "gap-y": [gap]
-          }],
-          /**
-           * Justify Content
-           * @see https://tailwindcss.com/docs/justify-content
-           */
-          "justify-content": [{
-            justify: ["normal", ...getAlign()]
-          }],
-          /**
-           * Justify Items
-           * @see https://tailwindcss.com/docs/justify-items
-           */
-          "justify-items": [{
-            "justify-items": ["start", "end", "center", "stretch"]
-          }],
-          /**
-           * Justify Self
-           * @see https://tailwindcss.com/docs/justify-self
-           */
-          "justify-self": [{
-            "justify-self": ["auto", "start", "end", "center", "stretch"]
-          }],
-          /**
-           * Align Content
-           * @see https://tailwindcss.com/docs/align-content
-           */
-          "align-content": [{
-            content: ["normal", ...getAlign(), "baseline"]
-          }],
-          /**
-           * Align Items
-           * @see https://tailwindcss.com/docs/align-items
-           */
-          "align-items": [{
-            items: ["start", "end", "center", "baseline", "stretch"]
-          }],
-          /**
-           * Align Self
-           * @see https://tailwindcss.com/docs/align-self
-           */
-          "align-self": [{
-            self: ["auto", "start", "end", "center", "stretch", "baseline"]
-          }],
-          /**
-           * Place Content
-           * @see https://tailwindcss.com/docs/place-content
-           */
-          "place-content": [{
-            "place-content": [...getAlign(), "baseline"]
-          }],
-          /**
-           * Place Items
-           * @see https://tailwindcss.com/docs/place-items
-           */
-          "place-items": [{
-            "place-items": ["start", "end", "center", "baseline", "stretch"]
-          }],
-          /**
-           * Place Self
-           * @see https://tailwindcss.com/docs/place-self
-           */
-          "place-self": [{
-            "place-self": ["auto", "start", "end", "center", "stretch"]
-          }],
-          // Spacing
-          /**
-           * Padding
-           * @see https://tailwindcss.com/docs/padding
-           */
-          p: [{
-            p: [padding]
-          }],
-          /**
-           * Padding X
-           * @see https://tailwindcss.com/docs/padding
-           */
-          px: [{
-            px: [padding]
-          }],
-          /**
-           * Padding Y
-           * @see https://tailwindcss.com/docs/padding
-           */
-          py: [{
-            py: [padding]
-          }],
-          /**
-           * Padding Start
-           * @see https://tailwindcss.com/docs/padding
-           */
-          ps: [{
-            ps: [padding]
-          }],
-          /**
-           * Padding End
-           * @see https://tailwindcss.com/docs/padding
-           */
-          pe: [{
-            pe: [padding]
-          }],
-          /**
-           * Padding Top
-           * @see https://tailwindcss.com/docs/padding
-           */
-          pt: [{
-            pt: [padding]
-          }],
-          /**
-           * Padding Right
-           * @see https://tailwindcss.com/docs/padding
-           */
-          pr: [{
-            pr: [padding]
-          }],
-          /**
-           * Padding Bottom
-           * @see https://tailwindcss.com/docs/padding
-           */
-          pb: [{
-            pb: [padding]
-          }],
-          /**
-           * Padding Left
-           * @see https://tailwindcss.com/docs/padding
-           */
-          pl: [{
-            pl: [padding]
-          }],
-          /**
-           * Margin
-           * @see https://tailwindcss.com/docs/margin
-           */
-          m: [{
-            m: [margin]
-          }],
-          /**
-           * Margin X
-           * @see https://tailwindcss.com/docs/margin
-           */
-          mx: [{
-            mx: [margin]
-          }],
-          /**
-           * Margin Y
-           * @see https://tailwindcss.com/docs/margin
-           */
-          my: [{
-            my: [margin]
-          }],
-          /**
-           * Margin Start
-           * @see https://tailwindcss.com/docs/margin
-           */
-          ms: [{
-            ms: [margin]
-          }],
-          /**
-           * Margin End
-           * @see https://tailwindcss.com/docs/margin
-           */
-          me: [{
-            me: [margin]
-          }],
-          /**
-           * Margin Top
-           * @see https://tailwindcss.com/docs/margin
-           */
-          mt: [{
-            mt: [margin]
-          }],
-          /**
-           * Margin Right
-           * @see https://tailwindcss.com/docs/margin
-           */
-          mr: [{
-            mr: [margin]
-          }],
-          /**
-           * Margin Bottom
-           * @see https://tailwindcss.com/docs/margin
-           */
-          mb: [{
-            mb: [margin]
-          }],
-          /**
-           * Margin Left
-           * @see https://tailwindcss.com/docs/margin
-           */
-          ml: [{
-            ml: [margin]
-          }],
-          /**
-           * Space Between X
-           * @see https://tailwindcss.com/docs/space
-           */
-          "space-x": [{
-            "space-x": [space2]
-          }],
-          /**
-           * Space Between X Reverse
-           * @see https://tailwindcss.com/docs/space
-           */
-          "space-x-reverse": ["space-x-reverse"],
-          /**
-           * Space Between Y
-           * @see https://tailwindcss.com/docs/space
-           */
-          "space-y": [{
-            "space-y": [space2]
-          }],
-          /**
-           * Space Between Y Reverse
-           * @see https://tailwindcss.com/docs/space
-           */
-          "space-y-reverse": ["space-y-reverse"],
-          // Sizing
-          /**
-           * Width
-           * @see https://tailwindcss.com/docs/width
-           */
-          w: [{
-            w: ["auto", "min", "max", "fit", "svw", "lvw", "dvw", isArbitraryValue, spacing]
-          }],
-          /**
-           * Min-Width
-           * @see https://tailwindcss.com/docs/min-width
-           */
-          "min-w": [{
-            "min-w": [isArbitraryValue, spacing, "min", "max", "fit"]
-          }],
-          /**
-           * Max-Width
-           * @see https://tailwindcss.com/docs/max-width
-           */
-          "max-w": [{
-            "max-w": [isArbitraryValue, spacing, "none", "full", "min", "max", "fit", "prose", {
-              screen: [isTshirtSize]
-            }, isTshirtSize]
-          }],
-          /**
-           * Height
-           * @see https://tailwindcss.com/docs/height
-           */
-          h: [{
-            h: [isArbitraryValue, spacing, "auto", "min", "max", "fit", "svh", "lvh", "dvh"]
-          }],
-          /**
-           * Min-Height
-           * @see https://tailwindcss.com/docs/min-height
-           */
-          "min-h": [{
-            "min-h": [isArbitraryValue, spacing, "min", "max", "fit", "svh", "lvh", "dvh"]
-          }],
-          /**
-           * Max-Height
-           * @see https://tailwindcss.com/docs/max-height
-           */
-          "max-h": [{
-            "max-h": [isArbitraryValue, spacing, "min", "max", "fit", "svh", "lvh", "dvh"]
-          }],
-          /**
-           * Size
-           * @see https://tailwindcss.com/docs/size
-           */
-          size: [{
-            size: [isArbitraryValue, spacing, "auto", "min", "max", "fit"]
-          }],
-          // Typography
-          /**
-           * Font Size
-           * @see https://tailwindcss.com/docs/font-size
-           */
-          "font-size": [{
-            text: ["base", isTshirtSize, isArbitraryLength]
-          }],
-          /**
-           * Font Smoothing
-           * @see https://tailwindcss.com/docs/font-smoothing
-           */
-          "font-smoothing": ["antialiased", "subpixel-antialiased"],
-          /**
-           * Font Style
-           * @see https://tailwindcss.com/docs/font-style
-           */
-          "font-style": ["italic", "not-italic"],
-          /**
-           * Font Weight
-           * @see https://tailwindcss.com/docs/font-weight
-           */
-          "font-weight": [{
-            font: ["thin", "extralight", "light", "normal", "medium", "semibold", "bold", "extrabold", "black", isArbitraryNumber]
-          }],
-          /**
-           * Font Family
-           * @see https://tailwindcss.com/docs/font-family
-           */
-          "font-family": [{
-            font: [isAny]
-          }],
-          /**
-           * Font Variant Numeric
-           * @see https://tailwindcss.com/docs/font-variant-numeric
-           */
-          "fvn-normal": ["normal-nums"],
-          /**
-           * Font Variant Numeric
-           * @see https://tailwindcss.com/docs/font-variant-numeric
-           */
-          "fvn-ordinal": ["ordinal"],
-          /**
-           * Font Variant Numeric
-           * @see https://tailwindcss.com/docs/font-variant-numeric
-           */
-          "fvn-slashed-zero": ["slashed-zero"],
-          /**
-           * Font Variant Numeric
-           * @see https://tailwindcss.com/docs/font-variant-numeric
-           */
-          "fvn-figure": ["lining-nums", "oldstyle-nums"],
-          /**
-           * Font Variant Numeric
-           * @see https://tailwindcss.com/docs/font-variant-numeric
-           */
-          "fvn-spacing": ["proportional-nums", "tabular-nums"],
-          /**
-           * Font Variant Numeric
-           * @see https://tailwindcss.com/docs/font-variant-numeric
-           */
-          "fvn-fraction": ["diagonal-fractions", "stacked-fractons"],
-          /**
-           * Letter Spacing
-           * @see https://tailwindcss.com/docs/letter-spacing
-           */
-          tracking: [{
-            tracking: ["tighter", "tight", "normal", "wide", "wider", "widest", isArbitraryValue]
-          }],
-          /**
-           * Line Clamp
-           * @see https://tailwindcss.com/docs/line-clamp
-           */
-          "line-clamp": [{
-            "line-clamp": ["none", isNumber, isArbitraryNumber]
-          }],
-          /**
-           * Line Height
-           * @see https://tailwindcss.com/docs/line-height
-           */
-          leading: [{
-            leading: ["none", "tight", "snug", "normal", "relaxed", "loose", isLength, isArbitraryValue]
-          }],
-          /**
-           * List Style Image
-           * @see https://tailwindcss.com/docs/list-style-image
-           */
-          "list-image": [{
-            "list-image": ["none", isArbitraryValue]
-          }],
-          /**
-           * List Style Type
-           * @see https://tailwindcss.com/docs/list-style-type
-           */
-          "list-style-type": [{
-            list: ["none", "disc", "decimal", isArbitraryValue]
-          }],
-          /**
-           * List Style Position
-           * @see https://tailwindcss.com/docs/list-style-position
-           */
-          "list-style-position": [{
-            list: ["inside", "outside"]
-          }],
-          /**
-           * Placeholder Color
-           * @deprecated since Tailwind CSS v3.0.0
-           * @see https://tailwindcss.com/docs/placeholder-color
-           */
-          "placeholder-color": [{
-            placeholder: [colors]
-          }],
-          /**
-           * Placeholder Opacity
-           * @see https://tailwindcss.com/docs/placeholder-opacity
-           */
-          "placeholder-opacity": [{
-            "placeholder-opacity": [opacity]
-          }],
-          /**
-           * Text Alignment
-           * @see https://tailwindcss.com/docs/text-align
-           */
-          "text-alignment": [{
-            text: ["left", "center", "right", "justify", "start", "end"]
-          }],
-          /**
-           * Text Color
-           * @see https://tailwindcss.com/docs/text-color
-           */
-          "text-color": [{
-            text: [colors]
-          }],
-          /**
-           * Text Opacity
-           * @see https://tailwindcss.com/docs/text-opacity
-           */
-          "text-opacity": [{
-            "text-opacity": [opacity]
-          }],
-          /**
-           * Text Decoration
-           * @see https://tailwindcss.com/docs/text-decoration
-           */
-          "text-decoration": ["underline", "overline", "line-through", "no-underline"],
-          /**
-           * Text Decoration Style
-           * @see https://tailwindcss.com/docs/text-decoration-style
-           */
-          "text-decoration-style": [{
-            decoration: [...getLineStyles(), "wavy"]
-          }],
-          /**
-           * Text Decoration Thickness
-           * @see https://tailwindcss.com/docs/text-decoration-thickness
-           */
-          "text-decoration-thickness": [{
-            decoration: ["auto", "from-font", isLength, isArbitraryLength]
-          }],
-          /**
-           * Text Underline Offset
-           * @see https://tailwindcss.com/docs/text-underline-offset
-           */
-          "underline-offset": [{
-            "underline-offset": ["auto", isLength, isArbitraryValue]
-          }],
-          /**
-           * Text Decoration Color
-           * @see https://tailwindcss.com/docs/text-decoration-color
-           */
-          "text-decoration-color": [{
-            decoration: [colors]
-          }],
-          /**
-           * Text Transform
-           * @see https://tailwindcss.com/docs/text-transform
-           */
-          "text-transform": ["uppercase", "lowercase", "capitalize", "normal-case"],
-          /**
-           * Text Overflow
-           * @see https://tailwindcss.com/docs/text-overflow
-           */
-          "text-overflow": ["truncate", "text-ellipsis", "text-clip"],
-          /**
-           * Text Wrap
-           * @see https://tailwindcss.com/docs/text-wrap
-           */
-          "text-wrap": [{
-            text: ["wrap", "nowrap", "balance", "pretty"]
-          }],
-          /**
-           * Text Indent
-           * @see https://tailwindcss.com/docs/text-indent
-           */
-          indent: [{
-            indent: getSpacingWithArbitrary()
-          }],
-          /**
-           * Vertical Alignment
-           * @see https://tailwindcss.com/docs/vertical-align
-           */
-          "vertical-align": [{
-            align: ["baseline", "top", "middle", "bottom", "text-top", "text-bottom", "sub", "super", isArbitraryValue]
-          }],
-          /**
-           * Whitespace
-           * @see https://tailwindcss.com/docs/whitespace
-           */
-          whitespace: [{
-            whitespace: ["normal", "nowrap", "pre", "pre-line", "pre-wrap", "break-spaces"]
-          }],
-          /**
-           * Word Break
-           * @see https://tailwindcss.com/docs/word-break
-           */
-          break: [{
-            break: ["normal", "words", "all", "keep"]
-          }],
-          /**
-           * Hyphens
-           * @see https://tailwindcss.com/docs/hyphens
-           */
-          hyphens: [{
-            hyphens: ["none", "manual", "auto"]
-          }],
-          /**
-           * Content
-           * @see https://tailwindcss.com/docs/content
-           */
-          content: [{
-            content: ["none", isArbitraryValue]
-          }],
-          // Backgrounds
-          /**
-           * Background Attachment
-           * @see https://tailwindcss.com/docs/background-attachment
-           */
-          "bg-attachment": [{
-            bg: ["fixed", "local", "scroll"]
-          }],
-          /**
-           * Background Clip
-           * @see https://tailwindcss.com/docs/background-clip
-           */
-          "bg-clip": [{
-            "bg-clip": ["border", "padding", "content", "text"]
-          }],
-          /**
-           * Background Opacity
-           * @deprecated since Tailwind CSS v3.0.0
-           * @see https://tailwindcss.com/docs/background-opacity
-           */
-          "bg-opacity": [{
-            "bg-opacity": [opacity]
-          }],
-          /**
-           * Background Origin
-           * @see https://tailwindcss.com/docs/background-origin
-           */
-          "bg-origin": [{
-            "bg-origin": ["border", "padding", "content"]
-          }],
-          /**
-           * Background Position
-           * @see https://tailwindcss.com/docs/background-position
-           */
-          "bg-position": [{
-            bg: [...getPositions(), isArbitraryPosition]
-          }],
-          /**
-           * Background Repeat
-           * @see https://tailwindcss.com/docs/background-repeat
-           */
-          "bg-repeat": [{
-            bg: ["no-repeat", {
-              repeat: ["", "x", "y", "round", "space"]
-            }]
-          }],
-          /**
-           * Background Size
-           * @see https://tailwindcss.com/docs/background-size
-           */
-          "bg-size": [{
-            bg: ["auto", "cover", "contain", isArbitrarySize]
-          }],
-          /**
-           * Background Image
-           * @see https://tailwindcss.com/docs/background-image
-           */
-          "bg-image": [{
-            bg: ["none", {
-              "gradient-to": ["t", "tr", "r", "br", "b", "bl", "l", "tl"]
-            }, isArbitraryImage]
-          }],
-          /**
-           * Background Color
-           * @see https://tailwindcss.com/docs/background-color
-           */
-          "bg-color": [{
-            bg: [colors]
-          }],
-          /**
-           * Gradient Color Stops From Position
-           * @see https://tailwindcss.com/docs/gradient-color-stops
-           */
-          "gradient-from-pos": [{
-            from: [gradientColorStopPositions]
-          }],
-          /**
-           * Gradient Color Stops Via Position
-           * @see https://tailwindcss.com/docs/gradient-color-stops
-           */
-          "gradient-via-pos": [{
-            via: [gradientColorStopPositions]
-          }],
-          /**
-           * Gradient Color Stops To Position
-           * @see https://tailwindcss.com/docs/gradient-color-stops
-           */
-          "gradient-to-pos": [{
-            to: [gradientColorStopPositions]
-          }],
-          /**
-           * Gradient Color Stops From
-           * @see https://tailwindcss.com/docs/gradient-color-stops
-           */
-          "gradient-from": [{
-            from: [gradientColorStops]
-          }],
-          /**
-           * Gradient Color Stops Via
-           * @see https://tailwindcss.com/docs/gradient-color-stops
-           */
-          "gradient-via": [{
-            via: [gradientColorStops]
-          }],
-          /**
-           * Gradient Color Stops To
-           * @see https://tailwindcss.com/docs/gradient-color-stops
-           */
-          "gradient-to": [{
-            to: [gradientColorStops]
-          }],
-          // Borders
-          /**
-           * Border Radius
-           * @see https://tailwindcss.com/docs/border-radius
-           */
-          rounded: [{
-            rounded: [borderRadius]
-          }],
-          /**
-           * Border Radius Start
-           * @see https://tailwindcss.com/docs/border-radius
-           */
-          "rounded-s": [{
-            "rounded-s": [borderRadius]
-          }],
-          /**
-           * Border Radius End
-           * @see https://tailwindcss.com/docs/border-radius
-           */
-          "rounded-e": [{
-            "rounded-e": [borderRadius]
-          }],
-          /**
-           * Border Radius Top
-           * @see https://tailwindcss.com/docs/border-radius
-           */
-          "rounded-t": [{
-            "rounded-t": [borderRadius]
-          }],
-          /**
-           * Border Radius Right
-           * @see https://tailwindcss.com/docs/border-radius
-           */
-          "rounded-r": [{
-            "rounded-r": [borderRadius]
-          }],
-          /**
-           * Border Radius Bottom
-           * @see https://tailwindcss.com/docs/border-radius
-           */
-          "rounded-b": [{
-            "rounded-b": [borderRadius]
-          }],
-          /**
-           * Border Radius Left
-           * @see https://tailwindcss.com/docs/border-radius
-           */
-          "rounded-l": [{
-            "rounded-l": [borderRadius]
-          }],
-          /**
-           * Border Radius Start Start
-           * @see https://tailwindcss.com/docs/border-radius
-           */
-          "rounded-ss": [{
-            "rounded-ss": [borderRadius]
-          }],
-          /**
-           * Border Radius Start End
-           * @see https://tailwindcss.com/docs/border-radius
-           */
-          "rounded-se": [{
-            "rounded-se": [borderRadius]
-          }],
-          /**
-           * Border Radius End End
-           * @see https://tailwindcss.com/docs/border-radius
-           */
-          "rounded-ee": [{
-            "rounded-ee": [borderRadius]
-          }],
-          /**
-           * Border Radius End Start
-           * @see https://tailwindcss.com/docs/border-radius
-           */
-          "rounded-es": [{
-            "rounded-es": [borderRadius]
-          }],
-          /**
-           * Border Radius Top Left
-           * @see https://tailwindcss.com/docs/border-radius
-           */
-          "rounded-tl": [{
-            "rounded-tl": [borderRadius]
-          }],
-          /**
-           * Border Radius Top Right
-           * @see https://tailwindcss.com/docs/border-radius
-           */
-          "rounded-tr": [{
-            "rounded-tr": [borderRadius]
-          }],
-          /**
-           * Border Radius Bottom Right
-           * @see https://tailwindcss.com/docs/border-radius
-           */
-          "rounded-br": [{
-            "rounded-br": [borderRadius]
-          }],
-          /**
-           * Border Radius Bottom Left
-           * @see https://tailwindcss.com/docs/border-radius
-           */
-          "rounded-bl": [{
-            "rounded-bl": [borderRadius]
-          }],
-          /**
-           * Border Width
-           * @see https://tailwindcss.com/docs/border-width
-           */
-          "border-w": [{
-            border: [borderWidth]
-          }],
-          /**
-           * Border Width X
-           * @see https://tailwindcss.com/docs/border-width
-           */
-          "border-w-x": [{
-            "border-x": [borderWidth]
-          }],
-          /**
-           * Border Width Y
-           * @see https://tailwindcss.com/docs/border-width
-           */
-          "border-w-y": [{
-            "border-y": [borderWidth]
-          }],
-          /**
-           * Border Width Start
-           * @see https://tailwindcss.com/docs/border-width
-           */
-          "border-w-s": [{
-            "border-s": [borderWidth]
-          }],
-          /**
-           * Border Width End
-           * @see https://tailwindcss.com/docs/border-width
-           */
-          "border-w-e": [{
-            "border-e": [borderWidth]
-          }],
-          /**
-           * Border Width Top
-           * @see https://tailwindcss.com/docs/border-width
-           */
-          "border-w-t": [{
-            "border-t": [borderWidth]
-          }],
-          /**
-           * Border Width Right
-           * @see https://tailwindcss.com/docs/border-width
-           */
-          "border-w-r": [{
-            "border-r": [borderWidth]
-          }],
-          /**
-           * Border Width Bottom
-           * @see https://tailwindcss.com/docs/border-width
-           */
-          "border-w-b": [{
-            "border-b": [borderWidth]
-          }],
-          /**
-           * Border Width Left
-           * @see https://tailwindcss.com/docs/border-width
-           */
-          "border-w-l": [{
-            "border-l": [borderWidth]
-          }],
-          /**
-           * Border Opacity
-           * @see https://tailwindcss.com/docs/border-opacity
-           */
-          "border-opacity": [{
-            "border-opacity": [opacity]
-          }],
-          /**
-           * Border Style
-           * @see https://tailwindcss.com/docs/border-style
-           */
-          "border-style": [{
-            border: [...getLineStyles(), "hidden"]
-          }],
-          /**
-           * Divide Width X
-           * @see https://tailwindcss.com/docs/divide-width
-           */
-          "divide-x": [{
-            "divide-x": [borderWidth]
-          }],
-          /**
-           * Divide Width X Reverse
-           * @see https://tailwindcss.com/docs/divide-width
-           */
-          "divide-x-reverse": ["divide-x-reverse"],
-          /**
-           * Divide Width Y
-           * @see https://tailwindcss.com/docs/divide-width
-           */
-          "divide-y": [{
-            "divide-y": [borderWidth]
-          }],
-          /**
-           * Divide Width Y Reverse
-           * @see https://tailwindcss.com/docs/divide-width
-           */
-          "divide-y-reverse": ["divide-y-reverse"],
-          /**
-           * Divide Opacity
-           * @see https://tailwindcss.com/docs/divide-opacity
-           */
-          "divide-opacity": [{
-            "divide-opacity": [opacity]
-          }],
-          /**
-           * Divide Style
-           * @see https://tailwindcss.com/docs/divide-style
-           */
-          "divide-style": [{
-            divide: getLineStyles()
-          }],
-          /**
-           * Border Color
-           * @see https://tailwindcss.com/docs/border-color
-           */
-          "border-color": [{
-            border: [borderColor]
-          }],
-          /**
-           * Border Color X
-           * @see https://tailwindcss.com/docs/border-color
-           */
-          "border-color-x": [{
-            "border-x": [borderColor]
-          }],
-          /**
-           * Border Color Y
-           * @see https://tailwindcss.com/docs/border-color
-           */
-          "border-color-y": [{
-            "border-y": [borderColor]
-          }],
-          /**
-           * Border Color S
-           * @see https://tailwindcss.com/docs/border-color
-           */
-          "border-color-s": [{
-            "border-s": [borderColor]
-          }],
-          /**
-           * Border Color E
-           * @see https://tailwindcss.com/docs/border-color
-           */
-          "border-color-e": [{
-            "border-e": [borderColor]
-          }],
-          /**
-           * Border Color Top
-           * @see https://tailwindcss.com/docs/border-color
-           */
-          "border-color-t": [{
-            "border-t": [borderColor]
-          }],
-          /**
-           * Border Color Right
-           * @see https://tailwindcss.com/docs/border-color
-           */
-          "border-color-r": [{
-            "border-r": [borderColor]
-          }],
-          /**
-           * Border Color Bottom
-           * @see https://tailwindcss.com/docs/border-color
-           */
-          "border-color-b": [{
-            "border-b": [borderColor]
-          }],
-          /**
-           * Border Color Left
-           * @see https://tailwindcss.com/docs/border-color
-           */
-          "border-color-l": [{
-            "border-l": [borderColor]
-          }],
-          /**
-           * Divide Color
-           * @see https://tailwindcss.com/docs/divide-color
-           */
-          "divide-color": [{
-            divide: [borderColor]
-          }],
-          /**
-           * Outline Style
-           * @see https://tailwindcss.com/docs/outline-style
-           */
-          "outline-style": [{
-            outline: ["", ...getLineStyles()]
-          }],
-          /**
-           * Outline Offset
-           * @see https://tailwindcss.com/docs/outline-offset
-           */
-          "outline-offset": [{
-            "outline-offset": [isLength, isArbitraryValue]
-          }],
-          /**
-           * Outline Width
-           * @see https://tailwindcss.com/docs/outline-width
-           */
-          "outline-w": [{
-            outline: [isLength, isArbitraryLength]
-          }],
-          /**
-           * Outline Color
-           * @see https://tailwindcss.com/docs/outline-color
-           */
-          "outline-color": [{
-            outline: [colors]
-          }],
-          /**
-           * Ring Width
-           * @see https://tailwindcss.com/docs/ring-width
-           */
-          "ring-w": [{
-            ring: getLengthWithEmptyAndArbitrary()
-          }],
-          /**
-           * Ring Width Inset
-           * @see https://tailwindcss.com/docs/ring-width
-           */
-          "ring-w-inset": ["ring-inset"],
-          /**
-           * Ring Color
-           * @see https://tailwindcss.com/docs/ring-color
-           */
-          "ring-color": [{
-            ring: [colors]
-          }],
-          /**
-           * Ring Opacity
-           * @see https://tailwindcss.com/docs/ring-opacity
-           */
-          "ring-opacity": [{
-            "ring-opacity": [opacity]
-          }],
-          /**
-           * Ring Offset Width
-           * @see https://tailwindcss.com/docs/ring-offset-width
-           */
-          "ring-offset-w": [{
-            "ring-offset": [isLength, isArbitraryLength]
-          }],
-          /**
-           * Ring Offset Color
-           * @see https://tailwindcss.com/docs/ring-offset-color
-           */
-          "ring-offset-color": [{
-            "ring-offset": [colors]
-          }],
-          // Effects
-          /**
-           * Box Shadow
-           * @see https://tailwindcss.com/docs/box-shadow
-           */
-          shadow: [{
-            shadow: ["", "inner", "none", isTshirtSize, isArbitraryShadow]
-          }],
-          /**
-           * Box Shadow Color
-           * @see https://tailwindcss.com/docs/box-shadow-color
-           */
-          "shadow-color": [{
-            shadow: [isAny]
-          }],
-          /**
-           * Opacity
-           * @see https://tailwindcss.com/docs/opacity
-           */
-          opacity: [{
-            opacity: [opacity]
-          }],
-          /**
-           * Mix Blend Mode
-           * @see https://tailwindcss.com/docs/mix-blend-mode
-           */
-          "mix-blend": [{
-            "mix-blend": [...getBlendModes(), "plus-lighter", "plus-darker"]
-          }],
-          /**
-           * Background Blend Mode
-           * @see https://tailwindcss.com/docs/background-blend-mode
-           */
-          "bg-blend": [{
-            "bg-blend": getBlendModes()
-          }],
-          // Filters
-          /**
-           * Filter
-           * @deprecated since Tailwind CSS v3.0.0
-           * @see https://tailwindcss.com/docs/filter
-           */
-          filter: [{
-            filter: ["", "none"]
-          }],
-          /**
-           * Blur
-           * @see https://tailwindcss.com/docs/blur
-           */
-          blur: [{
-            blur: [blur2]
-          }],
-          /**
-           * Brightness
-           * @see https://tailwindcss.com/docs/brightness
-           */
-          brightness: [{
-            brightness: [brightness]
-          }],
-          /**
-           * Contrast
-           * @see https://tailwindcss.com/docs/contrast
-           */
-          contrast: [{
-            contrast: [contrast]
-          }],
-          /**
-           * Drop Shadow
-           * @see https://tailwindcss.com/docs/drop-shadow
-           */
-          "drop-shadow": [{
-            "drop-shadow": ["", "none", isTshirtSize, isArbitraryValue]
-          }],
-          /**
-           * Grayscale
-           * @see https://tailwindcss.com/docs/grayscale
-           */
-          grayscale: [{
-            grayscale: [grayscale]
-          }],
-          /**
-           * Hue Rotate
-           * @see https://tailwindcss.com/docs/hue-rotate
-           */
-          "hue-rotate": [{
-            "hue-rotate": [hueRotate]
-          }],
-          /**
-           * Invert
-           * @see https://tailwindcss.com/docs/invert
-           */
-          invert: [{
-            invert: [invert]
-          }],
-          /**
-           * Saturate
-           * @see https://tailwindcss.com/docs/saturate
-           */
-          saturate: [{
-            saturate: [saturate]
-          }],
-          /**
-           * Sepia
-           * @see https://tailwindcss.com/docs/sepia
-           */
-          sepia: [{
-            sepia: [sepia]
-          }],
-          /**
-           * Backdrop Filter
-           * @deprecated since Tailwind CSS v3.0.0
-           * @see https://tailwindcss.com/docs/backdrop-filter
-           */
-          "backdrop-filter": [{
-            "backdrop-filter": ["", "none"]
-          }],
-          /**
-           * Backdrop Blur
-           * @see https://tailwindcss.com/docs/backdrop-blur
-           */
-          "backdrop-blur": [{
-            "backdrop-blur": [blur2]
-          }],
-          /**
-           * Backdrop Brightness
-           * @see https://tailwindcss.com/docs/backdrop-brightness
-           */
-          "backdrop-brightness": [{
-            "backdrop-brightness": [brightness]
-          }],
-          /**
-           * Backdrop Contrast
-           * @see https://tailwindcss.com/docs/backdrop-contrast
-           */
-          "backdrop-contrast": [{
-            "backdrop-contrast": [contrast]
-          }],
-          /**
-           * Backdrop Grayscale
-           * @see https://tailwindcss.com/docs/backdrop-grayscale
-           */
-          "backdrop-grayscale": [{
-            "backdrop-grayscale": [grayscale]
-          }],
-          /**
-           * Backdrop Hue Rotate
-           * @see https://tailwindcss.com/docs/backdrop-hue-rotate
-           */
-          "backdrop-hue-rotate": [{
-            "backdrop-hue-rotate": [hueRotate]
-          }],
-          /**
-           * Backdrop Invert
-           * @see https://tailwindcss.com/docs/backdrop-invert
-           */
-          "backdrop-invert": [{
-            "backdrop-invert": [invert]
-          }],
-          /**
-           * Backdrop Opacity
-           * @see https://tailwindcss.com/docs/backdrop-opacity
-           */
-          "backdrop-opacity": [{
-            "backdrop-opacity": [opacity]
-          }],
-          /**
-           * Backdrop Saturate
-           * @see https://tailwindcss.com/docs/backdrop-saturate
-           */
-          "backdrop-saturate": [{
-            "backdrop-saturate": [saturate]
-          }],
-          /**
-           * Backdrop Sepia
-           * @see https://tailwindcss.com/docs/backdrop-sepia
-           */
-          "backdrop-sepia": [{
-            "backdrop-sepia": [sepia]
-          }],
-          // Tables
-          /**
-           * Border Collapse
-           * @see https://tailwindcss.com/docs/border-collapse
-           */
-          "border-collapse": [{
-            border: ["collapse", "separate"]
-          }],
-          /**
-           * Border Spacing
-           * @see https://tailwindcss.com/docs/border-spacing
-           */
-          "border-spacing": [{
-            "border-spacing": [borderSpacing]
-          }],
-          /**
-           * Border Spacing X
-           * @see https://tailwindcss.com/docs/border-spacing
-           */
-          "border-spacing-x": [{
-            "border-spacing-x": [borderSpacing]
-          }],
-          /**
-           * Border Spacing Y
-           * @see https://tailwindcss.com/docs/border-spacing
-           */
-          "border-spacing-y": [{
-            "border-spacing-y": [borderSpacing]
-          }],
-          /**
-           * Table Layout
-           * @see https://tailwindcss.com/docs/table-layout
-           */
-          "table-layout": [{
-            table: ["auto", "fixed"]
-          }],
-          /**
-           * Caption Side
-           * @see https://tailwindcss.com/docs/caption-side
-           */
-          caption: [{
-            caption: ["top", "bottom"]
-          }],
-          // Transitions and Animation
-          /**
-           * Tranisition Property
-           * @see https://tailwindcss.com/docs/transition-property
-           */
-          transition: [{
-            transition: ["none", "all", "", "colors", "opacity", "shadow", "transform", isArbitraryValue]
-          }],
-          /**
-           * Transition Duration
-           * @see https://tailwindcss.com/docs/transition-duration
-           */
-          duration: [{
-            duration: getNumberAndArbitrary()
-          }],
-          /**
-           * Transition Timing Function
-           * @see https://tailwindcss.com/docs/transition-timing-function
-           */
-          ease: [{
-            ease: ["linear", "in", "out", "in-out", isArbitraryValue]
-          }],
-          /**
-           * Transition Delay
-           * @see https://tailwindcss.com/docs/transition-delay
-           */
-          delay: [{
-            delay: getNumberAndArbitrary()
-          }],
-          /**
-           * Animation
-           * @see https://tailwindcss.com/docs/animation
-           */
-          animate: [{
-            animate: ["none", "spin", "ping", "pulse", "bounce", isArbitraryValue]
-          }],
-          // Transforms
-          /**
-           * Transform
-           * @see https://tailwindcss.com/docs/transform
-           */
-          transform: [{
-            transform: ["", "gpu", "none"]
-          }],
-          /**
-           * Scale
-           * @see https://tailwindcss.com/docs/scale
-           */
-          scale: [{
-            scale: [scale]
-          }],
-          /**
-           * Scale X
-           * @see https://tailwindcss.com/docs/scale
-           */
-          "scale-x": [{
-            "scale-x": [scale]
-          }],
-          /**
-           * Scale Y
-           * @see https://tailwindcss.com/docs/scale
-           */
-          "scale-y": [{
-            "scale-y": [scale]
-          }],
-          /**
-           * Rotate
-           * @see https://tailwindcss.com/docs/rotate
-           */
-          rotate: [{
-            rotate: [isInteger, isArbitraryValue]
-          }],
-          /**
-           * Translate X
-           * @see https://tailwindcss.com/docs/translate
-           */
-          "translate-x": [{
-            "translate-x": [translate]
-          }],
-          /**
-           * Translate Y
-           * @see https://tailwindcss.com/docs/translate
-           */
-          "translate-y": [{
-            "translate-y": [translate]
-          }],
-          /**
-           * Skew X
-           * @see https://tailwindcss.com/docs/skew
-           */
-          "skew-x": [{
-            "skew-x": [skew]
-          }],
-          /**
-           * Skew Y
-           * @see https://tailwindcss.com/docs/skew
-           */
-          "skew-y": [{
-            "skew-y": [skew]
-          }],
-          /**
-           * Transform Origin
-           * @see https://tailwindcss.com/docs/transform-origin
-           */
-          "transform-origin": [{
-            origin: ["center", "top", "top-right", "right", "bottom-right", "bottom", "bottom-left", "left", "top-left", isArbitraryValue]
-          }],
-          // Interactivity
-          /**
-           * Accent Color
-           * @see https://tailwindcss.com/docs/accent-color
-           */
-          accent: [{
-            accent: ["auto", colors]
-          }],
-          /**
-           * Appearance
-           * @see https://tailwindcss.com/docs/appearance
-           */
-          appearance: [{
-            appearance: ["none", "auto"]
-          }],
-          /**
-           * Cursor
-           * @see https://tailwindcss.com/docs/cursor
-           */
-          cursor: [{
-            cursor: ["auto", "default", "pointer", "wait", "text", "move", "help", "not-allowed", "none", "context-menu", "progress", "cell", "crosshair", "vertical-text", "alias", "copy", "no-drop", "grab", "grabbing", "all-scroll", "col-resize", "row-resize", "n-resize", "e-resize", "s-resize", "w-resize", "ne-resize", "nw-resize", "se-resize", "sw-resize", "ew-resize", "ns-resize", "nesw-resize", "nwse-resize", "zoom-in", "zoom-out", isArbitraryValue]
-          }],
-          /**
-           * Caret Color
-           * @see https://tailwindcss.com/docs/just-in-time-mode#caret-color-utilities
-           */
-          "caret-color": [{
-            caret: [colors]
-          }],
-          /**
-           * Pointer Events
-           * @see https://tailwindcss.com/docs/pointer-events
-           */
-          "pointer-events": [{
-            "pointer-events": ["none", "auto"]
-          }],
-          /**
-           * Resize
-           * @see https://tailwindcss.com/docs/resize
-           */
-          resize: [{
-            resize: ["none", "y", "x", ""]
-          }],
-          /**
-           * Scroll Behavior
-           * @see https://tailwindcss.com/docs/scroll-behavior
-           */
-          "scroll-behavior": [{
-            scroll: ["auto", "smooth"]
-          }],
-          /**
-           * Scroll Margin
-           * @see https://tailwindcss.com/docs/scroll-margin
-           */
-          "scroll-m": [{
-            "scroll-m": getSpacingWithArbitrary()
-          }],
-          /**
-           * Scroll Margin X
-           * @see https://tailwindcss.com/docs/scroll-margin
-           */
-          "scroll-mx": [{
-            "scroll-mx": getSpacingWithArbitrary()
-          }],
-          /**
-           * Scroll Margin Y
-           * @see https://tailwindcss.com/docs/scroll-margin
-           */
-          "scroll-my": [{
-            "scroll-my": getSpacingWithArbitrary()
-          }],
-          /**
-           * Scroll Margin Start
-           * @see https://tailwindcss.com/docs/scroll-margin
-           */
-          "scroll-ms": [{
-            "scroll-ms": getSpacingWithArbitrary()
-          }],
-          /**
-           * Scroll Margin End
-           * @see https://tailwindcss.com/docs/scroll-margin
-           */
-          "scroll-me": [{
-            "scroll-me": getSpacingWithArbitrary()
-          }],
-          /**
-           * Scroll Margin Top
-           * @see https://tailwindcss.com/docs/scroll-margin
-           */
-          "scroll-mt": [{
-            "scroll-mt": getSpacingWithArbitrary()
-          }],
-          /**
-           * Scroll Margin Right
-           * @see https://tailwindcss.com/docs/scroll-margin
-           */
-          "scroll-mr": [{
-            "scroll-mr": getSpacingWithArbitrary()
-          }],
-          /**
-           * Scroll Margin Bottom
-           * @see https://tailwindcss.com/docs/scroll-margin
-           */
-          "scroll-mb": [{
-            "scroll-mb": getSpacingWithArbitrary()
-          }],
-          /**
-           * Scroll Margin Left
-           * @see https://tailwindcss.com/docs/scroll-margin
-           */
-          "scroll-ml": [{
-            "scroll-ml": getSpacingWithArbitrary()
-          }],
-          /**
-           * Scroll Padding
-           * @see https://tailwindcss.com/docs/scroll-padding
-           */
-          "scroll-p": [{
-            "scroll-p": getSpacingWithArbitrary()
-          }],
-          /**
-           * Scroll Padding X
-           * @see https://tailwindcss.com/docs/scroll-padding
-           */
-          "scroll-px": [{
-            "scroll-px": getSpacingWithArbitrary()
-          }],
-          /**
-           * Scroll Padding Y
-           * @see https://tailwindcss.com/docs/scroll-padding
-           */
-          "scroll-py": [{
-            "scroll-py": getSpacingWithArbitrary()
-          }],
-          /**
-           * Scroll Padding Start
-           * @see https://tailwindcss.com/docs/scroll-padding
-           */
-          "scroll-ps": [{
-            "scroll-ps": getSpacingWithArbitrary()
-          }],
-          /**
-           * Scroll Padding End
-           * @see https://tailwindcss.com/docs/scroll-padding
-           */
-          "scroll-pe": [{
-            "scroll-pe": getSpacingWithArbitrary()
-          }],
-          /**
-           * Scroll Padding Top
-           * @see https://tailwindcss.com/docs/scroll-padding
-           */
-          "scroll-pt": [{
-            "scroll-pt": getSpacingWithArbitrary()
-          }],
-          /**
-           * Scroll Padding Right
-           * @see https://tailwindcss.com/docs/scroll-padding
-           */
-          "scroll-pr": [{
-            "scroll-pr": getSpacingWithArbitrary()
-          }],
-          /**
-           * Scroll Padding Bottom
-           * @see https://tailwindcss.com/docs/scroll-padding
-           */
-          "scroll-pb": [{
-            "scroll-pb": getSpacingWithArbitrary()
-          }],
-          /**
-           * Scroll Padding Left
-           * @see https://tailwindcss.com/docs/scroll-padding
-           */
-          "scroll-pl": [{
-            "scroll-pl": getSpacingWithArbitrary()
-          }],
-          /**
-           * Scroll Snap Align
-           * @see https://tailwindcss.com/docs/scroll-snap-align
-           */
-          "snap-align": [{
-            snap: ["start", "end", "center", "align-none"]
-          }],
-          /**
-           * Scroll Snap Stop
-           * @see https://tailwindcss.com/docs/scroll-snap-stop
-           */
-          "snap-stop": [{
-            snap: ["normal", "always"]
-          }],
-          /**
-           * Scroll Snap Type
-           * @see https://tailwindcss.com/docs/scroll-snap-type
-           */
-          "snap-type": [{
-            snap: ["none", "x", "y", "both"]
-          }],
-          /**
-           * Scroll Snap Type Strictness
-           * @see https://tailwindcss.com/docs/scroll-snap-type
-           */
-          "snap-strictness": [{
-            snap: ["mandatory", "proximity"]
-          }],
-          /**
-           * Touch Action
-           * @see https://tailwindcss.com/docs/touch-action
-           */
-          touch: [{
-            touch: ["auto", "none", "manipulation"]
-          }],
-          /**
-           * Touch Action X
-           * @see https://tailwindcss.com/docs/touch-action
-           */
-          "touch-x": [{
-            "touch-pan": ["x", "left", "right"]
-          }],
-          /**
-           * Touch Action Y
-           * @see https://tailwindcss.com/docs/touch-action
-           */
-          "touch-y": [{
-            "touch-pan": ["y", "up", "down"]
-          }],
-          /**
-           * Touch Action Pinch Zoom
-           * @see https://tailwindcss.com/docs/touch-action
-           */
-          "touch-pz": ["touch-pinch-zoom"],
-          /**
-           * User Select
-           * @see https://tailwindcss.com/docs/user-select
-           */
-          select: [{
-            select: ["none", "text", "all", "auto"]
-          }],
-          /**
-           * Will Change
-           * @see https://tailwindcss.com/docs/will-change
-           */
-          "will-change": [{
-            "will-change": ["auto", "scroll", "contents", "transform", isArbitraryValue]
-          }],
-          // SVG
-          /**
-           * Fill
-           * @see https://tailwindcss.com/docs/fill
-           */
-          fill: [{
-            fill: [colors, "none"]
-          }],
-          /**
-           * Stroke Width
-           * @see https://tailwindcss.com/docs/stroke-width
-           */
-          "stroke-w": [{
-            stroke: [isLength, isArbitraryLength, isArbitraryNumber]
-          }],
-          /**
-           * Stroke
-           * @see https://tailwindcss.com/docs/stroke
-           */
-          stroke: [{
-            stroke: [colors, "none"]
-          }],
-          // Accessibility
-          /**
-           * Screen Readers
-           * @see https://tailwindcss.com/docs/screen-readers
-           */
-          sr: ["sr-only", "not-sr-only"],
-          /**
-           * Forced Color Adjust
-           * @see https://tailwindcss.com/docs/forced-color-adjust
-           */
-          "forced-color-adjust": [{
-            "forced-color-adjust": ["auto", "none"]
-          }]
-        },
-        conflictingClassGroups: {
-          overflow: ["overflow-x", "overflow-y"],
-          overscroll: ["overscroll-x", "overscroll-y"],
-          inset: ["inset-x", "inset-y", "start", "end", "top", "right", "bottom", "left"],
-          "inset-x": ["right", "left"],
-          "inset-y": ["top", "bottom"],
-          flex: ["basis", "grow", "shrink"],
-          gap: ["gap-x", "gap-y"],
-          p: ["px", "py", "ps", "pe", "pt", "pr", "pb", "pl"],
-          px: ["pr", "pl"],
-          py: ["pt", "pb"],
-          m: ["mx", "my", "ms", "me", "mt", "mr", "mb", "ml"],
-          mx: ["mr", "ml"],
-          my: ["mt", "mb"],
-          size: ["w", "h"],
-          "font-size": ["leading"],
-          "fvn-normal": ["fvn-ordinal", "fvn-slashed-zero", "fvn-figure", "fvn-spacing", "fvn-fraction"],
-          "fvn-ordinal": ["fvn-normal"],
-          "fvn-slashed-zero": ["fvn-normal"],
-          "fvn-figure": ["fvn-normal"],
-          "fvn-spacing": ["fvn-normal"],
-          "fvn-fraction": ["fvn-normal"],
-          "line-clamp": ["display", "overflow"],
-          rounded: ["rounded-s", "rounded-e", "rounded-t", "rounded-r", "rounded-b", "rounded-l", "rounded-ss", "rounded-se", "rounded-ee", "rounded-es", "rounded-tl", "rounded-tr", "rounded-br", "rounded-bl"],
-          "rounded-s": ["rounded-ss", "rounded-es"],
-          "rounded-e": ["rounded-se", "rounded-ee"],
-          "rounded-t": ["rounded-tl", "rounded-tr"],
-          "rounded-r": ["rounded-tr", "rounded-br"],
-          "rounded-b": ["rounded-br", "rounded-bl"],
-          "rounded-l": ["rounded-tl", "rounded-bl"],
-          "border-spacing": ["border-spacing-x", "border-spacing-y"],
-          "border-w": ["border-w-s", "border-w-e", "border-w-t", "border-w-r", "border-w-b", "border-w-l"],
-          "border-w-x": ["border-w-r", "border-w-l"],
-          "border-w-y": ["border-w-t", "border-w-b"],
-          "border-color": ["border-color-s", "border-color-e", "border-color-t", "border-color-r", "border-color-b", "border-color-l"],
-          "border-color-x": ["border-color-r", "border-color-l"],
-          "border-color-y": ["border-color-t", "border-color-b"],
-          "scroll-m": ["scroll-mx", "scroll-my", "scroll-ms", "scroll-me", "scroll-mt", "scroll-mr", "scroll-mb", "scroll-ml"],
-          "scroll-mx": ["scroll-mr", "scroll-ml"],
-          "scroll-my": ["scroll-mt", "scroll-mb"],
-          "scroll-p": ["scroll-px", "scroll-py", "scroll-ps", "scroll-pe", "scroll-pt", "scroll-pr", "scroll-pb", "scroll-pl"],
-          "scroll-px": ["scroll-pr", "scroll-pl"],
-          "scroll-py": ["scroll-pt", "scroll-pb"],
-          touch: ["touch-x", "touch-y", "touch-pz"],
-          "touch-x": ["touch"],
-          "touch-y": ["touch"],
-          "touch-pz": ["touch"]
-        },
-        conflictingClassGroupModifiers: {
-          "font-size": ["leading"]
-        }
-      };
-    };
-    var mergeConfigs = (baseConfig, {
-      cacheSize,
-      prefix,
-      separator,
-      experimentalParseClassName,
-      extend = {},
-      override = {}
-    }) => {
-      overrideProperty(baseConfig, "cacheSize", cacheSize);
-      overrideProperty(baseConfig, "prefix", prefix);
-      overrideProperty(baseConfig, "separator", separator);
-      overrideProperty(baseConfig, "experimentalParseClassName", experimentalParseClassName);
-      for (const configKey in override) {
-        overrideConfigProperties(baseConfig[configKey], override[configKey]);
-      }
-      for (const key in extend) {
-        mergeConfigProperties(baseConfig[key], extend[key]);
-      }
-      return baseConfig;
-    };
-    var overrideProperty = (baseObject, overrideKey, overrideValue) => {
-      if (overrideValue !== void 0) {
-        baseObject[overrideKey] = overrideValue;
-      }
-    };
-    var overrideConfigProperties = (baseObject, overrideObject) => {
-      if (overrideObject) {
-        for (const key in overrideObject) {
-          overrideProperty(baseObject, key, overrideObject[key]);
-        }
-      }
-    };
-    var mergeConfigProperties = (baseObject, mergeObject) => {
-      if (mergeObject) {
-        for (const key in mergeObject) {
-          const mergeValue = mergeObject[key];
-          if (mergeValue !== void 0) {
-            baseObject[key] = (baseObject[key] || []).concat(mergeValue);
-          }
-        }
-      }
-    };
-    var extendTailwindMerge = (configExtension, ...createConfig) => typeof configExtension === "function" ? createTailwindMerge(getDefaultConfig, configExtension, ...createConfig) : createTailwindMerge(() => mergeConfigs(getDefaultConfig(), configExtension), ...createConfig);
-    var twMerge5 = /* @__PURE__ */ createTailwindMerge(getDefaultConfig);
-    exports.createTailwindMerge = createTailwindMerge;
-    exports.extendTailwindMerge = extendTailwindMerge;
-    exports.fromTheme = fromTheme;
-    exports.getDefaultConfig = getDefaultConfig;
-    exports.mergeConfigs = mergeConfigs;
-    exports.twJoin = twJoin;
-    exports.twMerge = twMerge5;
-    exports.validators = validators;
-  }
-});
 
 // node_modules/lodash/lodash.js
 var require_lodash = __commonJS({
@@ -3153,9 +614,9 @@ var require_lodash = __commonJS({
         }
         return result;
       }
-      function baseTimes(n2, iteratee) {
-        var index = -1, result = Array(n2);
-        while (++index < n2) {
+      function baseTimes(n, iteratee) {
+        var index = -1, result = Array(n);
+        while (++index < n) {
           result[index] = iteratee(index);
         }
         return result;
@@ -3679,8 +1140,8 @@ var require_lodash = __commonJS({
           var length = array.length;
           return length ? array[baseRandom(0, length - 1)] : undefined2;
         }
-        function arraySampleSize(array, n2) {
-          return shuffleSelf(copyArray(array), baseClamp(n2, 0, array.length));
+        function arraySampleSize(array, n) {
+          return shuffleSelf(copyArray(array), baseClamp(n, 0, array.length));
         }
         function arrayShuffle(array) {
           return shuffleSelf(copyArray(array));
@@ -3827,13 +1288,13 @@ var require_lodash = __commonJS({
           }
           return true;
         }
-        function baseDelay(func, wait2, args) {
+        function baseDelay(func, wait, args) {
           if (typeof func != "function") {
             throw new TypeError2(FUNC_ERROR_TEXT);
           }
           return setTimeout2(function() {
             func.apply(undefined2, args);
-          }, wait2);
+          }, wait);
         }
         function baseDifference(array, values2, iteratee2, comparator) {
           var index = -1, includes2 = arrayIncludes, isCommon = true, length = array.length, result2 = [], valuesLength = values2.length;
@@ -4241,13 +1702,13 @@ var require_lodash = __commonJS({
           }
           assignMergeValue(object, key, newValue);
         }
-        function baseNth(array, n2) {
+        function baseNth(array, n) {
           var length = array.length;
           if (!length) {
             return;
           }
-          n2 += n2 < 0 ? length : 0;
-          return isIndex(n2, length) ? array[n2] : undefined2;
+          n += n < 0 ? length : 0;
+          return isIndex(n, length) ? array[n] : undefined2;
         }
         function baseOrderBy(collection, iteratees, orders) {
           if (iteratees.length) {
@@ -4339,20 +1800,20 @@ var require_lodash = __commonJS({
           }
           return result2;
         }
-        function baseRepeat(string, n2) {
+        function baseRepeat(string, n) {
           var result2 = "";
-          if (!string || n2 < 1 || n2 > MAX_SAFE_INTEGER) {
+          if (!string || n < 1 || n > MAX_SAFE_INTEGER) {
             return result2;
           }
           do {
-            if (n2 % 2) {
+            if (n % 2) {
               result2 += string;
             }
-            n2 = nativeFloor(n2 / 2);
-            if (n2) {
+            n = nativeFloor(n / 2);
+            if (n) {
               string += string;
             }
-          } while (n2);
+          } while (n);
           return result2;
         }
         function baseRest(func, start) {
@@ -4361,9 +1822,9 @@ var require_lodash = __commonJS({
         function baseSample(collection) {
           return arraySample(values(collection));
         }
-        function baseSampleSize(collection, n2) {
+        function baseSampleSize(collection, n) {
           var array = values(collection);
-          return shuffleSelf(array, baseClamp(n2, 0, array.length));
+          return shuffleSelf(array, baseClamp(n, 0, array.length));
         }
         function baseSet(object, path, value, customizer) {
           if (!isObject(object)) {
@@ -5662,8 +3123,8 @@ var require_lodash = __commonJS({
           return object[key];
         }
         var setData = shortOut(baseSetData);
-        var setTimeout2 = ctxSetTimeout || function(func, wait2) {
-          return root.setTimeout(func, wait2);
+        var setTimeout2 = ctxSetTimeout || function(func, wait) {
+          return root.setTimeout(func, wait);
         };
         var setToString = shortOut(baseSetToString);
         function setWrapToString(wrapper, reference, bitmask) {
@@ -5799,22 +3260,22 @@ var require_lodash = __commonJS({
           }
           return isArrayLikeObject(array) ? baseDifference(array, baseFlatten(values2, 1, isArrayLikeObject, true), undefined2, comparator) : [];
         });
-        function drop(array, n2, guard) {
+        function drop(array, n, guard) {
           var length = array == null ? 0 : array.length;
           if (!length) {
             return [];
           }
-          n2 = guard || n2 === undefined2 ? 1 : toInteger(n2);
-          return baseSlice(array, n2 < 0 ? 0 : n2, length);
+          n = guard || n === undefined2 ? 1 : toInteger(n);
+          return baseSlice(array, n < 0 ? 0 : n, length);
         }
-        function dropRight(array, n2, guard) {
+        function dropRight(array, n, guard) {
           var length = array == null ? 0 : array.length;
           if (!length) {
             return [];
           }
-          n2 = guard || n2 === undefined2 ? 1 : toInteger(n2);
-          n2 = length - n2;
-          return baseSlice(array, 0, n2 < 0 ? 0 : n2);
+          n = guard || n === undefined2 ? 1 : toInteger(n);
+          n = length - n;
+          return baseSlice(array, 0, n < 0 ? 0 : n);
         }
         function dropRightWhile(array, predicate) {
           return array && array.length ? baseWhile(array, getIteratee(predicate, 3), true, true) : [];
@@ -5938,8 +3399,8 @@ var require_lodash = __commonJS({
           }
           return value === value ? strictLastIndexOf(array, value, index) : baseFindIndex(array, baseIsNaN, index, true);
         }
-        function nth(array, n2) {
-          return array && array.length ? baseNth(array, toInteger(n2)) : undefined2;
+        function nth(array, n) {
+          return array && array.length ? baseNth(array, toInteger(n)) : undefined2;
         }
         var pull = baseRest(pullAll);
         function pullAll(array, values2) {
@@ -6034,21 +3495,21 @@ var require_lodash = __commonJS({
           var length = array == null ? 0 : array.length;
           return length ? baseSlice(array, 1, length) : [];
         }
-        function take(array, n2, guard) {
+        function take(array, n, guard) {
           if (!(array && array.length)) {
             return [];
           }
-          n2 = guard || n2 === undefined2 ? 1 : toInteger(n2);
-          return baseSlice(array, 0, n2 < 0 ? 0 : n2);
+          n = guard || n === undefined2 ? 1 : toInteger(n);
+          return baseSlice(array, 0, n < 0 ? 0 : n);
         }
-        function takeRight(array, n2, guard) {
+        function takeRight(array, n, guard) {
           var length = array == null ? 0 : array.length;
           if (!length) {
             return [];
           }
-          n2 = guard || n2 === undefined2 ? 1 : toInteger(n2);
-          n2 = length - n2;
-          return baseSlice(array, n2 < 0 ? 0 : n2, length);
+          n = guard || n === undefined2 ? 1 : toInteger(n);
+          n = length - n;
+          return baseSlice(array, n < 0 ? 0 : n, length);
         }
         function takeRightWhile(array, predicate) {
           return array && array.length ? baseWhile(array, getIteratee(predicate, 3), false, true) : [];
@@ -6325,14 +3786,14 @@ var require_lodash = __commonJS({
           var func = isArray(collection) ? arraySample : baseSample;
           return func(collection);
         }
-        function sampleSize(collection, n2, guard) {
-          if (guard ? isIterateeCall(collection, n2, guard) : n2 === undefined2) {
-            n2 = 1;
+        function sampleSize(collection, n, guard) {
+          if (guard ? isIterateeCall(collection, n, guard) : n === undefined2) {
+            n = 1;
           } else {
-            n2 = toInteger(n2);
+            n = toInteger(n);
           }
           var func = isArray(collection) ? arraySampleSize : baseSampleSize;
-          return func(collection, n2);
+          return func(collection, n);
         }
         function shuffle(collection) {
           var func = isArray(collection) ? arrayShuffle : baseShuffle;
@@ -6373,42 +3834,42 @@ var require_lodash = __commonJS({
         var now2 = ctxNow || function() {
           return root.Date.now();
         };
-        function after(n2, func) {
+        function after(n, func) {
           if (typeof func != "function") {
             throw new TypeError2(FUNC_ERROR_TEXT);
           }
-          n2 = toInteger(n2);
+          n = toInteger(n);
           return function() {
-            if (--n2 < 1) {
+            if (--n < 1) {
               return func.apply(this, arguments);
             }
           };
         }
-        function ary(func, n2, guard) {
-          n2 = guard ? undefined2 : n2;
-          n2 = func && n2 == null ? func.length : n2;
-          return createWrap(func, WRAP_ARY_FLAG, undefined2, undefined2, undefined2, undefined2, n2);
+        function ary(func, n, guard) {
+          n = guard ? undefined2 : n;
+          n = func && n == null ? func.length : n;
+          return createWrap(func, WRAP_ARY_FLAG, undefined2, undefined2, undefined2, undefined2, n);
         }
-        function before(n2, func) {
+        function before(n, func) {
           var result2;
           if (typeof func != "function") {
             throw new TypeError2(FUNC_ERROR_TEXT);
           }
-          n2 = toInteger(n2);
+          n = toInteger(n);
           return function() {
-            if (--n2 > 0) {
+            if (--n > 0) {
               result2 = func.apply(this, arguments);
             }
-            if (n2 <= 1) {
+            if (n <= 1) {
               func = undefined2;
             }
             return result2;
           };
         }
-        var bind2 = baseRest(function(func, thisArg, partials) {
+        var bind = baseRest(function(func, thisArg, partials) {
           var bitmask = WRAP_BIND_FLAG;
           if (partials.length) {
-            var holders = replaceHolders(partials, getHolder(bind2));
+            var holders = replaceHolders(partials, getHolder(bind));
             bitmask |= WRAP_PARTIAL_FLAG;
           }
           return createWrap(func, bitmask, thisArg, partials, holders);
@@ -6433,16 +3894,16 @@ var require_lodash = __commonJS({
           result2.placeholder = curryRight.placeholder;
           return result2;
         }
-        function debounce2(func, wait2, options) {
+        function debounce2(func, wait, options) {
           var lastArgs, lastThis, maxWait, result2, timerId, lastCallTime, lastInvokeTime = 0, leading = false, maxing = false, trailing = true;
           if (typeof func != "function") {
             throw new TypeError2(FUNC_ERROR_TEXT);
           }
-          wait2 = toNumber(wait2) || 0;
+          wait = toNumber(wait) || 0;
           if (isObject(options)) {
             leading = !!options.leading;
             maxing = "maxWait" in options;
-            maxWait = maxing ? nativeMax(toNumber(options.maxWait) || 0, wait2) : maxWait;
+            maxWait = maxing ? nativeMax(toNumber(options.maxWait) || 0, wait) : maxWait;
             trailing = "trailing" in options ? !!options.trailing : trailing;
           }
           function invokeFunc(time) {
@@ -6454,16 +3915,16 @@ var require_lodash = __commonJS({
           }
           function leadingEdge(time) {
             lastInvokeTime = time;
-            timerId = setTimeout2(timerExpired, wait2);
+            timerId = setTimeout2(timerExpired, wait);
             return leading ? invokeFunc(time) : result2;
           }
           function remainingWait(time) {
-            var timeSinceLastCall = time - lastCallTime, timeSinceLastInvoke = time - lastInvokeTime, timeWaiting = wait2 - timeSinceLastCall;
+            var timeSinceLastCall = time - lastCallTime, timeSinceLastInvoke = time - lastInvokeTime, timeWaiting = wait - timeSinceLastCall;
             return maxing ? nativeMin(timeWaiting, maxWait - timeSinceLastInvoke) : timeWaiting;
           }
           function shouldInvoke(time) {
             var timeSinceLastCall = time - lastCallTime, timeSinceLastInvoke = time - lastInvokeTime;
-            return lastCallTime === undefined2 || timeSinceLastCall >= wait2 || timeSinceLastCall < 0 || maxing && timeSinceLastInvoke >= maxWait;
+            return lastCallTime === undefined2 || timeSinceLastCall >= wait || timeSinceLastCall < 0 || maxing && timeSinceLastInvoke >= maxWait;
           }
           function timerExpired() {
             var time = now2();
@@ -6501,12 +3962,12 @@ var require_lodash = __commonJS({
               }
               if (maxing) {
                 clearTimeout2(timerId);
-                timerId = setTimeout2(timerExpired, wait2);
+                timerId = setTimeout2(timerExpired, wait);
                 return invokeFunc(lastCallTime);
               }
             }
             if (timerId === undefined2) {
-              timerId = setTimeout2(timerExpired, wait2);
+              timerId = setTimeout2(timerExpired, wait);
             }
             return result2;
           }
@@ -6517,8 +3978,8 @@ var require_lodash = __commonJS({
         var defer = baseRest(function(func, args) {
           return baseDelay(func, 1, args);
         });
-        var delay2 = baseRest(function(func, wait2, args) {
-          return baseDelay(func, toNumber(wait2) || 0, args);
+        var delay2 = baseRest(function(func, wait, args) {
+          return baseDelay(func, toNumber(wait) || 0, args);
         });
         function flip(func) {
           return createWrap(func, WRAP_FLIP_FLAG);
@@ -6604,7 +4065,7 @@ var require_lodash = __commonJS({
             return apply(func, this, otherArgs);
           });
         }
-        function throttle(func, wait2, options) {
+        function throttle(func, wait, options) {
           var leading = true, trailing = true;
           if (typeof func != "function") {
             throw new TypeError2(FUNC_ERROR_TEXT);
@@ -6613,9 +4074,9 @@ var require_lodash = __commonJS({
             leading = "leading" in options ? !!options.leading : leading;
             trailing = "trailing" in options ? !!options.trailing : trailing;
           }
-          return debounce2(func, wait2, {
+          return debounce2(func, wait, {
             "leading": leading,
-            "maxWait": wait2,
+            "maxWait": wait,
             "trailing": trailing
           });
         }
@@ -7213,13 +4674,13 @@ var require_lodash = __commonJS({
           }
           return nativeParseInt(toString(string).replace(reTrimStart, ""), radix || 0);
         }
-        function repeat(string, n2, guard) {
-          if (guard ? isIterateeCall(string, n2, guard) : n2 === undefined2) {
-            n2 = 1;
+        function repeat(string, n, guard) {
+          if (guard ? isIterateeCall(string, n, guard) : n === undefined2) {
+            n = 1;
           } else {
-            n2 = toInteger(n2);
+            n = toInteger(n);
           }
-          return baseRepeat(toString(string), n2);
+          return baseRepeat(toString(string), n);
         }
         function replace() {
           var args = arguments, string = toString(args[0]);
@@ -7415,7 +4876,7 @@ var require_lodash = __commonJS({
         var bindAll = flatRest(function(object, methodNames) {
           arrayEach(methodNames, function(key) {
             key = toKey(key);
-            baseAssignValue(object, key, bind2(object[key], object));
+            baseAssignValue(object, key, bind(object[key], object));
           });
           return object;
         });
@@ -7507,10 +4968,10 @@ var require_lodash = __commonJS({
         }
         function noop2() {
         }
-        function nthArg(n2) {
-          n2 = toInteger(n2);
+        function nthArg(n) {
+          n = toInteger(n);
           return baseRest(function(args) {
-            return baseNth(args, n2);
+            return baseNth(args, n);
           });
         }
         var over = createOver(arrayMap);
@@ -7541,16 +5002,16 @@ var require_lodash = __commonJS({
         function stubTrue() {
           return true;
         }
-        function times(n2, iteratee2) {
-          n2 = toInteger(n2);
-          if (n2 < 1 || n2 > MAX_SAFE_INTEGER) {
+        function times(n, iteratee2) {
+          n = toInteger(n);
+          if (n < 1 || n > MAX_SAFE_INTEGER) {
             return [];
           }
-          var index = MAX_ARRAY_LENGTH, length = nativeMin(n2, MAX_ARRAY_LENGTH);
+          var index = MAX_ARRAY_LENGTH, length = nativeMin(n, MAX_ARRAY_LENGTH);
           iteratee2 = getIteratee(iteratee2);
-          n2 -= MAX_ARRAY_LENGTH;
+          n -= MAX_ARRAY_LENGTH;
           var result2 = baseTimes(length, iteratee2);
-          while (++index < n2) {
+          while (++index < n) {
             iteratee2(index);
           }
           return result2;
@@ -7612,7 +5073,7 @@ var require_lodash = __commonJS({
         lodash.assignWith = assignWith;
         lodash.at = at;
         lodash.before = before;
-        lodash.bind = bind2;
+        lodash.bind = bind;
         lodash.bindAll = bindAll;
         lodash.bindKey = bindKey;
         lodash.castArray = castArray;
@@ -7924,21 +5385,21 @@ var require_lodash = __commonJS({
           lodash[methodName].placeholder = lodash;
         });
         arrayEach(["drop", "take"], function(methodName, index) {
-          LazyWrapper.prototype[methodName] = function(n2) {
-            n2 = n2 === undefined2 ? 1 : nativeMax(toInteger(n2), 0);
+          LazyWrapper.prototype[methodName] = function(n) {
+            n = n === undefined2 ? 1 : nativeMax(toInteger(n), 0);
             var result2 = this.__filtered__ && !index ? new LazyWrapper(this) : this.clone();
             if (result2.__filtered__) {
-              result2.__takeCount__ = nativeMin(n2, result2.__takeCount__);
+              result2.__takeCount__ = nativeMin(n, result2.__takeCount__);
             } else {
               result2.__views__.push({
-                "size": nativeMin(n2, MAX_ARRAY_LENGTH),
+                "size": nativeMin(n, MAX_ARRAY_LENGTH),
                 "type": methodName + (result2.__dir__ < 0 ? "Right" : "")
               });
             }
             return result2;
           };
-          LazyWrapper.prototype[methodName + "Right"] = function(n2) {
-            return this.reverse()[methodName](n2).reverse();
+          LazyWrapper.prototype[methodName + "Right"] = function(n) {
+            return this.reverse()[methodName](n).reverse();
           };
         });
         arrayEach(["filter", "map", "takeWhile"], function(methodName, index) {
@@ -8101,12 +5562,11 @@ __export(main_exports, {
   default: () => GraphWeaverPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian24 = require("obsidian");
+var import_obsidian27 = require("obsidian");
 
 // node_modules/svelte/src/runtime/internal/utils.js
 function noop() {
 }
-var identity = (x) => x;
 function assign(tar, src) {
   for (const k in src)
     tar[k] = src[k];
@@ -8194,74 +5654,6 @@ function get_all_dirty_from_scope($$scope) {
     return dirty;
   }
   return -1;
-}
-function exclude_internal_props(props) {
-  const result = {};
-  for (const k in props)
-    if (k[0] !== "$")
-      result[k] = props[k];
-  return result;
-}
-function compute_rest_props(props, keys) {
-  const rest = {};
-  keys = new Set(keys);
-  for (const k in props)
-    if (!keys.has(k) && k[0] !== "$")
-      rest[k] = props[k];
-  return rest;
-}
-function compute_slots(slots) {
-  const result = {};
-  for (const key in slots) {
-    result[key] = true;
-  }
-  return result;
-}
-function set_store_value(store, ret, value) {
-  store.set(value);
-  return ret;
-}
-function action_destroyer(action_result) {
-  return action_result && is_function(action_result.destroy) ? action_result.destroy : noop;
-}
-function split_css_unit(value) {
-  const split = typeof value === "string" && value.match(/^\s*(-?[\d.]+)([^\s]*)\s*$/);
-  return split ? [parseFloat(split[1]), split[2] || "px"] : [
-    /** @type {number} */
-    value,
-    "px"
-  ];
-}
-
-// node_modules/svelte/src/runtime/internal/environment.js
-var is_client = typeof window !== "undefined";
-var now = is_client ? () => window.performance.now() : () => Date.now();
-var raf = is_client ? (cb) => requestAnimationFrame(cb) : noop;
-
-// node_modules/svelte/src/runtime/internal/loop.js
-var tasks = /* @__PURE__ */ new Set();
-function run_tasks(now2) {
-  tasks.forEach((task) => {
-    if (!task.c(now2)) {
-      tasks.delete(task);
-      task.f();
-    }
-  });
-  if (tasks.size !== 0)
-    raf(run_tasks);
-}
-function loop(callback) {
-  let task;
-  if (tasks.size === 0)
-    raf(run_tasks);
-  return {
-    promise: new Promise((fulfill) => {
-      tasks.add(task = { c: callback, f: fulfill });
-    }),
-    abort() {
-      tasks.delete(task);
-    }
-  };
 }
 
 // node_modules/svelte/src/runtime/internal/globals.js
@@ -8351,12 +5743,6 @@ function get_root_for_style(node) {
   }
   return node.ownerDocument;
 }
-function append_empty_stylesheet(node) {
-  const style_element = element("style");
-  style_element.textContent = "/* empty */";
-  append_stylesheet(get_root_for_style(node), style_element);
-  return style_element.sheet;
-}
 function append_stylesheet(node, style) {
   append(
     /** @type {Document} */
@@ -8382,9 +5768,6 @@ function destroy_each(iterations, detaching) {
 function element(name) {
   return document.createElement(name);
 }
-function svg_element(name) {
-  return document.createElementNS("http://www.w3.org/2000/svg", name);
-}
 function text(data) {
   return document.createTextNode(data);
 }
@@ -8398,46 +5781,23 @@ function listen(node, event, handler, options) {
   node.addEventListener(event, handler, options);
   return () => node.removeEventListener(event, handler, options);
 }
+function prevent_default(fn) {
+  return function(event) {
+    event.preventDefault();
+    return fn.call(this, event);
+  };
+}
+function stop_propagation(fn) {
+  return function(event) {
+    event.stopPropagation();
+    return fn.call(this, event);
+  };
+}
 function attr(node, attribute, value) {
   if (value == null)
     node.removeAttribute(attribute);
   else if (node.getAttribute(attribute) !== value)
     node.setAttribute(attribute, value);
-}
-var always_set_through_set_attribute = ["width", "height"];
-function set_attributes(node, attributes) {
-  const descriptors = Object.getOwnPropertyDescriptors(node.__proto__);
-  for (const key in attributes) {
-    if (attributes[key] == null) {
-      node.removeAttribute(key);
-    } else if (key === "style") {
-      node.style.cssText = attributes[key];
-    } else if (key === "__value") {
-      node.value = node[key] = attributes[key];
-    } else if (descriptors[key] && descriptors[key].set && always_set_through_set_attribute.indexOf(key) === -1) {
-      node[key] = attributes[key];
-    } else {
-      attr(node, key, attributes[key]);
-    }
-  }
-}
-function set_custom_element_data_map(node, data_map) {
-  Object.keys(data_map).forEach((key) => {
-    set_custom_element_data(node, key, data_map[key]);
-  });
-}
-function set_custom_element_data(node, prop, value) {
-  const lower = prop.toLowerCase();
-  if (lower in node) {
-    node[lower] = typeof node[lower] === "boolean" && value === "" ? true : value;
-  } else if (prop in node) {
-    node[prop] = typeof node[prop] === "boolean" && value === "" ? true : value;
-  } else {
-    attr(node, prop, value);
-  }
-}
-function set_dynamic_element_data(tag) {
-  return /-/.test(tag) ? set_custom_element_data_map : set_attributes;
 }
 function to_number(value) {
   return value === "" ? null : +value;
@@ -8498,70 +5858,6 @@ function construct_svelte_component(component, props) {
   return new component(props);
 }
 
-// node_modules/svelte/src/runtime/internal/style_manager.js
-var managed_styles = /* @__PURE__ */ new Map();
-var active = 0;
-function hash(str) {
-  let hash2 = 5381;
-  let i = str.length;
-  while (i--)
-    hash2 = (hash2 << 5) - hash2 ^ str.charCodeAt(i);
-  return hash2 >>> 0;
-}
-function create_style_information(doc, node) {
-  const info = { stylesheet: append_empty_stylesheet(node), rules: {} };
-  managed_styles.set(doc, info);
-  return info;
-}
-function create_rule(node, a, b, duration, delay2, ease, fn, uid = 0) {
-  const step = 16.666 / duration;
-  let keyframes = "{\n";
-  for (let p = 0; p <= 1; p += step) {
-    const t = a + (b - a) * ease(p);
-    keyframes += p * 100 + `%{${fn(t, 1 - t)}}
-`;
-  }
-  const rule = keyframes + `100% {${fn(b, 1 - b)}}
-}`;
-  const name = `__svelte_${hash(rule)}_${uid}`;
-  const doc = get_root_for_style(node);
-  const { stylesheet, rules } = managed_styles.get(doc) || create_style_information(doc, node);
-  if (!rules[name]) {
-    rules[name] = true;
-    stylesheet.insertRule(`@keyframes ${name} ${rule}`, stylesheet.cssRules.length);
-  }
-  const animation = node.style.animation || "";
-  node.style.animation = `${animation ? `${animation}, ` : ""}${name} ${duration}ms linear ${delay2}ms 1 both`;
-  active += 1;
-  return name;
-}
-function delete_rule(node, name) {
-  const previous = (node.style.animation || "").split(", ");
-  const next = previous.filter(
-    name ? (anim) => anim.indexOf(name) < 0 : (anim) => anim.indexOf("__svelte") === -1
-    // remove all Svelte animations
-  );
-  const deleted = previous.length - next.length;
-  if (deleted) {
-    node.style.animation = next.join(", ");
-    active -= deleted;
-    if (!active)
-      clear_rules();
-  }
-}
-function clear_rules() {
-  raf(() => {
-    if (active)
-      return;
-    managed_styles.forEach((info) => {
-      const { ownerNode } = info.stylesheet;
-      if (ownerNode)
-        detach(ownerNode);
-    });
-    managed_styles.clear();
-  });
-}
-
 // node_modules/svelte/src/runtime/internal/lifecycle.js
 var current_component;
 function set_current_component(component) {
@@ -8578,9 +5874,24 @@ function onMount(fn) {
 function onDestroy(fn) {
   get_current_component().$$.on_destroy.push(fn);
 }
-function setContext(key, context) {
-  get_current_component().$$.context.set(key, context);
-  return context;
+function createEventDispatcher() {
+  const component = get_current_component();
+  return (type, detail, { cancelable = false } = {}) => {
+    const callbacks = component.$$.callbacks[type];
+    if (callbacks) {
+      const event = custom_event(
+        /** @type {string} */
+        type,
+        detail,
+        { cancelable }
+      );
+      callbacks.slice().forEach((fn) => {
+        fn.call(component, event);
+      });
+      return !event.defaultPrevented;
+    }
+    return true;
+  };
 }
 function getContext(key) {
   return get_current_component().$$.context.get(key);
@@ -8607,9 +5918,6 @@ function schedule_update() {
 }
 function add_render_callback(fn) {
   render_callbacks.push(fn);
-}
-function add_flush_callback(fn) {
-  flush_callbacks.push(fn);
 }
 var seen_callbacks = /* @__PURE__ */ new Set();
 var flushidx = 0;
@@ -8671,19 +5979,6 @@ function flush_render_callbacks(fns) {
 }
 
 // node_modules/svelte/src/runtime/internal/transitions.js
-var promise;
-function wait() {
-  if (!promise) {
-    promise = Promise.resolve();
-    promise.then(() => {
-      promise = null;
-    });
-  }
-  return promise;
-}
-function dispatch(node, direction, kind) {
-  node.dispatchEvent(custom_event(`${direction ? "intro" : "outro"}${kind}`));
-}
 var outroing = /* @__PURE__ */ new Set();
 var outros;
 function group_outros() {
@@ -8724,149 +6019,19 @@ function transition_out(block, local, detach2, callback) {
     callback();
   }
 }
-var null_transition = { duration: 0 };
-function create_bidirectional_transition(node, fn, params, intro) {
-  const options = { direction: "both" };
-  let config = fn(node, params, options);
-  let t = intro ? 0 : 1;
-  let running_program = null;
-  let pending_program = null;
-  let animation_name = null;
-  let original_inert_value;
-  function clear_animation() {
-    if (animation_name)
-      delete_rule(node, animation_name);
-  }
-  function init2(program, duration) {
-    const d = (
-      /** @type {Program['d']} */
-      program.b - t
-    );
-    duration *= Math.abs(d);
-    return {
-      a: t,
-      b: program.b,
-      d,
-      duration,
-      start: program.start,
-      end: program.start + duration,
-      group: program.group
-    };
-  }
-  function go(b) {
-    const {
-      delay: delay2 = 0,
-      duration = 300,
-      easing = identity,
-      tick: tick2 = noop,
-      css
-    } = config || null_transition;
-    const program = {
-      start: now() + delay2,
-      b
-    };
-    if (!b) {
-      program.group = outros;
-      outros.r += 1;
-    }
-    if ("inert" in node) {
-      if (b) {
-        if (original_inert_value !== void 0) {
-          node.inert = original_inert_value;
-        }
-      } else {
-        original_inert_value = /** @type {HTMLElement} */
-        node.inert;
-        node.inert = true;
-      }
-    }
-    if (running_program || pending_program) {
-      pending_program = program;
-    } else {
-      if (css) {
-        clear_animation();
-        animation_name = create_rule(node, t, b, duration, delay2, easing, css);
-      }
-      if (b)
-        tick2(0, 1);
-      running_program = init2(program, duration);
-      add_render_callback(() => dispatch(node, b, "start"));
-      loop((now2) => {
-        if (pending_program && now2 > pending_program.start) {
-          running_program = init2(pending_program, duration);
-          pending_program = null;
-          dispatch(node, running_program.b, "start");
-          if (css) {
-            clear_animation();
-            animation_name = create_rule(
-              node,
-              t,
-              running_program.b,
-              running_program.duration,
-              0,
-              easing,
-              config.css
-            );
-          }
-        }
-        if (running_program) {
-          if (now2 >= running_program.end) {
-            tick2(t = running_program.b, 1 - t);
-            dispatch(node, running_program.b, "end");
-            if (!pending_program) {
-              if (running_program.b) {
-                clear_animation();
-              } else {
-                if (!--running_program.group.r)
-                  run_all(running_program.group.c);
-              }
-            }
-            running_program = null;
-          } else if (now2 >= running_program.start) {
-            const p = now2 - running_program.start;
-            t = running_program.a + running_program.d * easing(p / running_program.duration);
-            tick2(t, 1 - t);
-          }
-        }
-        return !!(running_program || pending_program);
-      });
-    }
-  }
-  return {
-    run(b) {
-      if (is_function(config)) {
-        wait().then(() => {
-          const opts = { direction: b ? "in" : "out" };
-          config = config(opts);
-          go(b);
-        });
-      } else {
-        go(b);
-      }
-    },
-    end() {
-      clear_animation();
-      running_program = pending_program = null;
-    }
-  };
-}
 
 // node_modules/svelte/src/runtime/internal/each.js
 function ensure_array_like(array_like_or_iterator) {
   return (array_like_or_iterator == null ? void 0 : array_like_or_iterator.length) !== void 0 ? array_like_or_iterator : Array.from(array_like_or_iterator);
-}
-function destroy_block(block, lookup) {
-  block.d(1);
-  lookup.delete(block.key);
 }
 function outro_and_destroy_block(block, lookup) {
   transition_out(block, 1, 1, () => {
     lookup.delete(block.key);
   });
 }
-function update_keyed_each(old_blocks, dirty, get_key, dynamic, ctx, list, lookup, node, destroy, create_each_block9, next, get_context) {
+function update_keyed_each(old_blocks, dirty, get_key, dynamic, ctx, list, lookup, node, destroy, create_each_block3, next, get_context) {
   let o = old_blocks.length;
-  let n2 = list.length;
+  let n = list.length;
   let i = o;
   const old_indexes = {};
   while (i--)
@@ -8875,13 +6040,13 @@ function update_keyed_each(old_blocks, dirty, get_key, dynamic, ctx, list, looku
   const new_lookup = /* @__PURE__ */ new Map();
   const deltas = /* @__PURE__ */ new Map();
   const updates = [];
-  i = n2;
+  i = n;
   while (i--) {
     const child_ctx = get_context(ctx, list, i);
     const key = get_key(child_ctx);
     let block = lookup.get(key);
     if (!block) {
-      block = create_each_block9(key, child_ctx);
+      block = create_each_block3(key, child_ctx);
       block.c();
     } else if (dynamic) {
       updates.push(() => block.p(child_ctx, dirty));
@@ -8897,17 +6062,17 @@ function update_keyed_each(old_blocks, dirty, get_key, dynamic, ctx, list, looku
     block.m(node, next);
     lookup.set(block.key, block);
     next = block.first;
-    n2--;
+    n--;
   }
-  while (o && n2) {
-    const new_block = new_blocks[n2 - 1];
+  while (o && n) {
+    const new_block = new_blocks[n - 1];
     const old_block = old_blocks[o - 1];
     const new_key = new_block.key;
     const old_key = old_block.key;
     if (new_block === old_block) {
       next = new_block.first;
       o--;
-      n2--;
+      n--;
     } else if (!new_lookup.has(old_key)) {
       destroy(old_block, lookup);
       o--;
@@ -8928,8 +6093,8 @@ function update_keyed_each(old_blocks, dirty, get_key, dynamic, ctx, list, looku
     if (!new_lookup.has(old_block.key))
       destroy(old_block, lookup);
   }
-  while (n2)
-    insert2(new_blocks[n2 - 1]);
+  while (n)
+    insert2(new_blocks[n - 1]);
   run_all(updates);
   return new_blocks;
 }
@@ -8942,19 +6107,19 @@ function get_spread_update(levels, updates) {
   let i = levels.length;
   while (i--) {
     const o = levels[i];
-    const n2 = updates[i];
-    if (n2) {
+    const n = updates[i];
+    if (n) {
       for (const key in o) {
-        if (!(key in n2))
+        if (!(key in n))
           to_null_out[key] = 1;
       }
-      for (const key in n2) {
+      for (const key in n) {
         if (!accounted_for[key]) {
-          update2[key] = n2[key];
+          update2[key] = n[key];
           accounted_for[key] = 1;
         }
       }
-      levels[i] = n2;
+      levels[i] = n;
     } else {
       for (const key in o) {
         accounted_for[key] = 1;
@@ -9005,13 +6170,6 @@ var _boolean_attributes = (
 var boolean_attributes = /* @__PURE__ */ new Set([..._boolean_attributes]);
 
 // node_modules/svelte/src/runtime/internal/Component.js
-function bind(component, name, callback) {
-  const index = component.$$.props[name];
-  if (index !== void 0) {
-    component.$$.bound[index] = callback;
-    callback(component.$$.ctx[index]);
-  }
-}
 function create_component(block) {
   block && block.c();
 }
@@ -9047,7 +6205,7 @@ function make_dirty(component, i) {
   }
   component.$$.dirty[i / 31 | 0] |= 1 << i % 31;
 }
-function init(component, options, instance20, create_fragment20, not_equal, props, append_styles2 = null, dirty = [-1]) {
+function init(component, options, instance15, create_fragment15, not_equal, props, append_styles2 = null, dirty = [-1]) {
   const parent_component = current_component;
   set_current_component(component);
   const $$ = component.$$ = {
@@ -9073,7 +6231,7 @@ function init(component, options, instance20, create_fragment20, not_equal, prop
   };
   append_styles2 && append_styles2($$.root);
   let ready = false;
-  $$.ctx = instance20 ? instance20(component, options.props || {}, (i, ret, ...rest) => {
+  $$.ctx = instance15 ? instance15(component, options.props || {}, (i, ret, ...rest) => {
     const value = rest.length ? rest[0] : ret;
     if ($$.ctx && not_equal($$.ctx[i], $$.ctx[i] = value)) {
       if (!$$.skip_bound && $$.bound[i])
@@ -9086,7 +6244,7 @@ function init(component, options, instance20, create_fragment20, not_equal, prop
   $$.update();
   ready = true;
   run_all($$.before_update);
-  $$.fragment = create_fragment20 ? create_fragment20($$.ctx) : false;
+  $$.fragment = create_fragment15 ? create_fragment15($$.ctx) : false;
   if (options.target) {
     if (options.hydrate) {
       start_hydrating();
@@ -9459,253 +6617,82 @@ function derived(stores, fn, initial_value) {
   });
 }
 
-// src/services/core/ServiceError.ts
-var ServiceError = class extends Error {
-  constructor(serviceId, message, details) {
-    super(message);
-    this.name = "ServiceError";
-    this.serviceId = serviceId;
-    this.details = details;
-    Object.setPrototypeOf(this, ServiceError.prototype);
-    if ((details == null ? void 0 : details.cause) instanceof Error) {
-      this.cause = details.cause;
+// src/stores/CoreStore.ts
+function createPersistentStore(key, initialState2) {
+  const loadState = () => {
+    try {
+      const saved = localStorage.getItem(key);
+      return saved ? __spreadValues(__spreadValues({}, initialState2), JSON.parse(saved)) : initialState2;
+    } catch (e) {
+      return initialState2;
     }
-  }
-  /**
-   * Create ServiceError from unknown error
-   * @param serviceId Service identifier
-   * @param error Original error
-   * @param additionalDetails Additional error details
-   */
-  static from(serviceId, error, additionalDetails) {
-    if (error instanceof ServiceError) {
-      return error;
-    }
-    const details = __spreadProps(__spreadValues({}, additionalDetails), {
-      cause: error instanceof Error ? error : void 0
-    });
-    const message = error instanceof Error ? error.message : String(error);
-    return new ServiceError(serviceId, message, details);
-  }
-  /**
-   * Get error details
-   * @returns Structured error details
-   */
-  getDetails() {
-    return {
-      message: this.message,
-      serviceId: this.serviceId,
-      details: this.details,
-      stack: this.stack,
-      cause: this.cause
-    };
-  }
-};
-
-// src/stores/StoreUtils.ts
-function createEnhancedStore(initialValue) {
-  let currentValue = initialValue;
-  const subscribers = [];
+  };
+  const { subscribe: subscribe2, set, update: update2 } = writable(loadState());
   return {
-    subscribe(run2, invalidate) {
-      subscribers.push(run2);
-      run2(currentValue);
-      return () => {
-        const index = subscribers.indexOf(run2);
-        if (index > -1) {
-          subscribers.splice(index, 1);
-        }
-      };
+    subscribe: subscribe2,
+    set,
+    update: update2,
+    // Type-safe patch method
+    patch: (partial) => {
+      update2((state) => __spreadValues(__spreadValues({}, state), partial));
     },
-    set(value) {
-      currentValue = value;
-      subscribers.forEach((sub) => sub(currentValue));
-    },
-    update(updater) {
-      this.set(updater(currentValue));
-    },
-    initialize(initialData) {
-      currentValue = __spreadValues(__spreadValues({}, currentValue), initialData);
-      this.set(currentValue);
-    },
-    reset() {
-      currentValue = initialValue;
-      this.set(currentValue);
-    },
-    getSnapshot() {
-      return currentValue;
-    }
-  };
-}
-function createPersistedStore(key, initialState2, validator) {
-  const loadPersistedData = () => {
-    try {
-      const stored = localStorage.getItem(key);
-      if (!stored)
-        return null;
-      const parsed = JSON.parse(stored);
-      if (validator && !validator(parsed)) {
-        console.error("\u{1F987} Invalid persisted state:", parsed);
-        return null;
-      }
-      return parsed;
-    } catch (error) {
-      console.error("\u{1F987} Error loading persisted state:", error);
-      return null;
-    }
-  };
-  const store = createEnhancedStore(
-    __spreadValues(__spreadValues({}, initialState2), loadPersistedData() || {})
-  );
-  store.subscribe((state) => {
-    try {
+    // Reset to initial state
+    reset: () => set(initialState2),
+    // Persist state
+    persist: () => {
+      const state = get_store_value({ subscribe: subscribe2 });
       localStorage.setItem(key, JSON.stringify(state));
-    } catch (error) {
-      console.error("\u{1F987} Error persisting state:", error);
     }
-  });
-  return store;
+  };
 }
-function updateNestedState(store, key, value) {
-  store.update((state) => __spreadProps(__spreadValues({}, state), {
-    [key]: typeof value === "function" ? value(state[key]) : value
-  }));
-}
-
-// src/stores/BaseStore.ts
-var BaseStore = class {
-  constructor(serviceId, serviceName, initialState2) {
-    this.unsubscribers = [];
-    // Service state management
-    this._serviceState = "uninitialized" /* Uninitialized */;
-    this._error = null;
-    this.serviceId = serviceId;
-    this.serviceName = serviceName;
-    this.store = createEnhancedStore(initialState2);
-  }
-  // IService implementation
-  isReady() {
-    return this._serviceState === "ready" /* Ready */;
-  }
-  initialize() {
-    return __async(this, null, function* () {
-      try {
-        this._serviceState = "initializing" /* Initializing */;
-        this._serviceState = "ready" /* Ready */;
-        this._error = null;
-      } catch (error) {
-        this._serviceState = "error" /* Error */;
-        this._error = new ServiceError(
-          this.serviceId,
-          `Failed to initialize ${this.serviceName}`,
-          error instanceof Error ? error : void 0
-        );
-        throw this._error;
-      }
+var core = createPersistentStore("graphweaver-core", {
+  plugin: null,
+  initialized: false,
+  lastUpdate: Date.now()
+});
+var errors = writable({
+  message: null,
+  timestamp: null,
+  type: null,
+  context: {}
+});
+var utils = {
+  initialize: (plugin) => {
+    core.patch({
+      plugin,
+      initialized: true,
+      lastUpdate: Date.now()
     });
-  }
-  destroy() {
-    return __async(this, null, function* () {
-      try {
-        this._serviceState = "destroying" /* Destroying */;
-        this.unsubscribers.forEach((unsub) => unsub());
-        this.unsubscribers = [];
-        this._serviceState = "destroyed" /* Destroyed */;
-        this._error = null;
-      } catch (error) {
-        this._serviceState = "error" /* Error */;
-        this._error = new ServiceError(
-          this.serviceId,
-          `Failed to destroy ${this.serviceName}`,
-          error instanceof Error ? error : void 0
-        );
-        throw this._error;
-      }
+  },
+  reportError: (message, type = "error", context) => {
+    errors.set({
+      message,
+      type,
+      timestamp: Date.now(),
+      context
     });
-  }
-  getState() {
-    return {
-      state: this._serviceState,
-      error: this._error
-    };
-  }
-  // Store methods
-  subscribe(run2, invalidate) {
-    if (this._serviceState !== "ready" /* Ready */) {
-      throw new ServiceError(
-        this.serviceId,
-        `Cannot subscribe to ${this.serviceName} - service is not ready`
-      );
-    }
-    const unsub = this.store.subscribe(run2, invalidate);
-    this.unsubscribers.push(unsub);
-    return () => {
-      const index = this.unsubscribers.indexOf(unsub);
-      if (index > -1) {
-        this.unsubscribers.splice(index, 1);
-      }
-      unsub();
-    };
-  }
-  set(value) {
-    if (this._serviceState !== "ready" /* Ready */) {
-      throw new ServiceError(
-        this.serviceId,
-        `Cannot set state of ${this.serviceName} - service is not ready`
-      );
-    }
-    this.store.set(value);
-  }
-  update(updater) {
-    if (this._serviceState !== "ready" /* Ready */) {
-      throw new ServiceError(
-        this.serviceId,
-        `Cannot update state of ${this.serviceName} - service is not ready`
-      );
-    }
-    this.store.update(updater);
-  }
-  reset() {
-    if (this._serviceState !== "ready" /* Ready */) {
-      throw new ServiceError(
-        this.serviceId,
-        `Cannot reset state of ${this.serviceName} - service is not ready`
-      );
-    }
-    this.store.reset();
-  }
-  getSnapshot() {
-    return this.store.getSnapshot();
-  }
-  // Helper method for type-safe nested updates
-  updateState(key, value) {
-    if (this._serviceState !== "ready" /* Ready */) {
-      throw new ServiceError(
-        this.serviceId,
-        `Cannot update state of ${this.serviceName} - service is not ready`
-      );
-    }
-    this.store.update((state) => __spreadProps(__spreadValues({}, state), {
-      [key]: value
-    }));
-  }
-  // Helper method to set error state
-  setError(error) {
-    this._serviceState = "error" /* Error */;
-    this._error = new ServiceError(
-      this.serviceId,
-      typeof error === "string" ? error : error.message,
-      error instanceof Error ? error : void 0
-    );
-  }
-  // Helper method to clear error state
-  clearError() {
-    this._error = null;
-    if (this._serviceState === "error" /* Error */) {
-      this._serviceState = "ready" /* Ready */;
-    }
+  },
+  clearError: () => {
+    errors.set({
+      message: null,
+      timestamp: null,
+      type: null
+    });
   }
 };
+var isInitialized = derived(core, ($core) => $core.initialized);
+var hasError = derived(errors, ($errors) => $errors.message !== null);
+
+// src/types/ai.types.ts
+var AIProvider = /* @__PURE__ */ ((AIProvider2) => {
+  AIProvider2["OpenAI"] = "openai";
+  AIProvider2["Anthropic"] = "anthropic";
+  AIProvider2["Google"] = "google";
+  AIProvider2["Groq"] = "groq";
+  AIProvider2["OpenRouter"] = "openrouter";
+  AIProvider2["LMStudio"] = "lmstudio";
+  return AIProvider2;
+})(AIProvider || {});
 
 // src/types/operations.types.ts
 var OperationType = /* @__PURE__ */ ((OperationType2) => {
@@ -9717,7 +6704,7 @@ var OperationType = /* @__PURE__ */ ((OperationType2) => {
   return OperationType2;
 })(OperationType || {});
 
-// src/settings/Settings.ts
+// src/types/settings.types.ts
 var DEFAULT_SETTINGS = {
   aiProvider: {
     selected: "openai" /* OpenAI */,
@@ -9758,8 +6745,6 @@ var DEFAULT_SETTINGS = {
   },
   knowledgeBloom: {
     selectedModel: "string",
-    outputFolder: "",
-    overwriteExisting: false,
     defaultPrompt: "Generate a comprehensive note about {LINK}. Include key concepts, definitions, and relevant examples if applicable."
   }
 };
@@ -10041,6 +7026,49 @@ ${content.trim()}`;
       }
       return modelApiName;
     });
+  }
+};
+
+// src/services/core/ServiceError.ts
+var ServiceError = class extends Error {
+  constructor(serviceId, message, details) {
+    super(message);
+    this.name = "ServiceError";
+    this.serviceId = serviceId;
+    this.details = details;
+    Object.setPrototypeOf(this, ServiceError.prototype);
+    if ((details == null ? void 0 : details.cause) instanceof Error) {
+      this.cause = details.cause;
+    }
+  }
+  /**
+   * Create ServiceError from unknown error
+   * @param serviceId Service identifier
+   * @param error Original error
+   * @param additionalDetails Additional error details
+   */
+  static from(serviceId, error, additionalDetails) {
+    if (error instanceof ServiceError) {
+      return error;
+    }
+    const details = __spreadProps(__spreadValues({}, additionalDetails), {
+      cause: error instanceof Error ? error : void 0
+    });
+    const message = error instanceof Error ? error.message : String(error);
+    return new ServiceError(serviceId, message, details);
+  }
+  /**
+   * Get error details
+   * @returns Structured error details
+   */
+  getDetails() {
+    return {
+      message: this.message,
+      serviceId: this.serviceId,
+      details: this.details,
+      stack: this.stack,
+      cause: this.cause
+    };
   }
 };
 
@@ -10596,24 +7624,20 @@ Suggest enough tags to form a comprehensive ontology for this knowledge base.
         return {
           name: String(name).trim(),
           description: String(value.description).trim(),
-          type: value.type || "string",
-          // Default to 'string' if type not provided
-          required: value.required !== void 0 ? Boolean(value.required) : false,
-          // Default to false
-          multipleValues: value.multipleValues !== void 0 ? Boolean(value.multipleValues) : false
-          // Default to false
+          type: "string",
+          required: false,
+          multipleValues: false
         };
-      } else {
-        console.warn(`Unexpected format for tag ${name}:`, value);
-        return null;
       }
-    }).filter(
-      (tag) => tag !== null && typeof tag.name === "string" && tag.name.length > 0 && typeof tag.description === "string" && tag.description.length > 0 && typeof tag.type === "string" && typeof tag.required === "boolean" && typeof tag.multipleValues === "boolean"
-    );
+      return null;
+    }).filter((tag) => tag !== null);
     if (suggestedTags.length === 0) {
       throw new Error("No valid tags found in AI response");
     }
-    return { suggestedTags };
+    return {
+      tags: suggestedTags,
+      properties: []
+    };
   }
   /**
    * Attempts to fix incomplete JSON strings.
@@ -10634,7 +7658,7 @@ Suggest enough tags to form a comprehensive ontology for this knowledge base.
    * @returns Boolean indicating validity.
    */
   validateInput(input) {
-    return Array.isArray(input.files) && Array.isArray(input.folders) && Array.isArray(input.tags) && typeof input.provider === "string" && typeof input.modelApiName === "string" && typeof input.userContext === "string";
+    return Array.isArray(input.files) && Array.isArray(input.folders) && Array.isArray(input.tags) && typeof input.provider === "string" && typeof input.modelApiName === "string" && (!input.userContext || typeof input.userContext === "string");
   }
   /**
    * Handles errors during ontology generation.
@@ -11001,96 +8025,562 @@ ${input.userPrompt}` : ""}
 };
 
 // src/stores/AIStore.ts
-function createAIStore(initialState2 = {
+var import_obsidian2 = require("obsidian");
+
+// src/stores/StoreUtils.ts
+function createEnhancedStore(initialValue) {
+  let currentValue = initialValue;
+  const subscribers = [];
+  return {
+    subscribe(run2, invalidate) {
+      subscribers.push(run2);
+      run2(currentValue);
+      return () => {
+        const index = subscribers.indexOf(run2);
+        if (index > -1) {
+          subscribers.splice(index, 1);
+        }
+      };
+    },
+    set(value) {
+      currentValue = value;
+      subscribers.forEach((sub) => sub(currentValue));
+    },
+    update(updater) {
+      this.set(updater(currentValue));
+    },
+    initialize(initialData) {
+      currentValue = __spreadValues(__spreadValues({}, currentValue), initialData);
+      this.set(currentValue);
+    },
+    reset() {
+      currentValue = initialValue;
+      this.set(currentValue);
+    },
+    getSnapshot() {
+      return currentValue;
+    }
+  };
+}
+function createBaseStore(initialValue) {
+  const store = writable(initialValue);
+  return __spreadProps(__spreadValues({}, store), {
+    initialize: () => __async(this, null, function* () {
+      return store.set(initialValue);
+    }),
+    reset: () => __async(this, null, function* () {
+      return store.set(initialValue);
+    }),
+    getSnapshot: () => get_store_value(store)
+  });
+}
+function createPersistedStore(key, initialState2, validator) {
+  const loadPersistedData = () => {
+    try {
+      const stored = localStorage.getItem(key);
+      if (!stored)
+        return null;
+      const parsed = JSON.parse(stored);
+      if (validator && !validator(parsed)) {
+        console.error("\u{1F987} Invalid persisted state:", parsed);
+        return null;
+      }
+      return parsed;
+    } catch (error) {
+      console.error("\u{1F987} Error loading persisted state:", error);
+      return null;
+    }
+  };
+  const store = createEnhancedStore(
+    __spreadValues(__spreadValues({}, initialState2), loadPersistedData() || {})
+  );
+  store.subscribe((state) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(state));
+    } catch (error) {
+      console.error("\u{1F987} Error persisting state:", error);
+    }
+  });
+  return store;
+}
+
+// src/types/aiModels.ts
+var OpenAIModels = [
+  {
+    name: "GPT 4o mini",
+    apiName: "gpt-4o-mini",
+    capabilities: {
+      maxTokens: 128e3,
+      supportsFunctions: true,
+      supportsStreaming: true
+    }
+  },
+  {
+    name: "GPT 4o",
+    apiName: "gpt-4o",
+    capabilities: {
+      maxTokens: 128e3,
+      supportsFunctions: true,
+      supportsStreaming: true,
+      supportsVision: true
+    }
+  },
+  {
+    name: "GPT o1 Preview",
+    apiName: "o1-preview",
+    capabilities: {
+      maxTokens: 128e3,
+      supportsFunctions: true,
+      supportsStreaming: true
+    }
+  },
+  {
+    name: "GPT o1 Mini",
+    apiName: "o1-mini",
+    capabilities: {
+      maxTokens: 128e3,
+      supportsFunctions: true,
+      supportsStreaming: true
+    }
+  }
+];
+var AnthropicModels = [
+  {
+    name: "Claude 3 Haiku",
+    apiName: "claude-3-haiku-20240307",
+    capabilities: {
+      maxTokens: 2e5,
+      supportsFunctions: true,
+      supportsStreaming: true
+    }
+  },
+  {
+    name: "Claude 3 Sonnet",
+    apiName: "claude-3-sonnet-20240229",
+    capabilities: {
+      maxTokens: 2e5,
+      supportsFunctions: true,
+      supportsStreaming: true,
+      supportsVision: true
+    }
+  },
+  {
+    name: "Claude 3 Opus",
+    apiName: "claude-3-opus-20240229",
+    capabilities: {
+      maxTokens: 2e5,
+      supportsFunctions: true,
+      supportsStreaming: true,
+      supportsVision: true
+    }
+  },
+  {
+    name: "Claude 3.5 Sonnet",
+    apiName: "claude-3-5-sonnet-20240620",
+    capabilities: {
+      maxTokens: 2e5,
+      supportsFunctions: true,
+      supportsStreaming: true,
+      supportsVision: true
+    }
+  }
+];
+var GoogleModels = [
+  {
+    name: "Gemini 1.5 Flash",
+    apiName: "gemini-1.5-flash",
+    capabilities: {
+      maxTokens: 32e3,
+      supportsStreaming: true
+    }
+  },
+  {
+    name: "Gemini 1.5 Flash 8B",
+    apiName: "gemini-1.5-flash-8b",
+    capabilities: {
+      maxTokens: 32e3,
+      supportsStreaming: true
+    }
+  },
+  {
+    name: "Gemini 1.5 Pro",
+    apiName: "gemini-1.5-pro",
+    capabilities: {
+      maxTokens: 32e3,
+      supportsStreaming: true,
+      supportsVision: true
+    }
+  }
+];
+var GroqModels = [
+  {
+    name: "Llama 3.1 70B",
+    apiName: "llama-3.1-70b-versatile",
+    capabilities: {
+      maxTokens: 32e3,
+      supportsStreaming: true
+    }
+  },
+  {
+    name: "Llama 3.1 8B",
+    apiName: "llama-3.1-8b-instant",
+    capabilities: {
+      maxTokens: 32e3,
+      supportsStreaming: true
+    }
+  },
+  {
+    name: "Llama 3.2 1B (Preview)",
+    apiName: "llama-3.2-1b-preview",
+    capabilities: {
+      maxTokens: 32e3,
+      supportsStreaming: true
+    }
+  },
+  {
+    name: "Llama 3.2 3B (Preview)",
+    apiName: "llama-3.2-3b-preview",
+    capabilities: {
+      maxTokens: 32e3,
+      supportsStreaming: true
+    }
+  }
+];
+var OpenRouterModels = [
+  {
+    name: "Anthropic Claude 3 Opus",
+    apiName: "anthropic/claude-3-opus",
+    capabilities: {
+      maxTokens: 2e5,
+      supportsFunctions: true,
+      supportsStreaming: true,
+      supportsVision: true
+    }
+  },
+  {
+    name: "Anthropic Claude 3.5 Sonnet",
+    apiName: "anthropic/claude-3.5-sonnet",
+    capabilities: {
+      maxTokens: 2e5,
+      supportsFunctions: true,
+      supportsStreaming: true,
+      supportsVision: true
+    }
+  },
+  {
+    name: "Google Gemini Flash 1.5",
+    apiName: "google/gemini-flash-1.5",
+    capabilities: {
+      maxTokens: 32e3,
+      supportsStreaming: true
+    }
+  },
+  {
+    name: "Google Gemini Flash 1.5 8B",
+    apiName: "google/gemini-flash-1.5-8b",
+    capabilities: {
+      maxTokens: 32e3,
+      supportsStreaming: true
+    }
+  },
+  {
+    name: "Google Gemini Pro 1.5",
+    apiName: "google/gemini-pro-1.5",
+    capabilities: {
+      maxTokens: 32e3,
+      supportsStreaming: true,
+      supportsVision: true
+    }
+  },
+  {
+    name: "Mistralai Mistral Large",
+    apiName: "mistralai/mistral-large",
+    capabilities: {
+      maxTokens: 32e3,
+      supportsStreaming: true
+    }
+  },
+  {
+    name: "Mistralai Mistral Nemo",
+    apiName: "mistralai/mistral-nemo",
+    capabilities: {
+      maxTokens: 32e3,
+      supportsStreaming: true
+    }
+  },
+  {
+    name: "OpenAI GPT 4o",
+    apiName: "openai/gpt-4o",
+    capabilities: {
+      maxTokens: 128e3,
+      supportsFunctions: true,
+      supportsStreaming: true,
+      supportsVision: true
+    }
+  },
+  {
+    name: "OpenAI GPT 4o Mini",
+    apiName: "openai/gpt-4o-mini",
+    capabilities: {
+      maxTokens: 128e3,
+      supportsFunctions: true,
+      supportsStreaming: true
+    }
+  },
+  {
+    name: "OpenAI o1 Mini",
+    apiName: "openai/o1-mini",
+    capabilities: {
+      maxTokens: 128e3,
+      supportsFunctions: true,
+      supportsStreaming: true
+    }
+  },
+  {
+    name: "OpenAI o1 Preview",
+    apiName: "openai/o1-preview",
+    capabilities: {
+      maxTokens: 128e3,
+      supportsFunctions: true,
+      supportsStreaming: true
+    }
+  }
+];
+var LMStudioModels = [
+  {
+    name: "Custom",
+    apiName: "custom",
+    capabilities: {
+      supportsStreaming: false
+    }
+  }
+];
+var AIModelMap = {
+  ["openai" /* OpenAI */]: OpenAIModels,
+  ["anthropic" /* Anthropic */]: AnthropicModels,
+  ["google" /* Google */]: GoogleModels,
+  ["groq" /* Groq */]: GroqModels,
+  ["openrouter" /* OpenRouter */]: OpenRouterModels,
+  ["lmstudio" /* LMStudio */]: LMStudioModels
+};
+var AIModelUtils = {
+  /**
+   * Get a model by its API name
+   * @param apiName The API name to look up
+   * @returns The matching model or undefined
+   */
+  getModelByApiName(apiName) {
+    for (const models of Object.values(AIModelMap)) {
+      const model = models.find((m) => m.apiName === apiName);
+      if (model)
+        return model;
+    }
+    return void 0;
+  },
+  /**
+   * Get all models for a specific provider
+   * @param provider The provider to get models for
+   * @returns Array of models for the provider
+   */
+  getModelsForProvider(provider) {
+    return AIModelMap[provider] || [];
+  },
+  /**
+   * Check if a model supports a specific capability
+   * @param model The model to check
+   * @param capability The capability to check for
+   * @returns Whether the model supports the capability
+   */
+  modelSupportsCapability(model, capability) {
+    var _a;
+    return !!((_a = model.capabilities) == null ? void 0 : _a[capability]);
+  },
+  /**
+   * Get all models that support a specific capability
+   * @param capability The capability to filter by
+   * @returns Array of models that support the capability
+   */
+  getModelsByCapability(capability) {
+    const supportedModels = [];
+    for (const models of Object.values(AIModelMap)) {
+      supportedModels.push(...models.filter((m) => this.modelSupportsCapability(m, capability)));
+    }
+    return supportedModels;
+  },
+  /**
+   * Get models by provider and capability
+   * @param provider The provider to filter by
+   * @param capability The capability to filter by
+   * @returns Array of matching models
+   */
+  getModelsByProviderAndCapability(provider, capability) {
+    return this.getModelsForProvider(provider).filter((m) => this.modelSupportsCapability(m, capability));
+  }
+};
+
+// src/stores/AIStore.ts
+var createInitialOperationMetrics = () => {
+  return Object.values(OperationType).reduce((acc, type) => __spreadProps(__spreadValues({}, acc), {
+    [type]: {
+      count: 0,
+      averageTime: 0,
+      errorCount: 0
+    }
+  }), {});
+};
+var defaultInitialState = {
   isInitialized: false,
   isConnected: false,
   currentModel: "",
   isProcessing: false,
   provider: "openai" /* OpenAI */,
-  // Use enum member instead of string
   availableModels: [],
   performanceMetrics: {
-    // Initialize all required properties
-    responseTime: {
-      average: 0,
-      min: Infinity,
-      max: 0,
-      samples: 0
-    },
-    successRate: {
-      total: 0,
-      successful: 0,
-      rate: 0
-    },
-    errorRate: {
-      total: 0,
-      errors: 0,
-      rate: 0
-    },
-    operationMetrics: {
-      generation: { count: 0, averageTime: 0, errorCount: 0 },
-      frontMatter: { count: 0, averageTime: 0, errorCount: 0 },
-      wikilink: { count: 0, averageTime: 0, errorCount: 0 },
-      ontology: { count: 0, averageTime: 0, errorCount: 0 },
-      knowledgeBloom: { count: 0, averageTime: 0, errorCount: 0 }
-    }
+    responseTime: { average: 0, min: Infinity, max: 0, samples: 0 },
+    successRate: { total: 0, successful: 0, rate: 0 },
+    errorRate: { total: 0, errors: 0, rate: 0 },
+    operationMetrics: createInitialOperationMetrics()
+  },
+  stateHistory: [],
+  lastUpdated: Date.now(),
+  knowledgeBloom: {
+    isGenerating: false,
+    selectedModel: "",
+    userPrompt: ""
   }
-}) {
+};
+function createAIStore(initialState2 = defaultInitialState) {
   const store = createEnhancedStore(initialState2);
+  const eventSubscribers = /* @__PURE__ */ new Map();
+  function recordTransition(event, update2, metadata) {
+    var _a;
+    const previousState = get_store_value(store);
+    store.update((state) => __spreadValues(__spreadValues({}, state), update2));
+    const newState = get_store_value(store);
+    const transition = {
+      event,
+      from: previousState,
+      to: newState,
+      timestamp: Date.now(),
+      metadata
+    };
+    store.update((state) => __spreadProps(__spreadValues({}, state), {
+      stateHistory: [transition, ...state.stateHistory].slice(0, 100)
+    }));
+    (_a = eventSubscribers.get(event)) == null ? void 0 : _a.forEach((callback) => {
+      try {
+        callback(transition);
+      } catch (error) {
+        console.error("Error in state transition subscriber:", error);
+        utils.reportError("AI Store event subscriber error", "error", { error });
+      }
+    });
+    return transition;
+  }
   return __spreadProps(__spreadValues({}, store), {
     setProvider: (provider) => {
-      updateNestedState(store, "provider", provider);
+      const models = AIModelUtils.getModelsForProvider(provider);
+      if (!models.length) {
+        throw new Error(`No models available for provider: ${provider}`);
+      }
+      recordTransition("providerChanged" /* ProviderChanged */, {
+        provider,
+        availableModels: models,
+        currentModel: models[0].apiName
+      });
     },
     updateConnection: (isConnected) => {
-      updateNestedState(store, "isConnected", isConnected);
+      recordTransition("connectionChanged" /* ConnectionChanged */, { isConnected });
     },
     setModel: (model) => {
-      updateNestedState(store, "currentModel", model);
+      const modelInfo = AIModelUtils.getModelByApiName(model);
+      if (!modelInfo) {
+        throw new Error(`Invalid model: ${model}`);
+      }
+      recordTransition("modelChanged" /* ModelChanged */, { currentModel: model });
     },
-    setInitialized: (isInitialized) => {
-      updateNestedState(store, "isInitialized", isInitialized);
+    setInitialized: (isInitialized2) => {
+      recordTransition("initializationChanged" /* InitializationChanged */, { isInitialized: isInitialized2 });
     },
     setProcessing: (isProcessing) => {
-      updateNestedState(store, "isProcessing", isProcessing);
+      recordTransition("processingChanged" /* ProcessingChanged */, { isProcessing });
     },
     setAvailableModels: (models) => {
-      updateNestedState(store, "availableModels", models);
+      recordTransition("modelsUpdated" /* ModelsUpdated */, { availableModels: models });
     },
     setError: (error) => {
-      updateNestedState(store, "error", error);
+      recordTransition("errorOccurred" /* ErrorOccurred */, {
+        error: error ? { message: error, timestamp: Date.now() } : void 0
+      });
     },
     setLastResponse: (response) => {
-      updateNestedState(store, "lastResponse", response);
+      store.update((state) => __spreadProps(__spreadValues({}, state), { lastResponse: response }));
     },
     updateMetrics: (metrics) => {
       store.update((state) => __spreadProps(__spreadValues({}, state), {
-        performanceMetrics: __spreadProps(__spreadValues(__spreadValues({}, state.performanceMetrics), metrics), {
-          // Ensure nested objects are also merged properly
-          responseTime: __spreadValues(__spreadValues({}, state.performanceMetrics.responseTime), metrics.responseTime),
-          successRate: __spreadValues(__spreadValues({}, state.performanceMetrics.successRate), metrics.successRate),
-          errorRate: __spreadValues(__spreadValues({}, state.performanceMetrics.errorRate), metrics.errorRate),
-          operationMetrics: __spreadValues(__spreadValues({}, state.performanceMetrics.operationMetrics), metrics.operationMetrics)
-        })
+        performanceMetrics: __spreadValues(__spreadValues({}, state.performanceMetrics), metrics)
       }));
     },
     updateOperation: (operation) => {
-      if (operation && !operation.type) {
-        throw new Error("Operation type is required when updating OperationStatus");
+      recordTransition(
+        operation ? "operationStarted" /* OperationStarted */ : "operationCompleted" /* OperationCompleted */,
+        { currentOperation: operation && "type" in operation ? operation : null }
+      );
+    },
+    reportError: (error, metadata) => {
+      recordTransition("errorOccurred" /* ErrorOccurred */, {
+        error: {
+          message: error.message,
+          timestamp: Date.now()
+        },
+        lastError: {
+          message: error.message,
+          timestamp: Date.now()
+        }
+      }, metadata);
+      utils.reportError(`AI Error: ${error.message}`, "error", metadata);
+      new import_obsidian2.Notice(`AI Error: ${error.message}`);
+    },
+    subscribeToEvent: (event, callback) => {
+      var _a;
+      if (!eventSubscribers.has(event)) {
+        eventSubscribers.set(event, /* @__PURE__ */ new Set());
       }
-      store.update((state) => {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r;
-        return __spreadProps(__spreadValues({}, state), {
-          currentOperation: operation ? __spreadProps(__spreadValues(__spreadValues({}, state.currentOperation), operation), {
-            type: operation.type,
-            startTime: (_c = (_b = operation.startTime) != null ? _b : (_a = state.currentOperation) == null ? void 0 : _a.startTime) != null ? _c : 0,
-            endTime: (_f = (_e = operation.endTime) != null ? _e : (_d = state.currentOperation) == null ? void 0 : _d.endTime) != null ? _f : 0,
-            duration: (_i = (_h = operation.duration) != null ? _h : (_g = state.currentOperation) == null ? void 0 : _g.duration) != null ? _i : 0,
-            success: (_l = (_k = operation.success) != null ? _k : (_j = state.currentOperation) == null ? void 0 : _j.success) != null ? _l : false,
-            error: (_o = (_n = operation.error) != null ? _n : (_m = state.currentOperation) == null ? void 0 : _m.error) != null ? _o : "",
-            metadata: (_r = (_q = operation.metadata) != null ? _q : (_p = state.currentOperation) == null ? void 0 : _p.metadata) != null ? _r : {}
-          }) : null
-        });
-      });
+      (_a = eventSubscribers.get(event)) == null ? void 0 : _a.add(callback);
+      return () => {
+        var _a2;
+        (_a2 = eventSubscribers.get(event)) == null ? void 0 : _a2.delete(callback);
+      };
+    },
+    getStateHistory: () => get_store_value(store).stateHistory,
+    clearHistory: () => {
+      store.update((state) => __spreadProps(__spreadValues({}, state), { stateHistory: [] }));
+    },
+    resetMetrics: () => {
+      store.update((state) => __spreadProps(__spreadValues({}, state), {
+        performanceMetrics: initialState2.performanceMetrics
+      }));
+    },
+    setKnowledgeBloomGenerating: (isGenerating) => {
+      recordTransition(
+        isGenerating ? "knowledgeBloomStarted" /* KnowledgeBloomStarted */ : "knowledgeBloomCompleted" /* KnowledgeBloomCompleted */,
+        { knowledgeBloom: __spreadProps(__spreadValues({}, get_store_value(store).knowledgeBloom), { isGenerating }) }
+      );
+    },
+    updateKnowledgeBloomSettings: (settings) => {
+      store.update((state) => __spreadProps(__spreadValues({}, state), {
+        knowledgeBloom: __spreadValues(__spreadValues({}, state.knowledgeBloom), settings)
+      }));
+    },
+    recordKnowledgeBloomGeneration: (noteCount) => {
+      store.update((state) => __spreadProps(__spreadValues({}, state), {
+        knowledgeBloom: __spreadProps(__spreadValues({}, state.knowledgeBloom), {
+          lastGenerated: {
+            timestamp: Date.now(),
+            noteCount
+          }
+        })
+      }));
     }
   });
 }
@@ -11103,6 +8593,12 @@ var aiStatus = derived(aiStore, ($store) => ({
   provider: $store.provider,
   availableModels: $store.availableModels,
   hasError: !!$store.error
+}));
+var knowledgeBloomStatus = derived(aiStore, ($store) => ({
+  isGenerating: $store.knowledgeBloom.isGenerating,
+  selectedModel: $store.knowledgeBloom.selectedModel,
+  userPrompt: $store.knowledgeBloom.userPrompt,
+  lastGenerated: $store.knowledgeBloom.lastGenerated
 }));
 
 // src/services/ai/GeneratorFactory.ts
@@ -11122,7 +8618,7 @@ var GeneratorFactory = class {
     // IService implementation
     this.serviceId = "generator-factory";
     this.serviceName = "Generator Factory Service";
-    this.serviceState = "uninitialized" /* Uninitialized */;
+    this.LifecycleState = "uninitialized" /* Uninitialized */;
     this.serviceError = null;
     this.isUnloading = false;
     // Generator factory properties
@@ -11141,11 +8637,11 @@ var GeneratorFactory = class {
         throw new ServiceError(this.serviceName, "Cannot initialize while unloading");
       }
       try {
-        this.serviceState = "initializing" /* Initializing */;
+        this.LifecycleState = "initializing" /* Initializing */;
         yield this.initializeEssentialGenerators();
-        this.serviceState = "ready" /* Ready */;
+        this.LifecycleState = "ready" /* Ready */;
       } catch (error) {
-        this.serviceState = "error" /* Error */;
+        this.LifecycleState = "error" /* Error */;
         this.serviceError = ServiceError.from(
           this.serviceName,
           error,
@@ -11187,7 +8683,7 @@ var GeneratorFactory = class {
    * Check if service is ready
    */
   isReady() {
-    return this.serviceState === "ready" /* Ready */ && !this.isUnloading;
+    return this.LifecycleState === "ready" /* Ready */ && !this.isUnloading;
   }
   /**
    * Clean up service resources
@@ -11198,11 +8694,11 @@ var GeneratorFactory = class {
         return;
       try {
         this.isUnloading = true;
-        this.serviceState = "destroying" /* Destroying */;
+        this.LifecycleState = "destroying" /* Destroying */;
         yield this.cleanup();
-        this.serviceState = "destroyed" /* Destroyed */;
+        this.LifecycleState = "destroyed" /* Destroyed */;
       } catch (error) {
-        this.serviceState = "error" /* Error */;
+        this.LifecycleState = "error" /* Error */;
         this.serviceError = ServiceError.from(
           this.serviceName,
           error,
@@ -11233,7 +8729,7 @@ var GeneratorFactory = class {
   }
   getState() {
     return {
-      state: this.serviceState,
+      state: this.LifecycleState,
       error: this.serviceError
     };
   }
@@ -11423,10 +8919,10 @@ var GeneratorFactory = class {
     return __async(this, null, function* () {
       if (this.isUnloading)
         return;
-      const instance20 = this.instances.get(type);
-      if (instance20) {
-        if ("reset" in instance20 && typeof instance20.reset === "function") {
-          yield instance20.reset();
+      const instance15 = this.instances.get(type);
+      if (instance15) {
+        if ("reset" in instance15 && typeof instance15.reset === "function") {
+          yield instance15.reset();
         }
         this.instances.delete(type);
         this.lastRun.delete(type);
@@ -11462,9 +8958,9 @@ var GeneratorFactory = class {
   /**
    * Get service state information
    */
-  getServiceState() {
+  getLifecycleState() {
     return {
-      state: this.serviceState,
+      state: this.LifecycleState,
       error: this.serviceError
     };
   }
@@ -11473,6 +8969,7 @@ var GeneratorFactory = class {
 // src/types/store.types.ts
 var DEFAULT_PLUGIN_STATE = {
   plugin: null,
+  app: null,
   settings: DEFAULT_SETTINGS,
   processing: {
     isProcessing: false,
@@ -11495,6 +8992,11 @@ var DEFAULT_PLUGIN_STATE = {
     isProcessing: false,
     provider: "openai" /* OpenAI */,
     availableModels: [],
+    knowledgeBloom: {
+      isGenerating: false,
+      selectedModel: "",
+      userPrompt: ""
+    },
     generators: Object.values(GeneratorType).reduce(
       (acc, type) => __spreadProps(__spreadValues({}, acc), {
         [type]: {
@@ -11550,9 +9052,16 @@ var DEFAULT_PLUGIN_STATE = {
     },
     currentOperation: null,
     queueLength: 0,
-    lastOperation: void 0
+    lastOperation: void 0,
+    stateHistory: [],
+    // Make this mutable
+    lastUpdated: Date.now()
+    // Add this line
   },
   ui: {
+    isInitialized: false,
+    error: void 0,
+    lastUpdated: Date.now(),
     darkMode: false,
     activeAccordion: null,
     notifications: [],
@@ -11575,26 +9084,35 @@ var DEFAULT_PLUGIN_STATE = {
 };
 
 // src/stores/PluginStore.ts
-var _PluginStore = class extends BaseStore {
+var _PluginStore = class {
   constructor() {
-    if (_PluginStore.instance) {
-      return _PluginStore.instance;
+    this.store = createBaseStore({
+      plugin: null,
+      app: null,
+      settings: DEFAULT_SETTINGS,
+      processing: DEFAULT_PLUGIN_STATE.processing,
+      ai: DEFAULT_PLUGIN_STATE.ai,
+      ui: DEFAULT_PLUGIN_STATE.ui,
+      files: DEFAULT_PLUGIN_STATE.files
+    });
+    this.subscribe = this.store.subscribe;
+    this.set = this.store.set;
+    this.update = this.store.update;
+  }
+  static getInstance() {
+    if (!_PluginStore.instance) {
+      _PluginStore.instance = new _PluginStore();
     }
-    super(
-      "plugin-store",
-      "Plugin Store Service",
-      JSON.parse(JSON.stringify(DEFAULT_PLUGIN_STATE))
-    );
-    _PluginStore.instance = this;
+    return _PluginStore.instance;
   }
   initialize() {
     return __async(this, null, function* () {
       try {
-        yield __superGet(_PluginStore.prototype, this, "initialize").call(this);
-        const savedState = this.loadSavedState();
-        if (savedState) {
-          this.set(this.resetVolatileState(savedState));
+        const coreState = get_store_value(core);
+        if (!coreState.initialized) {
+          throw new Error("Core store must be initialized first");
         }
+        yield this.saveState(this.getSnapshot());
       } catch (error) {
         this.handleError("Failed to initialize Plugin Store", error);
         throw error;
@@ -11603,42 +9121,39 @@ var _PluginStore = class extends BaseStore {
   }
   updateSection(section, update2) {
     try {
-      if (!this.isReady()) {
-        throw new Error("Plugin Store is not ready");
-      }
+      const currentState = this.getSnapshot();
       this.update((state) => {
         const newState = __spreadProps(__spreadValues({}, state), {
           [section]: typeof update2 === "function" ? update2(state[section]) : __spreadValues(__spreadValues({}, state[section]), update2)
         });
-        this.saveState(newState);
-        return newState;
+        return this.resetVolatileState(newState);
       });
+      this.saveState(this.getSnapshot());
     } catch (error) {
       this.handleError(`Failed to update section: ${String(section)}`, error);
     }
   }
-  // Private helpers
-  loadSavedState() {
-    try {
-      const saved = localStorage.getItem(_PluginStore.STORAGE_KEY);
-      return saved ? JSON.parse(saved) : null;
-    } catch (error) {
-      console.warn("\u{1F987} Failed to load saved state:", error);
-      return null;
-    }
+  reset() {
+    return __async(this, null, function* () {
+      this.set(structuredClone(DEFAULT_PLUGIN_STATE));
+      yield this.saveState(this.getSnapshot());
+    });
+  }
+  getSnapshot() {
+    return get_store_value(this.store);
   }
   saveState(state) {
-    try {
-      const persistedState = this.resetVolatileState(state);
-      localStorage.setItem(_PluginStore.STORAGE_KEY, JSON.stringify(persistedState));
-    } catch (error) {
-      console.warn("\u{1F987} Failed to save state:", error);
-    }
+    return __async(this, null, function* () {
+      try {
+        const persistedState = this.resetVolatileState(state);
+        localStorage.setItem(_PluginStore.STORAGE_KEY, JSON.stringify(persistedState));
+      } catch (error) {
+        this.handleError("Failed to save state", error);
+      }
+    });
   }
   resetVolatileState(state) {
     return __spreadProps(__spreadValues(__spreadValues({}, DEFAULT_PLUGIN_STATE), state), {
-      // Merge saved state
-      // Reset volatile state
       processing: __spreadProps(__spreadValues(__spreadValues({}, DEFAULT_PLUGIN_STATE.processing), state.processing), {
         isProcessing: false,
         currentFile: null,
@@ -11655,151 +9170,188 @@ var _PluginStore = class extends BaseStore {
     });
   }
   handleError(message, error) {
-    console.error(`\u{1F987} ${message}:`, error);
-    this.setError(error instanceof Error ? error : new Error(message));
+    utils.reportError(message, "error", { error });
+  }
+  sanitizeState(state) {
+    var _a, _b;
+    return __spreadProps(__spreadValues({}, state), {
+      plugin: state.plugin,
+      // Keep the full plugin instance
+      app: state.app ? {
+        workspace: {
+          activeLeaf: (_a = state.app.workspace) == null ? void 0 : _a.activeLeaf,
+          config: (_b = state.app.workspace) == null ? void 0 : _b.config
+        }
+      } : null
+    });
   }
 };
 var PluginStore = _PluginStore;
 PluginStore.STORAGE_KEY = "graphweaver-plugin-state";
 PluginStore.instance = null;
-function createPluginStore() {
-  return new PluginStore();
-}
-var pluginStore = createPluginStore();
-var settingsState = derived(pluginStore, ($store) => $store.settings);
-var processingState = derived(pluginStore, ($store) => $store.processing);
-var aiState = derived(pluginStore, ($store) => $store.ai);
-var uiState = derived(pluginStore, ($store) => $store.ui);
-var filesState = derived(pluginStore, ($store) => $store.files);
-var pluginStatus = derived(pluginStore, ($store) => ({
-  isInitialized: $store.ai.isInitialized,
-  isProcessing: $store.processing.isProcessing,
-  hasErrors: $store.processing.errors.length > 0 || !!$store.ai.error,
-  activeSection: $store.ui.activeAccordion,
-  serviceState: pluginStore.getState().state
-}));
+var pluginStore = PluginStore.getInstance();
+var settingsState = derived(
+  pluginStore,
+  ($store) => $store.settings
+);
+var processingState = derived(
+  pluginStore,
+  ($store) => $store.processing
+);
+var aiState = derived(
+  pluginStore,
+  ($store) => $store.ai
+);
+var uiState = derived(
+  pluginStore,
+  ($store) => $store.ui
+);
+var filesState = derived(
+  pluginStore,
+  ($store) => $store.files
+);
+var pluginStatus = derived(pluginStore, ($store) => {
+  const state = $store;
+  return {
+    isInitialized: state.ai.isInitialized,
+    isProcessing: state.processing.isProcessing,
+    hasErrors: state.processing.errors.length > 0 || !!state.ai.error,
+    activeSection: state.ui.activeAccordion,
+    serviceState: pluginStore.getSnapshot()
+  };
+});
 
 // src/stores/SettingStore.ts
-function createSettingsStore(settingsService) {
-  const store = createPersistedStore(
-    "graphweaver-settings",
-    DEFAULT_SETTINGS,
-    validateSettings
-  );
-  return __spreadProps(__spreadValues({}, store), {
-    /**
-     * Initialize the store with persisted settings
-     * @param persistedSettings Partial settings data
-     */
-    initialize: (persistedSettings) => {
-      store.update((settings) => __spreadValues(__spreadValues(__spreadValues({}, DEFAULT_SETTINGS), settings), persistedSettings));
-    },
-    /**
-     * Save new settings and persist them
-     * @param newSettings Complete settings data
-     */
-    save: (newSettings) => __async(this, null, function* () {
-      if (!validateSettings(newSettings)) {
-        throw new Error("Invalid settings configuration");
-      }
-      yield settingsService.updateSettings(newSettings);
-      store.set(newSettings);
-    }),
-    /**
-     * Update a specific setting
-     * @param key Setting key
-     * @param value New value for the setting
-     */
-    updateSetting: (key, value) => {
-      updateNestedState(store, key, value);
-    },
-    /**
-     * Validate settings structure and values
-     * @param settings Partial settings data
-     * @returns Boolean indicating validity
-     */
-    validateSettings: (settings) => {
-      return validateSettings(settings);
-    },
-    /**
-     * Reset settings to default values
-     */
-    reset: () => {
-      store.set(DEFAULT_SETTINGS);
-      void settingsService.updateSettings(DEFAULT_SETTINGS);
-    },
-    /**
-     * Get a snapshot of the current settings
-     * @returns Current settings data
-     */
-    getSnapshot: () => store.getSnapshot()
-  });
-}
-var settingsStore;
-function initializeSettingsStore(settingsService) {
-  settingsStore = createSettingsStore(settingsService);
-}
-var aiSettings;
-var frontMatterSettings;
-var advancedSettings;
-var knowledgeBloomSettings;
-var settingsStatus;
-function initializeDerivedStores() {
-  if (!settingsStore) {
-    throw new Error("Settings store not initialized");
-  }
-  aiSettings = derived(
-    settingsStore,
-    ($settings) => $settings.aiProvider
-  );
-  frontMatterSettings = derived(
-    settingsStore,
-    ($settings) => $settings.frontMatter
-  );
-  advancedSettings = derived(
-    settingsStore,
-    ($settings) => $settings.advanced
-  );
-  knowledgeBloomSettings = derived(
-    settingsStore,
-    ($settings) => $settings.knowledgeBloom
-  );
-  settingsStatus = derived(settingsStore, ($settings) => ({
-    isValid: validateSettings($settings),
-    hasApiKey: !!$settings.aiProvider.apiKeys[$settings.aiProvider.selected],
-    isConfigured: validateSettings($settings) && !!$settings.aiProvider.apiKeys[$settings.aiProvider.selected],
-    provider: $settings.aiProvider.selected
-  }));
-}
-function validateSettings(settings) {
-  var _a;
-  const requiredSections = [
-    "aiProvider",
-    "frontMatter",
-    "tags",
-    "localLMStudio",
-    "advanced",
-    "ontology",
-    "knowledgeBloom"
-  ];
-  const hasRequiredSections = requiredSections.every(
-    (section) => section in settings
-  );
-  if (!hasRequiredSections)
-    return false;
-  const aiProvider = settings.aiProvider;
-  if (!(aiProvider == null ? void 0 : aiProvider.selected) || !aiProvider.apiKeys || !aiProvider.selectedModels) {
-    return false;
-  }
-  if ((_a = settings.frontMatter) == null ? void 0 : _a.customProperties) {
-    const isValidCustomProperties = settings.frontMatter.customProperties.every(
-      (prop) => typeof prop.name === "string" && typeof prop.description === "string" && typeof prop.type === "string" && typeof prop.required === "boolean" && (prop.defaultValue === void 0 || true) && // Adjust as needed
-      (prop.options === void 0 || Array.isArray(prop.options)) && typeof prop.multipleValues === "boolean"
+var import_events = require("events");
+var _SettingsStoreImpl = class {
+  constructor(plugin) {
+    this.plugin = plugin;
+    this.eventEmitter = new import_events.EventEmitter();
+    this.store = createPersistedStore(
+      _SettingsStoreImpl.STORAGE_KEY,
+      DEFAULT_SETTINGS,
+      this.validateSettings
     );
-    if (!isValidCustomProperties)
-      return false;
+    this.subscribe = this.store.subscribe;
+    this.set = this.store.set;
+    this.update = this.store.update;
+    this.subscribe((settings) => {
+      this.emit("settingsChanged", settings);
+    });
   }
-  return true;
+  static getInstance(plugin) {
+    if (!_SettingsStoreImpl.instance) {
+      _SettingsStoreImpl.instance = new _SettingsStoreImpl(plugin);
+    }
+    return _SettingsStoreImpl.instance;
+  }
+  initialize() {
+    return __async(this, null, function* () {
+      try {
+        const loadedData = yield this.plugin.loadData();
+        if (loadedData) {
+          this.update((current) => __spreadValues(__spreadValues(__spreadValues({}, DEFAULT_SETTINGS), current), loadedData));
+        }
+      } catch (error) {
+        utils.reportError("Failed to initialize settings", "error", { error });
+        this.emit("persistenceError", error instanceof Error ? error : new Error("Unknown error"));
+        throw error;
+      }
+    });
+  }
+  getSettings() {
+    return this.store.getSnapshot();
+  }
+  getSettingSection(section) {
+    return __spreadValues({}, this.getSettings()[section]);
+  }
+  getNestedSetting(section, key) {
+    return this.getSettings()[section][key];
+  }
+  updateNestedSetting(section, key, value) {
+    return __async(this, null, function* () {
+      this.update((settings) => __spreadProps(__spreadValues({}, settings), {
+        [section]: __spreadProps(__spreadValues({}, settings[section]), {
+          [key]: value
+        })
+      }));
+      yield this.save(this.getSettings());
+    });
+  }
+  save(settings) {
+    return __async(this, null, function* () {
+      try {
+        if (!this.validateSettings(settings)) {
+          throw new Error("Invalid settings configuration");
+        }
+        yield this.plugin.saveData(settings);
+        this.set(settings);
+      } catch (error) {
+        this.emit("persistenceError", error instanceof Error ? error : new Error("Save failed"));
+        throw error;
+      }
+    });
+  }
+  updateSetting(key, value) {
+    this.update((settings) => __spreadProps(__spreadValues({}, settings), {
+      [key]: value
+    }));
+    this.emit("settingChanged", key, value);
+  }
+  validateSettings(settings) {
+    var _a;
+    const requiredSections = [
+      "aiProvider",
+      "frontMatter",
+      "tags",
+      "localLMStudio",
+      "advanced",
+      "ontology",
+      "knowledgeBloom"
+    ];
+    if (!requiredSections.every((section) => section in settings))
+      return false;
+    const { aiProvider } = settings;
+    if (!(aiProvider == null ? void 0 : aiProvider.selected) || !aiProvider.apiKeys || !aiProvider.selectedModels) {
+      return false;
+    }
+    if ((_a = settings.frontMatter) == null ? void 0 : _a.customProperties) {
+      const isValidProps = settings.frontMatter.customProperties.every(
+        (prop) => typeof prop.name === "string" && typeof prop.description === "string" && typeof prop.type === "string" && typeof prop.required === "boolean" && (!prop.options || Array.isArray(prop.options)) && typeof prop.multipleValues === "boolean"
+      );
+      if (!isValidProps)
+        return false;
+    }
+    return true;
+  }
+  reset() {
+    this.set(DEFAULT_SETTINGS);
+  }
+  getSnapshot() {
+    return this.store.getSnapshot();
+  }
+  destroy() {
+    return __async(this, null, function* () {
+      this.eventEmitter.removeAllListeners();
+    });
+  }
+  // Event emitter methods
+  emit(event, ...args) {
+    this.eventEmitter.emit(event, ...args);
+  }
+  on(event, listener) {
+    this.eventEmitter.on(event, listener);
+  }
+  off(event, listener) {
+    this.eventEmitter.off(event, listener);
+  }
+};
+var SettingsStoreImpl = _SettingsStoreImpl;
+SettingsStoreImpl.STORAGE_KEY = "graphweaver-settings";
+SettingsStoreImpl.instance = null;
+var settingsStore;
+function initializeSettingsStore(plugin) {
+  settingsStore = SettingsStoreImpl.getInstance(plugin);
 }
 
 // src/stores/ProcessingStore.ts
@@ -11817,10 +9369,18 @@ var initialState = {
   startTime: null,
   estimatedTimeRemaining: null
 };
-var _ProcessingStore = class extends CoreService {
+var _ProcessingStore = class {
   constructor() {
-    super("processing-store", "Processing Store Service");
-    this.store = createEnhancedStore(initialState);
+    this.serviceId = "processing-store";
+    this.serviceName = "Processing Store";
+    const store = createPersistedStore(
+      _ProcessingStore.STORAGE_KEY,
+      structuredClone(initialState)
+    );
+    this.store = store;
+    this.subscribe = store.subscribe;
+    this.set = store.set;
+    this.update = store.update;
   }
   static getInstance() {
     if (!_ProcessingStore.instance) {
@@ -11828,149 +9388,136 @@ var _ProcessingStore = class extends CoreService {
     }
     return _ProcessingStore.instance;
   }
-  /**
-   * Initialize the service
-   */
-  initializeInternal() {
+  initialize() {
     return __async(this, null, function* () {
       try {
-        this.set(initialState);
+        const currentState = this.getSnapshot();
+        if (!currentState) {
+          this.set(structuredClone(initialState));
+        }
       } catch (error) {
-        throw new ServiceError(
-          this.serviceName,
-          "Failed to initialize processing store",
-          error instanceof Error ? error : void 0
-        );
+        this.handleError("Failed to initialize Processing Store", error);
+        throw error;
       }
     });
   }
-  /**
-   * Clean up resources
-   */
-  destroyInternal() {
-    return __async(this, null, function* () {
-      this.set(initialState);
-    });
+  reset() {
+    this.set(structuredClone(initialState));
   }
-  // Implement Writable interface
-  set(value) {
-    this.store.set(value);
-  }
-  update(updater) {
-    this.store.update(updater);
-  }
-  subscribe(run2) {
-    return this.store.subscribe(run2);
-  }
-  /**
-   * Start processing a file
-   */
-  startProcessing(file) {
-    if (!this.isReady()) {
-      throw new ServiceError(this.serviceName, "Store not ready");
-    }
-    this.update((state) => __spreadProps(__spreadValues({}, state), {
-      isProcessing: true,
-      currentFile: file,
-      progress: 0,
-      state: "running" /* RUNNING */,
-      startTime: Date.now(),
-      filesQueued: state.queue.length,
-      filesRemaining: state.queue.length
-    }));
-  }
-  /**
-   * Complete file processing
-   */
-  completeFile(file) {
-    if (!this.isReady()) {
-      throw new ServiceError(this.serviceName, "Store not ready");
-    }
-    this.store.update((state) => {
-      const filesProcessed = state.filesProcessed + 1;
-      const filesRemaining = state.filesQueued - filesProcessed;
-      const elapsedTime = Date.now() - (state.startTime || Date.now());
-      const averageTimePerFile = elapsedTime / filesProcessed;
-      const estimatedTimeRemaining = averageTimePerFile * filesRemaining;
-      return __spreadProps(__spreadValues({}, state), {
-        isProcessing: filesRemaining > 0,
-        currentFile: null,
-        progress: filesProcessed / state.filesQueued * 100,
-        state: filesRemaining > 0 ? "running" /* RUNNING */ : "idle" /* IDLE */,
-        filesProcessed,
-        filesRemaining,
-        estimatedTimeRemaining
-      });
-    });
-  }
-  /**
-   * Set error state
-   */
-  setError(error) {
-    if (!this.isReady()) {
-      throw new ServiceError(this.serviceName, "Store not ready");
-    }
-    this.store.update((state) => {
-      const newError = error ? {
-        filePath: state.currentFile || "unknown",
-        error,
-        timestamp: Date.now(),
-        retryCount: 0
-      } : void 0;
-      return __spreadProps(__spreadValues({}, state), {
-        state: error ? "error" /* ERROR */ : state.state,
-        errors: newError ? [...state.errors, newError] : state.errors
-      });
-    });
-  }
-  /**
-   * Clear error state
-   */
-  clearError() {
-    if (!this.isReady()) {
-      throw new ServiceError(this.serviceName, "Store not ready");
-    }
-    this.store.update((state) => __spreadProps(__spreadValues({}, state), {
-      state: state.isProcessing ? "running" /* RUNNING */ : "idle" /* IDLE */,
-      errors: []
-    }));
-  }
-  /**
-   * Update progress
-   */
-  updateProgress(progress) {
-    if (!this.isReady()) {
-      throw new ServiceError(this.serviceName, "Store not ready");
-    }
-    this.store.update((state) => __spreadProps(__spreadValues({}, state), {
-      progress: Math.min(Math.max(progress, 0), 100)
-    }));
-  }
-  /**
-   * Update queue
-   */
-  updateQueue(files) {
-    if (!this.isReady()) {
-      throw new ServiceError(this.serviceName, "Store not ready");
-    }
-    this.store.update((state) => __spreadProps(__spreadValues({}, state), {
-      queue: files,
-      filesQueued: files.length,
-      filesRemaining: files.length
-    }));
-  }
-  /**
-   * Get current state snapshot
-   */
   getSnapshot() {
-    let currentState;
-    this.store.subscribe((state) => {
-      currentState = state;
-    })();
-    return currentState;
+    return get_store_value(this.store);
+  }
+  startProcessing(file) {
+    try {
+      this.update((state) => __spreadProps(__spreadValues({}, state), {
+        isProcessing: true,
+        currentFile: file,
+        progress: 0,
+        state: "running" /* RUNNING */,
+        startTime: Date.now(),
+        filesQueued: state.queue.length,
+        filesRemaining: state.queue.length
+      }));
+    } catch (error) {
+      this.handleError("Failed to start processing", error);
+    }
+  }
+  completeFile(file) {
+    try {
+      this.update((state) => {
+        const filesProcessed = state.filesProcessed + 1;
+        const filesRemaining = state.filesQueued - filesProcessed;
+        const elapsedTime = Date.now() - (state.startTime || Date.now());
+        const averageTimePerFile = elapsedTime / filesProcessed;
+        const estimatedTimeRemaining = averageTimePerFile * filesRemaining;
+        return __spreadProps(__spreadValues({}, state), {
+          isProcessing: filesRemaining > 0,
+          currentFile: null,
+          progress: filesProcessed / state.filesQueued * 100,
+          state: filesRemaining > 0 ? "running" /* RUNNING */ : "idle" /* IDLE */,
+          filesProcessed,
+          filesRemaining,
+          estimatedTimeRemaining
+        });
+      });
+    } catch (error) {
+      this.handleError("Failed to complete file processing", error);
+    }
+  }
+  setError(error) {
+    try {
+      this.update((state) => {
+        const newError = error ? {
+          filePath: state.currentFile || "unknown",
+          error,
+          timestamp: Date.now(),
+          retryCount: 0
+        } : void 0;
+        return __spreadProps(__spreadValues({}, state), {
+          state: error ? "error" /* ERROR */ : state.state,
+          errors: newError ? [...state.errors, newError] : state.errors
+        });
+      });
+    } catch (err) {
+      this.handleError("Failed to set error state", err);
+    }
+  }
+  clearError() {
+    try {
+      this.update((state) => __spreadProps(__spreadValues({}, state), {
+        state: state.isProcessing ? "running" /* RUNNING */ : "idle" /* IDLE */,
+        errors: []
+      }));
+    } catch (error) {
+      this.handleError("Failed to clear error state", error);
+    }
+  }
+  updateProgress(progress) {
+    try {
+      this.update((state) => __spreadProps(__spreadValues({}, state), {
+        progress: Math.min(Math.max(progress, 0), 100)
+      }));
+    } catch (error) {
+      this.handleError("Failed to update progress", error);
+    }
+  }
+  updateQueue(files) {
+    try {
+      this.update((state) => __spreadProps(__spreadValues({}, state), {
+        queue: files,
+        filesQueued: files.length,
+        filesRemaining: files.length
+      }));
+    } catch (error) {
+      this.handleError("Failed to update queue", error);
+    }
+  }
+  isReady() {
+    const state = this.getSnapshot();
+    return state.state !== "error" /* ERROR */;
+  }
+  destroy() {
+    return __async(this, null, function* () {
+      this.reset();
+    });
+  }
+  getState() {
+    const snapshot = this.getSnapshot();
+    return {
+      state: snapshot.state === "error" /* ERROR */ ? "error" /* Error */ : "initializing" /* Initializing */,
+      error: snapshot.error ? new ServiceError(
+        this.serviceId,
+        snapshot.error,
+        { state: snapshot }
+      ) : null
+    };
+  }
+  handleError(message, error) {
+    utils.reportError(message, "error", { error });
   }
 };
 var ProcessingStore = _ProcessingStore;
+ProcessingStore.STORAGE_KEY = "graphweaver-processing-state";
 ProcessingStore.instance = null;
 var processingStore = ProcessingStore.getInstance();
 var processingStatus = derived(processingStore, ($store) => ({
@@ -11993,20 +9540,35 @@ var processingProgress = derived(processingStore, ($store) => ({
 }));
 
 // src/stores/UIStore.ts
-var _UIStore = class extends CoreService {
+var INITIAL_STATE = {
+  darkMode: false,
+  activeAccordion: null,
+  notifications: [],
+  modalStack: [],
+  lastInteraction: Date.now(),
+  isInitialized: false,
+  lastUpdated: Date.now()
+};
+var _UIStore = class {
   constructor() {
-    super("ui-store", "UI Store Service");
-    this.store = createEnhancedStore({
-      darkMode: false,
-      activeAccordion: null,
-      notifications: [],
-      modalStack: [],
-      lastInteraction: Date.now()
-    });
+    this.serviceId = "ui-store";
+    this.serviceName = "UI Store";
+    this.state = "uninitialized" /* Uninitialized */;
+    this.error = null;
+    this.modalTransitionTimeout = null;
+    this.store = createPersistedStore(
+      _UIStore.STORAGE_KEY,
+      INITIAL_STATE,
+      this.validateState
+    );
     this.subscribe = this.store.subscribe;
     this.set = this.store.set;
     this.update = this.store.update;
+    this.setupNotificationHandling();
   }
+  /**
+   * Get singleton instance of UIStore
+   */
   static getInstance() {
     if (!_UIStore.instance) {
       _UIStore.instance = new _UIStore();
@@ -12014,191 +9576,247 @@ var _UIStore = class extends CoreService {
     return _UIStore.instance;
   }
   /**
-   * Initialize the service and load persisted state
+   * Initialize the UI store and reset any stale state
    */
-  initializeInternal() {
+  initialize() {
     return __async(this, null, function* () {
       try {
-        const savedState = localStorage.getItem(_UIStore.STORAGE_KEY);
-        if (savedState) {
-          try {
-            const parsedState = JSON.parse(savedState);
-            if (this.validateState(parsedState)) {
-              this.store.set(__spreadProps(__spreadValues(__spreadValues({}, this.getSnapshot()), parsedState), {
-                notifications: [],
-                // Reset notifications on initialization
-                lastInteraction: Date.now()
-              }));
-            }
-          } catch (error) {
-            console.warn("\u{1F987} Failed to parse saved UI state:", error);
-            localStorage.removeItem(_UIStore.STORAGE_KEY);
-          }
-        }
+        console.log("\u{1F987} Initializing UI Store");
+        this.state = "initializing" /* Initializing */;
+        this.update((state) => __spreadProps(__spreadValues({}, state), {
+          modalStack: [],
+          notifications: [],
+          activeAccordion: null,
+          isInitialized: true,
+          lastUpdated: Date.now()
+        }));
+        this.state = "ready" /* Ready */;
+        console.log("\u{1F987} UI Store initialized");
       } catch (error) {
-        throw new ServiceError(
+        this.state = "error" /* Error */;
+        this.error = new ServiceError(
           this.serviceName,
           "Failed to initialize UI Store",
-          error instanceof Error ? error : void 0
+          error
         );
+        utils.reportError("Failed to initialize UI Store", "error", { error });
+        throw this.error;
       }
+    });
+  }
+  // Modal Management
+  // ---------------
+  /**
+   * Push a new modal onto the stack
+   */
+  pushModal(modalId) {
+    console.log("\u{1F987} Pushing modal:", modalId);
+    if (this.modalTransitionTimeout) {
+      clearTimeout(this.modalTransitionTimeout);
+      this.modalTransitionTimeout = null;
+    }
+    this.update((state) => {
+      if (state.modalStack.includes(modalId)) {
+        return state;
+      }
+      return __spreadProps(__spreadValues({}, state), {
+        modalStack: [...state.modalStack, modalId],
+        lastInteraction: Date.now()
+      });
     });
   }
   /**
-   * Clean up service resources
+   * Remove the top modal from the stack
    */
-  destroyInternal() {
-    return __async(this, null, function* () {
-      try {
-        yield this.persistState();
-        this.store.set({
-          darkMode: false,
-          activeAccordion: null,
-          notifications: [],
-          modalStack: [],
-          lastInteraction: Date.now()
-        });
-      } catch (error) {
-        throw new ServiceError(
-          this.serviceName,
-          "Failed to destroy UI Store",
-          error instanceof Error ? error : void 0
-        );
+  popModal() {
+    console.log("\u{1F987} Popping modal");
+    this.modalTransitionTimeout = setTimeout(() => {
+      this.update((state) => __spreadProps(__spreadValues({}, state), {
+        modalStack: state.modalStack.slice(0, -1),
+        lastInteraction: Date.now()
+      }));
+      this.modalTransitionTimeout = null;
+    }, _UIStore.MODAL_TRANSITION_MS);
+  }
+  /**
+   * Clear all modals from the stack
+   */
+  clearModals() {
+    console.log("\u{1F987} Clearing all modals");
+    if (this.modalTransitionTimeout) {
+      clearTimeout(this.modalTransitionTimeout);
+      this.modalTransitionTimeout = null;
+    }
+    this.update((state) => __spreadProps(__spreadValues({}, state), {
+      modalStack: [],
+      lastInteraction: Date.now()
+    }));
+  }
+  /**
+   * Check if a specific modal is open
+   */
+  isModalOpen(modalId) {
+    return this.getSnapshot().modalStack.includes(modalId);
+  }
+  /**
+   * Get the ID of the currently visible modal
+   */
+  getTopModal() {
+    const { modalStack } = this.getSnapshot();
+    return modalStack.length > 0 ? modalStack[modalStack.length - 1] : null;
+  }
+  // Accordion Management
+  // -------------------
+  /**
+   * Set the currently active accordion section
+   */
+  setActiveAccordion(accordionId) {
+    this.update((state) => __spreadProps(__spreadValues({}, state), {
+      activeAccordion: accordionId,
+      lastInteraction: Date.now()
+    }));
+  }
+  // Notification Management
+  // ----------------------
+  /**
+   * Add a new notification
+   */
+  addNotification(notification) {
+    this.update((state) => {
+      const notifications2 = [...state.notifications];
+      if (notifications2.length >= _UIStore.MAX_NOTIFICATIONS) {
+        notifications2.shift();
       }
+      return __spreadProps(__spreadValues({}, state), {
+        notifications: [...notifications2, __spreadProps(__spreadValues({}, notification), {
+          timestamp: Date.now()
+        })],
+        lastInteraction: Date.now()
+      });
     });
   }
+  /**
+   * Remove a notification by ID
+   */
+  removeNotification(id) {
+    this.update((state) => __spreadProps(__spreadValues({}, state), {
+      notifications: state.notifications.filter((n) => n.id !== id),
+      lastInteraction: Date.now()
+    }));
+  }
+  /**
+   * Clear all notifications
+   */
+  clearNotifications() {
+    this.update((state) => __spreadProps(__spreadValues({}, state), {
+      notifications: [],
+      lastInteraction: Date.now()
+    }));
+  }
+  // Theme Management
+  // ---------------
   /**
    * Set dark mode state
    */
   setDarkMode(isDark) {
-    this.ensureReady();
-    this.store.update((state) => __spreadProps(__spreadValues({}, state), {
-      darkMode: isDark
-    }));
-    void this.persistState();
-  }
-  /**
-   * Set active accordion
-   */
-  setActiveAccordion(accordionId) {
-    this.ensureReady();
-    this.store.update((state) => __spreadProps(__spreadValues({}, state), {
-      activeAccordion: accordionId
-    }));
-    void this.persistState();
-  }
-  /**
-   * Add notification
-   */
-  addNotification(notification) {
-    this.ensureReady();
-    this.store.update((state) => __spreadProps(__spreadValues({}, state), {
-      notifications: [...state.notifications, __spreadProps(__spreadValues({}, notification), {
-        timestamp: Date.now()
-      })]
+    this.update((state) => __spreadProps(__spreadValues({}, state), {
+      darkMode: isDark,
+      lastUpdated: Date.now()
     }));
   }
-  /**
-   * Remove notification
-   */
-  removeNotification(id) {
-    this.ensureReady();
-    this.store.update((state) => __spreadProps(__spreadValues({}, state), {
-      notifications: state.notifications.filter((n2) => n2.id !== id)
-    }));
-  }
-  /**
-   * Push modal to stack
-   */
-  pushModal(modalId) {
-    this.ensureReady();
-    this.store.update((state) => __spreadProps(__spreadValues({}, state), {
-      modalStack: [...state.modalStack, modalId],
-      lastInteraction: Date.now()
-    }));
-    void this.persistState();
-  }
-  /**
-   * Pop modal from stack
-   */
-  popModal() {
-    this.ensureReady();
-    this.store.update((state) => __spreadProps(__spreadValues({}, state), {
-      modalStack: state.modalStack.slice(0, -1),
-      lastInteraction: Date.now()
-    }));
-    void this.persistState();
-  }
-  /**
-   * Get current state snapshot
-   */
-  getSnapshot() {
-    let currentState;
-    this.store.subscribe((state) => {
-      currentState = state;
-    })();
-    return currentState;
-  }
-  /**
-   * Persist state to localStorage
-   */
-  persistState() {
-    return __async(this, null, function* () {
-      if (!this.isReady())
-        return;
-      try {
-        const state = this.getSnapshot();
-        const persistedState = {
-          darkMode: state.darkMode,
-          activeAccordion: state.activeAccordion,
-          modalStack: state.modalStack,
-          lastInteraction: Date.now()
-        };
-        localStorage.setItem(_UIStore.STORAGE_KEY, JSON.stringify(persistedState));
-      } catch (error) {
-        console.warn("\u{1F987} Failed to persist UI state:", error);
-      }
-    });
-  }
-  /**
-   * Validate state structure
-   */
-  validateState(state) {
-    if (typeof state !== "object" || state === null)
-      return false;
-    const validState = state;
-    return (validState.darkMode === void 0 || typeof validState.darkMode === "boolean") && (validState.activeAccordion === void 0 || typeof validState.activeAccordion === "string" || validState.activeAccordion === null) && (validState.modalStack === void 0 || Array.isArray(validState.modalStack));
-  }
-  /**
-   * Ensure store is ready for operations
-   */
-  ensureReady() {
-    if (!this.isReady()) {
-      throw new ServiceError(this.serviceName, "Store not ready");
-    }
-  }
+  // Store Management
+  // ---------------
   /**
    * Reset store to initial state
    */
   reset() {
-    this.ensureReady();
-    this.store.set({
-      darkMode: false,
-      activeAccordion: null,
-      notifications: [],
-      modalStack: [],
-      lastInteraction: Date.now()
-    });
+    if (this.modalTransitionTimeout) {
+      clearTimeout(this.modalTransitionTimeout);
+      this.modalTransitionTimeout = null;
+    }
+    this.set(INITIAL_STATE);
     try {
       localStorage.removeItem(_UIStore.STORAGE_KEY);
     } catch (error) {
-      console.warn("\u{1F987} Failed to clear persisted UI state:", error);
+      utils.reportError("Failed to clear UI state", "error", { error });
     }
-    console.log("\u{1F987} UI Store reset to initial state");
+  }
+  /**
+   * Get current store state
+   */
+  getSnapshot() {
+    return this.store.getSnapshot();
+  }
+  // Service Implementation
+  // ---------------------
+  isReady() {
+    return this.state === "ready" /* Ready */;
+  }
+  destroy() {
+    return __async(this, null, function* () {
+      this.state = "destroying" /* Destroying */;
+      if (this.modalTransitionTimeout) {
+        clearTimeout(this.modalTransitionTimeout);
+        this.modalTransitionTimeout = null;
+      }
+      yield this.reset();
+      this.state = "destroyed" /* Destroyed */;
+    });
+  }
+  getState() {
+    return { state: this.state, error: this.error };
+  }
+  // Private Methods
+  // --------------
+  /**
+   * Setup auto-dismiss for notifications
+   */
+  setupNotificationHandling() {
+    this.subscribe((state) => {
+      state.notifications.forEach((notification) => {
+        if (notification.duration !== void 0) {
+          setTimeout(() => {
+            this.removeNotification(notification.id);
+          }, notification.duration || _UIStore.AUTO_DISMISS_DELAY);
+        }
+      });
+    });
+  }
+  /**
+   * Validate store state
+   */
+  validateState(state) {
+    var _a, _b, _c, _d, _e, _f;
+    const validation = {
+      isValid: false,
+      errors: []
+    };
+    if (!state || typeof state !== "object") {
+      (_a = validation.errors) == null ? void 0 : _a.push("State must be an object");
+      return false;
+    }
+    const validState = state;
+    if (validState.modalStack !== void 0 && !Array.isArray(validState.modalStack)) {
+      (_b = validation.errors) == null ? void 0 : _b.push("modalStack must be an array");
+    }
+    if (validState.notifications !== void 0 && !Array.isArray(validState.notifications)) {
+      (_c = validation.errors) == null ? void 0 : _c.push("notifications must be an array");
+    }
+    if (validState.darkMode !== void 0 && typeof validState.darkMode !== "boolean") {
+      (_d = validation.errors) == null ? void 0 : _d.push("darkMode must be a boolean");
+    }
+    if (validState.activeAccordion !== void 0 && validState.activeAccordion !== null && typeof validState.activeAccordion !== "string") {
+      (_e = validation.errors) == null ? void 0 : _e.push("activeAccordion must be a string or null");
+    }
+    validation.isValid = ((_f = validation.errors) == null ? void 0 : _f.length) === 0;
+    return validation.isValid;
   }
 };
 var UIStore = _UIStore;
 UIStore.STORAGE_KEY = "graphweaver-ui-state";
+UIStore.MAX_NOTIFICATIONS = 5;
+UIStore.AUTO_DISMISS_DELAY = 5e3;
+UIStore.MODAL_TRANSITION_MS = 300;
 UIStore.instance = null;
 var uiStore = UIStore.getInstance();
 var isDarkMode = derived(uiStore, ($store) => $store.darkMode);
@@ -12208,44 +9826,121 @@ var activeModal = derived(
 );
 var activeAccordion = derived(uiStore, ($store) => $store.activeAccordion);
 var notifications = derived(uiStore, ($store) => $store.notifications);
-
-// src/stores/ErrorStore.ts
-var ErrorStoreService = class extends BaseStore {
-  constructor() {
-    super("errorStore", "Error Store Service", {
-      active: false,
-      message: "",
-      timestamp: Date.now(),
-      source: void 0
-    });
-  }
-  reportError({ message, source }) {
-    this.set({
-      active: true,
-      message,
-      source,
-      timestamp: Date.now()
-    });
-  }
-  clearError() {
-    this.set({
-      active: false,
-      message: "",
-      timestamp: Date.now(),
-      source: void 0
-    });
-  }
-  hasError() {
-    return this.getSnapshot().active;
-  }
-};
-var errorStore = new ErrorStoreService();
-var errorStatus = derived(errorStore, ($store) => ({
-  hasError: $store.active,
-  message: $store.message,
-  timestamp: $store.timestamp,
-  source: $store.source
+var hasActiveModal = derived(uiStore, ($store) => $store.modalStack.length > 0);
+var hasNotifications = derived(uiStore, ($store) => $store.notifications.length > 0);
+var uiStatus = derived(uiStore, ($store) => ({
+  isInitialized: $store.isInitialized,
+  hasModal: $store.modalStack.length > 0,
+  hasNotifications: $store.notifications.length > 0,
+  darkMode: $store.darkMode,
+  activeAccordion: $store.activeAccordion
 }));
+
+// src/registrations/StoreRegistrations.ts
+function hasInitialize(store) {
+  return typeof (store == null ? void 0 : store.initialize) === "function";
+}
+function hasIsReady(store) {
+  return typeof (store == null ? void 0 : store.isReady) === "function";
+}
+function checkDependencies(store, dependencies) {
+  return dependencies.every((depId) => {
+    const depStore = getStore(depId);
+    return !hasIsReady(depStore) || depStore.isReady();
+  });
+}
+function getInitData(id, data) {
+  var _a;
+  if (!data)
+    return {};
+  if (id === "plugin")
+    return {};
+  return (_a = data[id]) != null ? _a : {};
+}
+function initializePluginStore(plugin) {
+  return __async(this, null, function* () {
+    console.log("\u{1F987} [StoreRegistrations] Initializing plugin store...");
+    yield pluginStore.initialize();
+    pluginStore.update((state) => __spreadProps(__spreadValues({}, state), { plugin }));
+  });
+}
+function initSettingsStore(plugin, data) {
+  return __async(this, null, function* () {
+    console.log("\u{1F987} [StoreRegistrations] Initializing settings store...");
+    initializeSettingsStore(plugin);
+    yield settingsStore.initialize();
+    const settingsData = getInitData("settings", data);
+    if (Object.keys(settingsData).length > 0) {
+      yield settingsStore.save(__spreadValues(__spreadValues({}, settingsStore.getSnapshot()), settingsData));
+    }
+  });
+}
+function initializeStore(sequence, data) {
+  return __async(this, null, function* () {
+    const { store, id, dependencies } = sequence;
+    if (!hasInitialize(store)) {
+      throw new Error(`Store ${id} missing initialize method`);
+    }
+    if (!checkDependencies(store, dependencies)) {
+      throw new Error(`Dependencies not ready for ${id} store`);
+    }
+    console.log(`\u{1F987} [StoreRegistrations] Initializing ${id} store...`);
+    yield store.initialize(getInitData(id, data));
+    console.log(`\u{1F987} [StoreRegistrations] Initialized ${id} store`);
+  });
+}
+function initializeStores(config) {
+  return __async(this, null, function* () {
+    try {
+      console.log("\u{1F987} [StoreRegistrations] Starting store initialization...");
+      utils.initialize(config.plugin);
+      yield initializePluginStore(config.plugin);
+      try {
+        yield initSettingsStore(config.plugin, config.data);
+      } catch (error) {
+        console.error("\u{1F987} [StoreRegistrations] Settings store initialization failed:", error);
+        throw new ServiceError(
+          "StoreRegistrations",
+          "Failed to initialize settings store",
+          error instanceof Error ? error : void 0
+        );
+      }
+      const initSequence = [
+        { store: aiStore, id: "ai", dependencies: ["settings"] },
+        { store: processingStore, id: "processing", dependencies: ["plugin"] },
+        { store: uiStore, id: "ui", dependencies: [] }
+      ];
+      for (const sequence of initSequence) {
+        try {
+          yield initializeStore(sequence, config.data);
+        } catch (error) {
+          throw new ServiceError(
+            "StoreRegistrations",
+            `Failed to initialize ${sequence.id} store`,
+            error instanceof Error ? error : void 0
+          );
+        }
+      }
+    } catch (error) {
+      console.error("\u{1F987} [StoreRegistrations] Store initialization failed:", error);
+      throw error instanceof ServiceError ? error : new ServiceError("StoreRegistrations", "Store initialization failed", error);
+    }
+  });
+}
+function getStore(id) {
+  const stores = {
+    plugin: pluginStore,
+    settings: settingsStore,
+    processing: processingStore,
+    ui: uiStore,
+    ai: aiStore
+  };
+  const store = stores[id];
+  if (!store) {
+    throw new ServiceError("StoreRegistrations", `Unknown store: ${id}`);
+  }
+  return store;
+}
 
 // src/registrations/ServiceRegistrations.ts
 var ServiceRegistry = class {
@@ -12345,25 +10040,65 @@ var ServiceRegistry = class {
     });
   }
   registerService(_0, _1) {
-    return __async(this, arguments, function* (id, instance20, dependencies = []) {
+    return __async(this, arguments, function* (id, instance15, dependencies = []) {
       console.log(`\u{1F987} [ServiceRegistry] Registering service: ${id}`);
-      if (this.services.has(id)) {
-        throw new ServiceError(
+      try {
+        if (!this.isInitialized) {
+          throw new ServiceError(
+            "ServiceRegistry",
+            "Registry not initialized. Call initializeRegistry() first."
+          );
+        }
+        if (!instance15) {
+          throw new ServiceError(
+            "ServiceRegistry",
+            `Invalid service instance for ${id}`
+          );
+        }
+        if (this.hasCircularDependency(id, dependencies)) {
+          throw new ServiceError(
+            "ServiceRegistry",
+            `Circular dependency detected for service ${id}`
+          );
+        }
+        if (!this.validateServiceInterface(instance15)) {
+          throw new ServiceError(
+            "ServiceRegistry",
+            `Service ${id} missing required interface methods`
+          );
+        }
+        this.services.set(id, {
+          instance: instance15,
+          dependencies,
+          error: void 0
+        });
+        console.log(`\u{1F987} [ServiceRegistry] Successfully registered service: ${id}`);
+      } catch (error) {
+        const serviceError = ServiceError.from(
           "ServiceRegistry",
-          `Service ${id} already registered`,
-          "SERVICE_ALREADY_REGISTERED"
+          error,
+          { context: `Failed to register service: ${id}` }
         );
+        console.error("\u{1F987} [ServiceRegistry] Registration error:", serviceError);
+        throw serviceError;
       }
-      this.services.set(id, {
-        instance: instance20,
-        dependencies,
-        error: void 0
-      });
-      if (dependencies.length === 0) {
-        this.initializedServices.add(id);
-      }
-      console.log(`\u{1F987} [ServiceRegistry] Available services: ${Array.from(this.services.keys()).join(", ")}`);
     });
+  }
+  validateServiceInterface(service) {
+    return typeof service.initialize === "function" && typeof service.destroy === "function" && typeof service.serviceName === "string";
+  }
+  hasCircularDependency(serviceId, dependencies, visited = /* @__PURE__ */ new Set()) {
+    if (visited.has(serviceId))
+      return true;
+    visited.add(serviceId);
+    for (const depId of dependencies) {
+      const service = this.services.get(depId);
+      if (service && this.hasCircularDependency(depId, service.dependencies, visited)) {
+        return true;
+      }
+    }
+    visited.delete(serviceId);
+    return false;
   }
   initializeAll() {
     return __async(this, null, function* () {
@@ -12399,192 +10134,34 @@ var ServiceRegistry = class {
   }
 };
 
-// src/registrations/StoreRegistrations.ts
-function hasStoreInterface(store) {
-  return typeof store.initialize === "function" && typeof store.destroy === "function" && typeof store.update === "function";
-}
-function checkDependencies(store, dependencies) {
-  return dependencies.every((depId) => {
-    const depStore = getStore(depId);
-    return !("isReady" in depStore) || depStore.isReady();
-  });
-}
-function initializeStores(config) {
-  return __async(this, null, function* () {
-    var _a, _b;
-    try {
-      console.log("\u{1F987} [StoreRegistrations] Initializing plugin store...");
-      yield pluginStore.initialize();
-      pluginStore.update((state) => __spreadProps(__spreadValues({}, state), {
-        plugin: config.plugin
-      }));
-      console.log("\u{1F987} [StoreRegistrations] Initializing settings store...");
-      const settingsService = ServiceRegistry.getInstance().getService("settingsService");
-      if (!settingsService) {
-        throw new ServiceError(
-          "StoreRegistrations",
-          "SettingsService not found in ServiceRegistry"
-        );
-      }
-      initializeSettingsStore(settingsService);
-      settingsStore.initialize((_b = (_a = config.data) == null ? void 0 : _a.settings) != null ? _b : {});
-      initializeDerivedStores();
-      console.log("\u{1F987} [StoreRegistrations] Settings store initialized");
-      const initSequence = [
-        {
-          store: processingStore,
-          id: "processing",
-          dependencies: ["plugin"]
-        },
-        {
-          store: uiStore,
-          id: "ui",
-          dependencies: []
-        },
-        {
-          store: errorStore,
-          id: "error",
-          dependencies: []
-        }
-        // Add other stores as needed
-      ];
-      for (const { store, id, dependencies } of initSequence) {
-        try {
-          if (!hasStoreInterface(store)) {
-            throw new Error(`Store ${id} does not implement required interface`);
-          }
-          if (!checkDependencies(store, dependencies)) {
-            throw new Error(
-              `Cannot initialize ${id} store. Dependencies not ready.`
-            );
-          }
-          console.log(`\u{1F987} [StoreRegistrations] Initializing ${id} store...`);
-          yield store.initialize();
-          console.log(`\u{1F987} [StoreRegistrations] Initialized ${id} store`);
-        } catch (error) {
-          console.error(`\u{1F987} [StoreRegistrations] Failed to initialize ${id} store:`, error);
-          throw new ServiceError(
-            "StoreRegistrations",
-            `Failed to initialize ${id} store`,
-            error instanceof Error ? error : void 0
-          );
-        }
-      }
-      console.log("\u{1F987} [StoreRegistrations] All stores initialized successfully");
-    } catch (error) {
-      console.error("\u{1F987} [StoreRegistrations] Failed to initialize stores:", error);
-      throw error;
-    }
-  });
-}
-function getStore(id) {
-  const stores = {
-    plugin: pluginStore,
-    settings: settingsStore,
-    processing: processingStore,
-    ui: uiStore,
-    error: errorStore
-  };
-  const store = stores[id];
-  if (!store) {
-    throw new ServiceError("StoreRegistrations", `Unknown store: ${id}`);
+// src/types/events.types.ts
+var import_events2 = require("events");
+var TypedEventEmitter = class {
+  constructor() {
+    this.emitter = new import_events2.EventEmitter();
   }
-  return store;
-}
-
-// src/services/core/TypedEventEmitter.ts
-var import_events = require("events");
-var TypedEventEmitter = class extends import_events.EventEmitter {
-  /**
-   * Register an event handler with type checking
-   * @param event The event name
-   * @param listener The event handler function
-   */
   on(event, listener) {
-    return super.on(event, listener);
+    this.emitter.on(event, listener);
+    return this;
   }
-  /**
-   * Remove an event handler with type checking
-   * @param event The event name
-   * @param listener The event handler function to remove
-   */
   off(event, listener) {
-    return super.off(event, listener);
-  }
-  /**
-   * Emit an event with type-safe arguments
-   * @param event The event name
-   * @param args The arguments to pass to handlers
-   */
-  emit(event, ...args) {
-    return super.emit(event, ...args);
-  }
-};
-
-// src/managers/SettingsStateManager.ts
-var SettingsStateManager = class {
-  constructor(plugin) {
-    this.plugin = plugin;
-    this.settings = __spreadValues({}, DEFAULT_SETTINGS);
-    this.eventEmitter = new TypedEventEmitter();
-  }
-  initialize() {
-    return __async(this, null, function* () {
-      const loadedData = yield this.plugin.loadData();
-      if (loadedData) {
-        this.settings = __spreadValues(__spreadValues({}, DEFAULT_SETTINGS), loadedData);
-        this.emit("settingsChanged", this.settings);
-      } else {
-        this.settings = __spreadValues({}, DEFAULT_SETTINGS);
-      }
-    });
-  }
-  getSettings() {
-    return __spreadValues({}, this.settings);
-  }
-  getSettingSection(section) {
-    return __spreadValues({}, this.settings[section]);
-  }
-  getNestedSetting(section, key) {
-    return this.settings[section][key];
-  }
-  updateNestedSetting(section, key, value) {
-    return __async(this, null, function* () {
-      this.settings[section] = __spreadProps(__spreadValues({}, this.settings[section]), {
-        [key]: value
-      });
-      yield this.saveSettings();
-      this.emit("settingsChanged", { [section]: this.settings[section] });
-    });
-  }
-  saveSettings() {
-    return __async(this, null, function* () {
-      try {
-        yield this.plugin.saveData(this.settings);
-      } catch (error) {
-        const serviceError = error instanceof Error ? error : new Error("Unknown error");
-        this.emit("persistenceError", serviceError);
-        throw serviceError;
-      }
-    });
-  }
-  on(event, listener) {
-    this.eventEmitter.on(event, listener);
+    this.emitter.off(event, listener);
+    return this;
   }
   emit(event, ...args) {
-    this.eventEmitter.emit(event, ...args);
+    return this.emitter.emit(event, ...args);
   }
-  resetToDefault() {
-    return __async(this, null, function* () {
-      this.settings = __spreadValues({}, DEFAULT_SETTINGS);
-      yield this.saveSettings();
-      this.emit("settingsReset");
-    });
+  once(event, listener) {
+    this.emitter.once(event, listener);
+    return this;
   }
-  destroy() {
-    return __async(this, null, function* () {
-      this.eventEmitter.removeAllListeners();
-    });
+  removeAllListeners(event) {
+    if (event) {
+      this.emitter.removeAllListeners(event);
+    } else {
+      this.emitter.removeAllListeners();
+    }
+    return this;
   }
 };
 
@@ -12592,38 +10169,96 @@ var SettingsStateManager = class {
 var SettingsService = class extends CoreService {
   constructor(plugin) {
     super("settings-service", "Settings Service");
-    this.stateManager = new SettingsStateManager(plugin);
+    this.plugin = plugin;
+    this.isInitialized = false;
+    this.eventEmitter = new TypedEventEmitter();
   }
+  /**
+   * Initialize settings service
+   */
   initializeInternal() {
     return __async(this, null, function* () {
       try {
-        yield this.stateManager.initialize();
+        if (this.isInitialized) {
+          return;
+        }
+        if (!this.plugin) {
+          throw new ServiceError(
+            this.serviceName,
+            "Plugin instance not provided"
+          );
+        }
+        try {
+          initializeSettingsStore(this.plugin);
+          yield settingsStore.initialize();
+        } catch (error) {
+          throw ServiceError.from(
+            this.serviceName,
+            error,
+            { context: "Settings store initialization failed" }
+          );
+        }
+        try {
+          settingsStore.subscribe((settings) => {
+            this.eventEmitter.emit("settingsChanged", settings);
+          });
+        } catch (error) {
+          throw ServiceError.from(
+            this.serviceName,
+            error,
+            { context: "Failed to subscribe to settings changes" }
+          );
+        }
+        this.isInitialized = true;
+        console.log("\u{1F987} [SettingsService] Initialized successfully");
       } catch (error) {
-        throw new ServiceError(
+        console.error("\u{1F987} [SettingsService] Initialization failed:", error);
+        throw ServiceError.from(
           this.serviceName,
-          "Failed to initialize settings",
-          error instanceof Error ? error : void 0
+          error,
+          { context: "Service initialization failed" }
         );
       }
     });
   }
+  /**
+   * Clean up service resources
+   */
   destroyInternal() {
     return __async(this, null, function* () {
-      yield this.stateManager.destroy();
+      try {
+        yield settingsStore.destroy();
+        this.eventEmitter.removeAllListeners();
+        this.isInitialized = false;
+      } catch (error) {
+        console.error("\u{1F987} [SettingsService] Cleanup failed:", error);
+      }
     });
   }
+  /**
+   * Get full settings object
+   */
   getSettings() {
-    return this.stateManager.getSettings();
+    return settingsStore.getSnapshot();
   }
+  /**
+   * Get specific settings section
+   */
   getSettingSection(section) {
-    return this.stateManager.getSettingSection(section);
+    return settingsStore.getSettingSection(section);
   }
+  /**
+   * Get nested setting value
+   */
   getNestedSetting(section, key) {
-    return this.stateManager.getNestedSetting(section, key);
+    return settingsStore.getNestedSetting(section, key);
   }
+  /**
+   * Update nested setting with proper typing
+   */
   updateNestedSetting(section, key, value) {
     return __async(this, null, function* () {
-      yield this.stateManager.updateNestedSetting(section, key, value);
+      yield settingsStore.updateNestedSetting(section, key, value);
     });
   }
   /**
@@ -12631,11 +10266,10 @@ var SettingsService = class extends CoreService {
    */
   updateKnowledgeBloomSettings(settings) {
     return __async(this, null, function* () {
-      const currentSettings = this.getSettings();
-      const updatedSettings = __spreadProps(__spreadValues({}, currentSettings), {
+      const currentSettings = settingsStore.getSnapshot();
+      yield settingsStore.save(__spreadProps(__spreadValues({}, currentSettings), {
         knowledgeBloom: __spreadValues(__spreadValues({}, currentSettings.knowledgeBloom), settings)
-      });
-      yield this.stateManager.saveSettings;
+      }));
     });
   }
   /**
@@ -12643,13 +10277,21 @@ var SettingsService = class extends CoreService {
    */
   updateSettings(settings) {
     return __async(this, null, function* () {
-      const currentSettings = this.getSettings();
-      const updatedSettings = __spreadValues(__spreadValues({}, currentSettings), settings);
-      yield this.stateManager.saveSettings;
+      const currentSettings = settingsStore.getSnapshot();
+      yield settingsStore.save(__spreadValues(__spreadValues({}, currentSettings), settings));
     });
   }
+  /**
+   * Register event listener
+   */
   on(event, listener) {
-    this.stateManager.on(event, listener);
+    this.eventEmitter.on(event, listener);
+  }
+  /**
+   * Remove event listener
+   */
+  off(event, listener) {
+    this.eventEmitter.off(event, listener);
   }
 };
 
@@ -12798,7 +10440,7 @@ var DatabaseService = _DatabaseService;
 DatabaseService.instance = null;
 
 // src/services/file/FileScannerService.ts
-var import_events2 = require("events");
+var import_events4 = require("events");
 var FileScannerService = class extends CoreService {
   constructor(vault, config = {}) {
     super("file-scanner", "File Scanner Service");
@@ -12806,6 +10448,7 @@ var FileScannerService = class extends CoreService {
     this.scanTimeout = null;
     this.lastProgressUpdate = 0;
     this.scanErrors = [];
+    this.state = "uninitialized" /* Uninitialized */;
     this.config = __spreadValues({
       batchSize: 100,
       progressInterval: 1e3,
@@ -12814,14 +10457,39 @@ var FileScannerService = class extends CoreService {
       // 30 seconds
       debug: false
     }, config);
-    this.eventEmitter = new import_events2.EventEmitter();
+    this.eventEmitter = new import_events4.EventEmitter();
   }
   /**
    * Initialize scanner service
    */
   initializeInternal() {
     return __async(this, null, function* () {
-      if (this.config.debug) {
+      try {
+        console.log("\u{1F987} FileScannerService: Starting initialization...");
+        this.state = "initializing" /* Initializing */;
+        if (!this.vault) {
+          throw new Error("Vault is required but not provided");
+        }
+        yield this.testVaultAccess();
+        console.log("\u{1F987} FileScannerService: Initialization complete");
+        this.state = "ready" /* Ready */;
+      } catch (error) {
+        this.state = "error" /* Error */;
+        console.error("\u{1F987} FileScannerService initialization failed:", error);
+        throw new ServiceError(
+          this.serviceName,
+          "Failed to initialize file scanner",
+          error instanceof Error ? error : void 0
+        );
+      }
+    });
+  }
+  testVaultAccess() {
+    return __async(this, null, function* () {
+      try {
+        yield this.vault.getMarkdownFiles();
+      } catch (error) {
+        throw new Error("Failed to access vault");
       }
     });
   }
@@ -13213,10 +10881,11 @@ var CORE_SERVICES = [
 ];
 function reportError(message, source, error) {
   console.error(`\u{1F987} [CoreRegistrations] ${message}:`, error);
-  errorStore.reportError({
-    message: error ? `${message}: ${error.message}` : message,
-    source
-  });
+  utils.reportError(
+    error ? `${message}: ${error.message}` : message,
+    "error",
+    { source }
+  );
 }
 function initializeCoreServices(plugin) {
   return __async(this, null, function* () {
@@ -13315,472 +10984,9 @@ function performCleanup(services) {
     }
   });
 }
-function destroyCoreServices(services) {
-  return __async(this, null, function* () {
-    if (!(services == null ? void 0 : services.length))
-      return;
-    yield performCleanup(services);
-  });
-}
-
-// src/services/ai/MetricsTracker.ts
-var MetricsTracker = class {
-  constructor() {
-    this.serviceId = "metrics-tracker";
-    this.serviceName = "Metrics Tracker";
-    this.state = "uninitialized" /* Uninitialized */;
-    this.error = null;
-    this.metrics = {};
-    this.operationHistory = [];
-    this.MAX_HISTORY_SIZE = 50;
-  }
-  initialize() {
-    return __async(this, null, function* () {
-      try {
-        this.state = "initializing" /* Initializing */;
-        this.initializeMetrics();
-        this.state = "ready" /* Ready */;
-      } catch (error) {
-        this.state = "error" /* Error */;
-        this.error = error instanceof ServiceError ? error : new ServiceError(this.serviceName, "Initialization failed");
-        throw this.error;
-      }
-    });
-  }
-  isReady() {
-    return this.state === "ready" /* Ready */;
-  }
-  destroy() {
-    return __async(this, null, function* () {
-      try {
-        this.state = "destroying" /* Destroying */;
-        this.clearHistory();
-        this.resetMetrics();
-        this.state = "destroyed" /* Destroyed */;
-      } catch (error) {
-        this.state = "error" /* Error */;
-        this.error = error instanceof ServiceError ? error : new ServiceError(this.serviceName, "Destroy failed");
-        throw this.error;
-      }
-    });
-  }
-  getState() {
-    return { state: this.state, error: this.error };
-  }
-  // Rest of existing MetricsTracker implementation...
-  initializeMetrics() {
-    Object.values(OperationType).forEach((type) => {
-      this.metrics[type] = {
-        totalOperations: 0,
-        successfulOperations: 0,
-        failedOperations: 0,
-        averageDuration: 0,
-        lastOperation: void 0
-      };
-    });
-  }
-  trackOperation(status) {
-    this.updateMetrics(status);
-    this.operationHistory.unshift(status);
-    if (this.operationHistory.length > this.MAX_HISTORY_SIZE) {
-      this.operationHistory.pop();
-    }
-  }
-  updateMetrics(status) {
-    const metrics = this.metrics[status.type];
-    const duration = (status.endTime || Date.now()) - status.startTime;
-    metrics.totalOperations++;
-    if (status.success) {
-      metrics.successfulOperations++;
-    } else {
-      metrics.failedOperations++;
-    }
-    metrics.averageDuration = (metrics.averageDuration * (metrics.totalOperations - 1) + duration) / metrics.totalOperations;
-    metrics.lastOperation = status;
-  }
-  getMetrics(type) {
-    return __spreadValues({}, this.metrics[type]);
-  }
-  getAllMetrics() {
-    return __spreadValues({}, this.metrics);
-  }
-  getHistory() {
-    return [...this.operationHistory];
-  }
-  clearHistory() {
-    this.operationHistory = [];
-  }
-  resetMetrics() {
-    this.initializeMetrics();
-  }
-};
-
-// src/services/ai/OperationEventEmitter.ts
-var OperationEventEmitter = class extends TypedEventEmitter {
-  constructor() {
-    super();
-    this.serviceId = "operation-emitter";
-    this.serviceName = "Operation Event Emitter";
-    this.state = "uninitialized" /* Uninitialized */;
-    this.error = null;
-  }
-  initialize() {
-    return __async(this, null, function* () {
-      this.state = "ready" /* Ready */;
-    });
-  }
-  isReady() {
-    return this.state === "ready" /* Ready */;
-  }
-  destroy() {
-    return __async(this, null, function* () {
-      this.removeAllListeners();
-      this.state = "destroyed" /* Destroyed */;
-    });
-  }
-  getState() {
-    return { state: this.state, error: this.error };
-  }
-  // Existing event emitter methods...
-  emitOperationStart(status) {
-    this.emit("operationStart", status);
-  }
-  emitOperationComplete(status) {
-    this.emit("operationComplete", status);
-  }
-  emitOperationError(error, status) {
-    this.emit("operationError", error, status);
-  }
-  emitOperationProgress(progress) {
-    this.emit("operationProgress", progress);
-  }
-  emitQueueUpdate(queueLength) {
-    this.emit("queueUpdate", queueLength);
-  }
-  emitStateChange(status) {
-    this.emit("stateChange", status);
-  }
-  emitMetricsUpdate(metrics) {
-    this.emit("metricsUpdate", metrics);
-  }
-};
-
-// src/types/aiModels.ts
-var OpenAIModels = [
-  {
-    name: "GPT 4o mini",
-    apiName: "gpt-4o-mini",
-    capabilities: {
-      maxTokens: 128e3,
-      supportsFunctions: true,
-      supportsStreaming: true
-    }
-  },
-  {
-    name: "GPT 4o",
-    apiName: "gpt-4o",
-    capabilities: {
-      maxTokens: 128e3,
-      supportsFunctions: true,
-      supportsStreaming: true,
-      supportsVision: true
-    }
-  },
-  {
-    name: "GPT o1 Preview",
-    apiName: "o1-preview",
-    capabilities: {
-      maxTokens: 128e3,
-      supportsFunctions: true,
-      supportsStreaming: true
-    }
-  },
-  {
-    name: "GPT o1 Mini",
-    apiName: "o1-mini",
-    capabilities: {
-      maxTokens: 128e3,
-      supportsFunctions: true,
-      supportsStreaming: true
-    }
-  }
-];
-var AnthropicModels = [
-  {
-    name: "Claude 3 Haiku",
-    apiName: "claude-3-haiku-20240307",
-    capabilities: {
-      maxTokens: 2e5,
-      supportsFunctions: true,
-      supportsStreaming: true
-    }
-  },
-  {
-    name: "Claude 3 Sonnet",
-    apiName: "claude-3-sonnet-20240229",
-    capabilities: {
-      maxTokens: 2e5,
-      supportsFunctions: true,
-      supportsStreaming: true,
-      supportsVision: true
-    }
-  },
-  {
-    name: "Claude 3 Opus",
-    apiName: "claude-3-opus-20240229",
-    capabilities: {
-      maxTokens: 2e5,
-      supportsFunctions: true,
-      supportsStreaming: true,
-      supportsVision: true
-    }
-  },
-  {
-    name: "Claude 3.5 Sonnet",
-    apiName: "claude-3-5-sonnet-20240620",
-    capabilities: {
-      maxTokens: 2e5,
-      supportsFunctions: true,
-      supportsStreaming: true,
-      supportsVision: true
-    }
-  }
-];
-var GoogleModels = [
-  {
-    name: "Gemini 1.5 Flash",
-    apiName: "gemini-1.5-flash",
-    capabilities: {
-      maxTokens: 32e3,
-      supportsStreaming: true
-    }
-  },
-  {
-    name: "Gemini 1.5 Flash 8B",
-    apiName: "gemini-1.5-flash-8b",
-    capabilities: {
-      maxTokens: 32e3,
-      supportsStreaming: true
-    }
-  },
-  {
-    name: "Gemini 1.5 Pro",
-    apiName: "gemini-1.5-pro",
-    capabilities: {
-      maxTokens: 32e3,
-      supportsStreaming: true,
-      supportsVision: true
-    }
-  }
-];
-var GroqModels = [
-  {
-    name: "Llama 3.1 70B",
-    apiName: "llama-3.1-70b-versatile",
-    capabilities: {
-      maxTokens: 32e3,
-      supportsStreaming: true
-    }
-  },
-  {
-    name: "Llama 3.1 8B",
-    apiName: "llama-3.1-8b-instant",
-    capabilities: {
-      maxTokens: 32e3,
-      supportsStreaming: true
-    }
-  },
-  {
-    name: "Llama 3.2 1B (Preview)",
-    apiName: "llama-3.2-1b-preview",
-    capabilities: {
-      maxTokens: 32e3,
-      supportsStreaming: true
-    }
-  },
-  {
-    name: "Llama 3.2 3B (Preview)",
-    apiName: "llama-3.2-3b-preview",
-    capabilities: {
-      maxTokens: 32e3,
-      supportsStreaming: true
-    }
-  }
-];
-var OpenRouterModels = [
-  {
-    name: "Anthropic Claude 3 Opus",
-    apiName: "anthropic/claude-3-opus",
-    capabilities: {
-      maxTokens: 2e5,
-      supportsFunctions: true,
-      supportsStreaming: true,
-      supportsVision: true
-    }
-  },
-  {
-    name: "Anthropic Claude 3.5 Sonnet",
-    apiName: "anthropic/claude-3.5-sonnet",
-    capabilities: {
-      maxTokens: 2e5,
-      supportsFunctions: true,
-      supportsStreaming: true,
-      supportsVision: true
-    }
-  },
-  {
-    name: "Google Gemini Flash 1.5",
-    apiName: "google/gemini-flash-1.5",
-    capabilities: {
-      maxTokens: 32e3,
-      supportsStreaming: true
-    }
-  },
-  {
-    name: "Google Gemini Flash 1.5 8B",
-    apiName: "google/gemini-flash-1.5-8b",
-    capabilities: {
-      maxTokens: 32e3,
-      supportsStreaming: true
-    }
-  },
-  {
-    name: "Google Gemini Pro 1.5",
-    apiName: "google/gemini-pro-1.5",
-    capabilities: {
-      maxTokens: 32e3,
-      supportsStreaming: true,
-      supportsVision: true
-    }
-  },
-  {
-    name: "Mistralai Mistral Large",
-    apiName: "mistralai/mistral-large",
-    capabilities: {
-      maxTokens: 32e3,
-      supportsStreaming: true
-    }
-  },
-  {
-    name: "Mistralai Mistral Nemo",
-    apiName: "mistralai/mistral-nemo",
-    capabilities: {
-      maxTokens: 32e3,
-      supportsStreaming: true
-    }
-  },
-  {
-    name: "OpenAI GPT 4o",
-    apiName: "openai/gpt-4o",
-    capabilities: {
-      maxTokens: 128e3,
-      supportsFunctions: true,
-      supportsStreaming: true,
-      supportsVision: true
-    }
-  },
-  {
-    name: "OpenAI GPT 4o Mini",
-    apiName: "openai/gpt-4o-mini",
-    capabilities: {
-      maxTokens: 128e3,
-      supportsFunctions: true,
-      supportsStreaming: true
-    }
-  },
-  {
-    name: "OpenAI o1 Mini",
-    apiName: "openai/o1-mini",
-    capabilities: {
-      maxTokens: 128e3,
-      supportsFunctions: true,
-      supportsStreaming: true
-    }
-  },
-  {
-    name: "OpenAI o1 Preview",
-    apiName: "openai/o1-preview",
-    capabilities: {
-      maxTokens: 128e3,
-      supportsFunctions: true,
-      supportsStreaming: true
-    }
-  }
-];
-var LMStudioModels = [
-  {
-    name: "Custom",
-    apiName: "custom",
-    capabilities: {
-      supportsStreaming: false
-    }
-  }
-];
-var AIModelMap = {
-  ["openai" /* OpenAI */]: OpenAIModels,
-  ["anthropic" /* Anthropic */]: AnthropicModels,
-  ["google" /* Google */]: GoogleModels,
-  ["groq" /* Groq */]: GroqModels,
-  ["openrouter" /* OpenRouter */]: OpenRouterModels,
-  ["lmstudio" /* LMStudio */]: LMStudioModels
-};
-var AIModelUtils = {
-  /**
-   * Get a model by its API name
-   * @param apiName The API name to look up
-   * @returns The matching model or undefined
-   */
-  getModelByApiName(apiName) {
-    for (const models of Object.values(AIModelMap)) {
-      const model = models.find((m) => m.apiName === apiName);
-      if (model)
-        return model;
-    }
-    return void 0;
-  },
-  /**
-   * Get all models for a specific provider
-   * @param provider The provider to get models for
-   * @returns Array of models for the provider
-   */
-  getModelsForProvider(provider) {
-    return AIModelMap[provider] || [];
-  },
-  /**
-   * Check if a model supports a specific capability
-   * @param model The model to check
-   * @param capability The capability to check for
-   * @returns Whether the model supports the capability
-   */
-  modelSupportsCapability(model, capability) {
-    var _a;
-    return !!((_a = model.capabilities) == null ? void 0 : _a[capability]);
-  },
-  /**
-   * Get all models that support a specific capability
-   * @param capability The capability to filter by
-   * @returns Array of models that support the capability
-   */
-  getModelsByCapability(capability) {
-    const supportedModels = [];
-    for (const models of Object.values(AIModelMap)) {
-      supportedModels.push(...models.filter((m) => this.modelSupportsCapability(m, capability)));
-    }
-    return supportedModels;
-  },
-  /**
-   * Get models by provider and capability
-   * @param provider The provider to filter by
-   * @param capability The capability to filter by
-   * @returns Array of matching models
-   */
-  getModelsByProviderAndCapability(provider, capability) {
-    return this.getModelsForProvider(provider).filter((m) => this.modelSupportsCapability(m, capability));
-  }
-};
 
 // src/adapters/OpenAIAdapter.ts
-var import_obsidian2 = require("obsidian");
+var import_obsidian3 = require("obsidian");
 var OpenAIAdapter = class {
   constructor(settingsService, jsonValidationService) {
     this.settingsService = settingsService;
@@ -13853,7 +11059,7 @@ var OpenAIAdapter = class {
   makeApiRequest(params) {
     return __async(this, null, function* () {
       var _a;
-      const response = yield (0, import_obsidian2.requestUrl)({
+      const response = yield (0, import_obsidian3.requestUrl)({
         url: "https://api.openai.com/v1/chat/completions",
         method: "POST",
         headers: {
@@ -13915,7 +11121,7 @@ var OpenAIAdapter = class {
   handleError(error) {
     console.error("Error in OpenAI API call:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    new import_obsidian2.Notice(`OpenAI API Error: ${errorMessage}`);
+    new import_obsidian3.Notice(`OpenAI API Error: ${errorMessage}`);
     return { success: false, error: errorMessage };
   }
   /**
@@ -13935,14 +11141,14 @@ var OpenAIAdapter = class {
           this.models[0].apiName
         );
         if (isValid) {
-          new import_obsidian2.Notice("OpenAI API key validated successfully");
+          new import_obsidian3.Notice("OpenAI API key validated successfully");
           return true;
         } else {
           throw new Error("Failed to validate API key");
         }
       } catch (error) {
         console.error("Error validating OpenAI API key:", error);
-        new import_obsidian2.Notice(`Failed to validate OpenAI API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
+        new import_obsidian3.Notice(`Failed to validate OpenAI API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
         return false;
       }
     });
@@ -14000,7 +11206,7 @@ var OpenAIAdapter = class {
 };
 
 // src/adapters/AnthropicAdapter.ts
-var import_obsidian3 = require("obsidian");
+var import_obsidian4 = require("obsidian");
 var AnthropicAdapter = class {
   constructor(settingsService, jsonValidationService) {
     this.settingsService = settingsService;
@@ -14064,7 +11270,7 @@ var AnthropicAdapter = class {
         max_tokens: maxTokens,
         temperature
       };
-      const response = yield (0, import_obsidian3.requestUrl)({
+      const response = yield (0, import_obsidian4.requestUrl)({
         url: "https://api.anthropic.com/v1/messages",
         method: "POST",
         headers: {
@@ -14086,7 +11292,7 @@ var AnthropicAdapter = class {
   handleError(error) {
     console.error("Error in Anthropic API call:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    new import_obsidian3.Notice(`Anthropic API Error: ${errorMessage}`);
+    new import_obsidian4.Notice(`Anthropic API Error: ${errorMessage}`);
     return { success: false, error: errorMessage };
   }
   validateApiKey() {
@@ -14097,14 +11303,14 @@ var AnthropicAdapter = class {
         }
         const response = yield this.testConnection("Return the word 'OK'.", this.models[0].apiName);
         if (response) {
-          new import_obsidian3.Notice("Anthropic API key validated successfully");
+          new import_obsidian4.Notice("Anthropic API key validated successfully");
           return true;
         } else {
           throw new Error("Failed to validate API key");
         }
       } catch (error) {
         console.error("Error validating Anthropic API key:", error);
-        new import_obsidian3.Notice(`Failed to validate Anthropic API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
+        new import_obsidian4.Notice(`Failed to validate Anthropic API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
         return false;
       }
     });
@@ -14136,7 +11342,7 @@ var AnthropicAdapter = class {
 };
 
 // src/adapters/GeminiAdapter.ts
-var import_obsidian4 = require("obsidian");
+var import_obsidian5 = require("obsidian");
 var GeminiAdapter = class {
   constructor(settingsService, jsonValidationService) {
     this.settingsService = settingsService;
@@ -14233,7 +11439,7 @@ var GeminiAdapter = class {
           topP: 0.95
         }
       };
-      const response = yield (0, import_obsidian4.requestUrl)({
+      const response = yield (0, import_obsidian5.requestUrl)({
         url: `https://generativelanguage.googleapis.com/v1/models/${params.model}:generateContent`,
         method: "POST",
         headers: {
@@ -14282,7 +11488,7 @@ var GeminiAdapter = class {
   handleError(error) {
     console.error("Error in Gemini API call:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    new import_obsidian4.Notice(`Gemini API Error: ${errorMessage}`);
+    new import_obsidian5.Notice(`Gemini API Error: ${errorMessage}`);
     return { success: false, error: errorMessage };
   }
   /**
@@ -14302,14 +11508,14 @@ var GeminiAdapter = class {
           this.models[0].apiName
         );
         if (isValid) {
-          new import_obsidian4.Notice("Gemini API key validated successfully");
+          new import_obsidian5.Notice("Gemini API key validated successfully");
           return true;
         } else {
           throw new Error("Failed to validate API key");
         }
       } catch (error) {
         console.error("Error validating Gemini API key:", error);
-        new import_obsidian4.Notice(`Failed to validate Gemini API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
+        new import_obsidian5.Notice(`Failed to validate Gemini API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
         return false;
       }
     });
@@ -14367,7 +11573,7 @@ var GeminiAdapter = class {
 };
 
 // src/adapters/GroqAdapter.ts
-var import_obsidian5 = require("obsidian");
+var import_obsidian6 = require("obsidian");
 var GroqAdapter = class {
   constructor(settingsService, jsonValidationService) {
     this.settingsService = settingsService;
@@ -14440,7 +11646,7 @@ var GroqAdapter = class {
   makeApiRequest(params) {
     return __async(this, null, function* () {
       var _a;
-      const response = yield (0, import_obsidian5.requestUrl)({
+      const response = yield (0, import_obsidian6.requestUrl)({
         url: "https://api.groq.com/openai/v1/chat/completions",
         method: "POST",
         headers: {
@@ -14500,7 +11706,7 @@ var GroqAdapter = class {
   handleError(error) {
     console.error("Error in Groq API call:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    new import_obsidian5.Notice(`Groq API Error: ${errorMessage}`);
+    new import_obsidian6.Notice(`Groq API Error: ${errorMessage}`);
     return { success: false, error: errorMessage };
   }
   /**
@@ -14520,14 +11726,14 @@ var GroqAdapter = class {
           this.models[0].apiName
         );
         if (isValid) {
-          new import_obsidian5.Notice("Groq API key validated successfully");
+          new import_obsidian6.Notice("Groq API key validated successfully");
           return true;
         } else {
           throw new Error("Failed to validate API key");
         }
       } catch (error) {
         console.error("Error validating Groq API key:", error);
-        new import_obsidian5.Notice(`Failed to validate Groq API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
+        new import_obsidian6.Notice(`Failed to validate Groq API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
         return false;
       }
     });
@@ -14585,7 +11791,7 @@ var GroqAdapter = class {
 };
 
 // src/adapters/OpenRouterAdapter.ts
-var import_obsidian6 = require("obsidian");
+var import_obsidian7 = require("obsidian");
 var OpenRouterAdapter = class {
   constructor(settingsService, jsonValidationService) {
     this.settingsService = settingsService;
@@ -14669,7 +11875,7 @@ var OpenRouterAdapter = class {
         "X-Title": "Obsidian GraphWeaver Plugin"
       };
       try {
-        const response = yield (0, import_obsidian6.requestUrl)({
+        const response = yield (0, import_obsidian7.requestUrl)({
           url: "https://openrouter.ai/api/v1/chat/completions",
           method: "POST",
           headers,
@@ -14729,7 +11935,7 @@ var OpenRouterAdapter = class {
   handleError(error) {
     console.error("Error in OpenRouter API call:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    new import_obsidian6.Notice(`OpenRouter API Error: ${errorMessage}`);
+    new import_obsidian7.Notice(`OpenRouter API Error: ${errorMessage}`);
     return { success: false, error: errorMessage };
   }
   /**
@@ -14749,14 +11955,14 @@ var OpenRouterAdapter = class {
           this.models[0].apiName
         );
         if (isValid) {
-          new import_obsidian6.Notice("OpenRouter API key validated successfully");
+          new import_obsidian7.Notice("OpenRouter API key validated successfully");
           return true;
         } else {
           throw new Error("Failed to validate API key");
         }
       } catch (error) {
         console.error("Error validating OpenRouter API key:", error);
-        new import_obsidian6.Notice(`Failed to validate OpenRouter API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
+        new import_obsidian7.Notice(`Failed to validate OpenRouter API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
         return false;
       }
     });
@@ -14814,7 +12020,7 @@ var OpenRouterAdapter = class {
 };
 
 // src/adapters/LMStudioAdapter.ts
-var import_obsidian7 = require("obsidian");
+var import_obsidian8 = require("obsidian");
 var LMStudioAdapter = class {
   constructor(settingsService, jsonValidationService) {
     this.settingsService = settingsService;
@@ -14829,7 +12035,7 @@ var LMStudioAdapter = class {
         if (!this.isReady()) {
           throw new Error("LM Studio settings are not properly configured");
         }
-        const response = yield (0, import_obsidian7.requestUrl)({
+        const response = yield (0, import_obsidian8.requestUrl)({
           url: `http://localhost:${this.port}/v1/chat/completions`,
           method: "POST",
           headers: {
@@ -14873,7 +12079,7 @@ var LMStudioAdapter = class {
         };
       } catch (error) {
         console.error("Error in LM Studio API call:", error);
-        new import_obsidian7.Notice(`LM Studio API Error: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
+        new import_obsidian8.Notice(`LM Studio API Error: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
         return {
           success: false,
           error: error instanceof Error ? error.message : "Unknown error occurred"
@@ -14963,7 +12169,7 @@ var AdapterRegistry = class {
     // IService implementation
     this.serviceId = "adapter-registry";
     this.serviceName = "Adapter Registry";
-    this.serviceState = "uninitialized" /* Uninitialized */;
+    this.LifecycleState = "uninitialized" /* Uninitialized */;
     this.serviceError = null;
     this.unsubscribers = [];
     this.isUnloading = false;
@@ -14977,7 +12183,7 @@ var AdapterRegistry = class {
    */
   getState() {
     return {
-      state: this.serviceState,
+      state: this.LifecycleState,
       error: this.serviceError
     };
   }
@@ -14987,12 +12193,12 @@ var AdapterRegistry = class {
   initialize() {
     return __async(this, null, function* () {
       try {
-        this.serviceState = "initializing" /* Initializing */;
+        this.LifecycleState = "initializing" /* Initializing */;
         yield this.initializeAdapters();
         this.setupSubscriptions();
-        this.serviceState = "ready" /* Ready */;
+        this.LifecycleState = "ready" /* Ready */;
       } catch (error) {
-        this.serviceState = "error" /* Error */;
+        this.LifecycleState = "error" /* Error */;
         this.serviceError = error instanceof ServiceError ? error : new ServiceError(this.serviceName, "Failed to initialize adapters");
         throw this.serviceError;
       }
@@ -15002,7 +12208,7 @@ var AdapterRegistry = class {
    * Check if service is ready
    */
   isReady() {
-    return this.serviceState === "ready" /* Ready */ && !this.isUnloading;
+    return this.LifecycleState === "ready" /* Ready */ && !this.isUnloading;
   }
   /**
    * Clean up resources and destroy adapters
@@ -15013,7 +12219,7 @@ var AdapterRegistry = class {
         return;
       try {
         this.isUnloading = true;
-        this.serviceState = "destroying" /* Destroying */;
+        this.LifecycleState = "destroying" /* Destroying */;
         this.unsubscribers.forEach((unsubscribe) => unsubscribe());
         this.unsubscribers = [];
         const cleanupPromises = Array.from(this.adapters.values()).map((adapter) => __async(this, null, function* () {
@@ -15031,9 +12237,9 @@ var AdapterRegistry = class {
         this.adapters.clear();
         this.adapterStatus.clear();
         this.updateAIStore();
-        this.serviceState = "destroyed" /* Destroyed */;
+        this.LifecycleState = "destroyed" /* Destroyed */;
       } catch (error) {
-        this.serviceState = "error" /* Error */;
+        this.LifecycleState = "error" /* Error */;
         this.serviceError = error instanceof ServiceError ? error : new ServiceError(this.serviceName, "Failed to destroy adapters");
         throw this.serviceError;
       }
@@ -15204,7 +12410,10 @@ var AdapterRegistry = class {
         isProcessing: false,
         provider: this.currentProvider,
         availableModels: AIModelMap[this.currentProvider] || [],
-        error: currentStatus.lastError
+        error: currentStatus.lastError ? {
+          message: currentStatus.lastError,
+          timestamp: Date.now()
+        } : void 0
       }));
     }
   }
@@ -15214,7 +12423,10 @@ var AdapterRegistry = class {
     console.error("AdapterRegistry error:", error);
     this.serviceError = new ServiceError(this.serviceName, error.message);
     aiStore.update((state) => __spreadProps(__spreadValues({}, state), {
-      error: error.message,
+      error: {
+        message: error.message,
+        timestamp: Date.now()
+      },
       lastError: {
         message: error.message,
         timestamp: Date.now()
@@ -15245,6 +12457,97 @@ var AdapterRegistry = class {
     return allModels;
   }
 };
+
+// src/stores/MetricsStore.ts
+function createInitialMetrics() {
+  return Object.values(OperationType).reduce((acc, type) => __spreadProps(__spreadValues({}, acc), {
+    [type]: {
+      totalOperations: 0,
+      successfulOperations: 0,
+      failedOperations: 0,
+      averageDuration: 0
+    }
+  }), {});
+}
+function updateMetrics(typeMetrics, operation) {
+  const newTotal = typeMetrics.totalOperations + 1;
+  const newSuccesses = typeMetrics.successfulOperations + (operation.success ? 1 : 0);
+  const newFailures = typeMetrics.failedOperations + (!operation.success ? 1 : 0);
+  const newAverageDuration = (typeMetrics.averageDuration * typeMetrics.totalOperations + (operation.duration || 0)) / newTotal;
+  return {
+    totalOperations: newTotal,
+    successfulOperations: newSuccesses,
+    failedOperations: newFailures,
+    averageDuration: newAverageDuration
+  };
+}
+function createMetricsStore() {
+  const { subscribe: subscribe2, set, update: update2 } = writable(createInitialMetrics());
+  return {
+    subscribe: subscribe2,
+    trackOperation: (operation) => update2((metrics) => {
+      const typeMetrics = metrics[operation.type];
+      const updatedMetrics = updateMetrics(typeMetrics, operation);
+      return __spreadProps(__spreadValues({}, metrics), {
+        [operation.type]: updatedMetrics
+      });
+    }),
+    resetMetrics: () => set(createInitialMetrics())
+  };
+}
+var metricsStore = createMetricsStore();
+
+// src/stores/OperationStore.ts
+function createOperationStore() {
+  const eventEmitter = new TypedEventEmitter();
+  const store = writable({
+    currentOperation: null,
+    operations: [],
+    progress: 0,
+    queueLength: 0,
+    metrics: createInitialMetrics()
+  });
+  return {
+    subscribe: store.subscribe,
+    eventEmitter,
+    startOperation: (operation) => store.update((state) => __spreadProps(__spreadValues({}, state), {
+      currentOperation: operation,
+      operations: [operation, ...state.operations]
+    })),
+    completeOperation: (operation) => store.update((state) => __spreadProps(__spreadValues({}, state), {
+      currentOperation: null,
+      operations: state.operations.map(
+        (op) => op.id === operation.id ? operation : op
+      )
+    })),
+    updateProgress: (progress) => store.update((state) => __spreadProps(__spreadValues({}, state), {
+      progress
+    })),
+    updateQueue: (length) => store.update((state) => __spreadProps(__spreadValues({}, state), {
+      queueLength: length
+    })),
+    trackMetrics: (operation) => store.update((state) => __spreadProps(__spreadValues({}, state), {
+      metrics: __spreadProps(__spreadValues({}, state.metrics), {
+        [operation.type]: updateMetrics(state.metrics[operation.type], operation)
+      })
+    })),
+    errorOperation: (status) => {
+      eventEmitter.emit("operationError", status);
+    },
+    getCurrentOperation: () => {
+      return get_store_value(store).currentOperation;
+    }
+  };
+}
+var operationStore = createOperationStore();
+var currentOperation = derived(
+  operationStore,
+  ($store) => $store.currentOperation
+);
+var operationProgress = derived(
+  operationStore,
+  ($store) => $store.progress
+);
 
 // src/services/ai/QueueManagerService.ts
 var QueueManagerService = class extends CoreService {
@@ -15278,6 +12581,7 @@ var QueueManagerService = class extends CoreService {
     }
     this.operationQueue.push(operation);
     this.sortQueue();
+    operationStore.updateQueue(this.operationQueue.length);
   }
   /**
    * Sort queue by priority
@@ -15319,10 +12623,12 @@ var QueueManagerService = class extends CoreService {
         return;
       }
       this.isProcessing = true;
+      operationStore.updateProgress(0);
       try {
         const operation = this.operationQueue[0];
         yield this.processOperation(operation);
         this.operationQueue = this.operationQueue.filter((op) => op.id !== operation.id);
+        operationStore.updateQueue(this.operationQueue.length);
       } finally {
         this.isProcessing = false;
       }
@@ -15356,103 +12662,38 @@ var QueueManagerService = class extends CoreService {
 
 // src/services/ai/OperationExecutor.ts
 var OperationExecutor = class {
-  constructor(metricsTracker, eventEmitter, queueManager) {
-    this.metricsTracker = metricsTracker;
-    this.eventEmitter = eventEmitter;
-    this.queueManager = queueManager;
-    this.currentOperation = null;
+  constructor(store) {
+    this.store = store;
   }
   /**
    * Execute operation with tracking
    */
   execute(type, operation, metadata, config) {
     return __async(this, null, function* () {
-      var _a;
       const operationId = this.generateOperationId();
-      const queuedOperation = {
+      const status = {
         id: operationId,
         type,
-        priority: (_a = config == null ? void 0 : config.priority) != null ? _a : this.queueManager.getOperationPriority(type),
         startTime: Date.now(),
-        execute: () => __async(this, null, function* () {
-          const result = yield this.executeWithTracking(type, operation, metadata);
-          return result.data;
-        }),
-        metadata
-      };
-      this.queueManager.enqueueOperation(queuedOperation);
-      return this.waitForOperation(operationId);
-    });
-  }
-  /**
-   * Execute operation with tracking
-   */
-  executeWithTracking(type, operation, metadata) {
-    return __async(this, null, function* () {
-      const startTime = Date.now();
-      const status = {
-        type,
-        startTime,
         metadata
       };
       try {
-        this.currentOperation = status;
-        this.eventEmitter.emitOperationStart(status);
+        this.store.startOperation(status);
         const result = yield operation();
-        const endTime = Date.now();
-        status.endTime = endTime;
-        status.duration = endTime - startTime;
-        status.success = true;
-        this.eventEmitter.emitOperationComplete(status);
-        return {
-          success: true,
-          data: result,
-          duration: status.duration,
-          metadata
-        };
+        this.store.completeOperation(__spreadProps(__spreadValues({}, status), {
+          endTime: Date.now(),
+          success: true
+        }));
+        return result;
       } catch (error) {
         const endTime = Date.now();
         status.endTime = endTime;
-        status.duration = endTime - startTime;
+        status.duration = endTime - status.startTime;
         status.success = false;
         status.error = error instanceof Error ? error.message : "Unknown error";
-        this.eventEmitter.emitOperationError(
-          error instanceof Error ? error : new Error(String(error)),
-          status
-        );
-        return {
-          success: false,
-          error: status.error,
-          duration: status.duration,
-          metadata
-        };
-      } finally {
-        this.currentOperation = null;
+        this.store.errorOperation(status);
+        throw error;
       }
-    });
-  }
-  /**
-   * Wait for operation completion with type-safe metrics
-   */
-  waitForOperation(operationId) {
-    return __async(this, null, function* () {
-      return new Promise((resolve, reject) => {
-        const checkInterval = setInterval(() => {
-          var _a, _b;
-          const operation = this.queueManager.getOperation(operationId);
-          if (!operation) {
-            clearInterval(checkInterval);
-            const metrics = this.metricsTracker.getAllMetrics();
-            const defaultOperation = (_a = metrics["generation" /* Generation */]) == null ? void 0 : _a.lastOperation;
-            const operationResult = (_b = defaultOperation == null ? void 0 : defaultOperation.metadata) == null ? void 0 : _b.result;
-            if ((defaultOperation == null ? void 0 : defaultOperation.success) && operationResult !== void 0) {
-              resolve(operationResult);
-            } else {
-              reject(new Error((defaultOperation == null ? void 0 : defaultOperation.error) || "Operation failed"));
-            }
-          }
-        }, 50);
-      });
     });
   }
   /**
@@ -15465,7 +12706,7 @@ var OperationExecutor = class {
    * Get current operation
    */
   getCurrentOperation() {
-    return this.currentOperation;
+    return this.store.getCurrentOperation();
   }
 };
 
@@ -15477,22 +12718,12 @@ var AIOperationManager = class {
     // IService implementation
     this.serviceId = "ai-operation-manager";
     this.serviceName = "AI Operation Manager";
-    this.serviceState = "uninitialized" /* Uninitialized */;
+    this.LifecycleState = "uninitialized" /* Uninitialized */;
     this.serviceError = null;
     this.unsubscribers = [];
-    // Public access methods for metrics and history
-    this.getMetrics = () => this.metricsTracker.getAllMetrics();
-    this.getHistory = () => this.metricsTracker.getHistory();
-    this.clearHistory = () => this.metricsTracker.clearHistory();
-    this.resetMetrics = () => this.metricsTracker.resetMetrics();
-    this.eventEmitter = new OperationEventEmitter();
-    this.metricsTracker = new MetricsTracker();
+    this.eventEmitter = operationStore.eventEmitter;
     this.queueManager = new QueueManagerService(this.processOperation.bind(this));
-    this.operationExecutor = new OperationExecutor(
-      this.metricsTracker,
-      this.eventEmitter,
-      this.queueManager
-    );
+    this.operationExecutor = new OperationExecutor(operationStore);
   }
   /**
    * Initialize service and components
@@ -15500,13 +12731,11 @@ var AIOperationManager = class {
   initialize() {
     return __async(this, null, function* () {
       try {
-        this.serviceState = "initializing" /* Initializing */;
-        yield this.metricsTracker.initialize();
-        yield this.queueManager.initialize();
+        this.LifecycleState = "initializing" /* Initializing */;
         this.setupEventListeners();
-        this.serviceState = "ready" /* Ready */;
+        this.LifecycleState = "ready" /* Ready */;
       } catch (error) {
-        this.serviceState = "error" /* Error */;
+        this.LifecycleState = "error" /* Error */;
         this.serviceError = ServiceError.from(this.serviceName, error);
         throw this.serviceError;
       }
@@ -15525,11 +12754,11 @@ var AIOperationManager = class {
    */
   setupEventListeners() {
     this.eventEmitter.on("operationComplete", (status) => {
-      this.metricsTracker.trackOperation(status);
+      metricsStore.trackOperation(status);
       this.updateAIStore();
     });
-    this.eventEmitter.on("operationError", (error, status) => {
-      console.error(`Operation error (${status.type}):`, error);
+    this.eventEmitter.on("operationError", (status) => {
+      console.error(`Operation error (${status.type}):`, status.error);
       this.updateAIStore();
     });
     const aiStoreUnsub = aiStore.subscribe(() => {
@@ -15540,14 +12769,14 @@ var AIOperationManager = class {
    * Check if service is ready
    */
   isReady() {
-    return this.serviceState === "ready" /* Ready */;
+    return this.LifecycleState === "ready" /* Ready */;
   }
   /**
    * Get service state
    */
   getState() {
     return {
-      state: this.serviceState,
+      state: this.LifecycleState,
       error: this.serviceError
     };
   }
@@ -15563,13 +12792,12 @@ var AIOperationManager = class {
   destroy() {
     return __async(this, null, function* () {
       try {
-        this.serviceState = "destroying" /* Destroying */;
+        this.LifecycleState = "destroying" /* Destroying */;
         this.unsubscribers.forEach((unsub) => unsub());
         this.unsubscribers = [];
         yield this.queueManager.destroy();
-        yield this.metricsTracker.destroy();
         this.eventEmitter.removeAllListeners();
-        this.serviceState = "destroyed" /* Destroyed */;
+        this.LifecycleState = "destroyed" /* Destroyed */;
       } catch (error) {
         this.serviceError = ServiceError.from(this.serviceName, error);
         throw this.serviceError;
@@ -15620,59 +12848,19 @@ var AIOperationManager = class {
    * Update AI store state
    */
   updateAIStore() {
-    aiStore.update((state) => {
-      var _a;
-      return __spreadProps(__spreadValues({}, state), {
-        currentOperation: this.operationExecutor.getCurrentOperation(),
-        queueLength: this.queueManager.getQueueLength(),
-        operationMetrics: this.metricsTracker.getAllMetrics(),
-        error: ((_a = this.serviceError) == null ? void 0 : _a.message) || state.error
-      });
-    });
+    aiStore.update((state) => __spreadProps(__spreadValues({}, state), {
+      currentOperation: this.operationExecutor.getCurrentOperation(),
+      queueLength: this.queueManager.getQueueLength(),
+      operationMetrics: get_store_value(metricsStore),
+      error: this.serviceError ? { message: this.serviceError.message, timestamp: Date.now() } : state.error
+    }));
   }
+  // Public access methods for metrics and history
+  // Removed metricsTracker method calls
 };
 
 // src/services/ai/AIService.ts
-var import_obsidian8 = require("obsidian");
-
-// src/services/ai/AIServiceError.ts
-var AIServiceError = class extends Error {
-  constructor(message, originalError, context) {
-    super(message);
-    this.name = "AIServiceError";
-    if (originalError instanceof Error) {
-      this.originalError = originalError;
-      this.stack = `${this.stack}
-Caused by: ${originalError.stack}`;
-    }
-    if (context) {
-      this.context = context;
-    }
-    Object.setPrototypeOf(this, AIServiceError.prototype);
-  }
-  /**
-   * Get full error details including context
-   */
-  getDetails() {
-    var _a;
-    return {
-      message: this.message,
-      originalError: (_a = this.originalError) == null ? void 0 : _a.message,
-      context: this.context,
-      stack: this.stack
-    };
-  }
-  /**
-   * Create error from unknown error
-   */
-  static from(error, context) {
-    if (error instanceof AIServiceError) {
-      return error;
-    }
-    const message = error instanceof Error ? error.message : "Unknown error occurred";
-    return new AIServiceError(message, error, context);
-  }
-};
+var import_obsidian9 = require("obsidian");
 
 // src/services/ai/AIGenerationService.ts
 var AIGenerationService = class {
@@ -15689,7 +12877,7 @@ var AIGenerationService = class {
         const result = yield generator.generate({ content });
         return result.content;
       } catch (error) {
-        throw new AIServiceError("Failed to generate front matter", error);
+        throw new ServiceError("Failed to generate front matter", error.message);
       }
     });
   }
@@ -15703,7 +12891,7 @@ var AIGenerationService = class {
         const result = yield generator.generate({ content, existingPages });
         return result.content;
       } catch (error) {
-        throw new AIServiceError("Failed to generate wikilinks", error);
+        throw new ServiceError("Failed to generate wikilinks", error.message);
       }
     });
   }
@@ -15716,7 +12904,7 @@ var AIGenerationService = class {
         const generator = yield this.generatorFactory.getGenerator("knowledgeBloom" /* KnowledgeBloom */);
         return yield generator.generate({ sourceFile, userPrompt });
       } catch (error) {
-        throw new AIServiceError("Failed to generate Knowledge Bloom", error);
+        throw new ServiceError("Failed to generate Knowledge Bloom", error.message);
       }
     });
   }
@@ -15729,7 +12917,7 @@ var AIGenerationService = class {
         const generator = yield this.generatorFactory.getGenerator("ontology" /* Ontology */);
         return yield generator.generate(input);
       } catch (error) {
-        throw new AIServiceError("Failed to generate ontology", error);
+        throw new ServiceError("Failed to generate ontology", error.message);
       }
     });
   }
@@ -15746,6 +12934,7 @@ var AIService = class extends CoreService {
     this.databaseService = databaseService;
     this.wikilinkProcessor = wikilinkProcessor;
     this.unsubscribers = [];
+    this.isInitializing = false;
     this.config = __spreadValues({
       defaultProvider: "openai" /* OpenAI */,
       enableNotifications: true,
@@ -15770,11 +12959,18 @@ var AIService = class extends CoreService {
       try {
         yield this.adapterRegistry.initialize();
         yield this.generatorFactory.initialize();
-        this.generationService = new AIGenerationService(this.generatorFactory);
-        this.setupSubscriptions();
+        const provider = this.getProviderFromStore();
+        const models = AIModelUtils.getModelsForProvider(provider);
+        if (!models.length) {
+          throw new Error(`No models available for provider: ${provider}`);
+        }
         aiStore.update((state) => __spreadProps(__spreadValues({}, state), {
+          availableModels: models,
+          currentModel: models[0].apiName,
           isInitialized: true
         }));
+        this.generationService = new AIGenerationService(this.generatorFactory);
+        this.setupSubscriptions();
       } catch (error) {
         throw new ServiceError(
           this.serviceName,
@@ -15872,24 +13068,34 @@ var AIService = class extends CoreService {
    */
   reinitialize() {
     return __async(this, null, function* () {
-      if (!this.isReady()) {
-        throw new ServiceError(this.serviceName, "Cannot reinitialize when not ready");
+      if (this.isInitializing) {
+        throw new ServiceError("AI Service", "Service is already initializing");
       }
       try {
-        yield this.destroy();
-        this.initializeComponents();
+        this.isInitializing = true;
+        yield this.waitForDependencies();
         yield this.initialize();
-        if (this.config.enableNotifications) {
-          new import_obsidian8.Notice("AI Service reinitialized successfully");
-        }
-      } catch (error) {
-        throw new ServiceError(
-          this.serviceName,
-          "Failed to reinitialize AI service",
-          error instanceof Error ? error : void 0
-        );
+      } finally {
+        this.isInitializing = false;
       }
     });
+  }
+  waitForDependencies() {
+    return __async(this, null, function* () {
+      const maxAttempts = 50;
+      const interval = 100;
+      for (let i = 0; i < maxAttempts; i++) {
+        if (this.checkDependenciesReady()) {
+          return;
+        }
+        yield new Promise((resolve) => setTimeout(resolve, interval));
+      }
+      throw new ServiceError("AI Service", "Dependencies failed to initialize");
+    });
+  }
+  checkDependenciesReady() {
+    var _a, _b, _c;
+    return ((_a = this.settingsService) == null ? void 0 : _a.isReady()) && ((_b = this.operationManager) == null ? void 0 : _b.isReady()) && ((_c = this.databaseService) == null ? void 0 : _c.isReady());
   }
   /**
    * Update AI store state
@@ -15947,7 +13153,7 @@ var AIService = class extends CoreService {
       try {
         const result = yield this.adapterRegistry.testConnection(provider);
         if (this.config.enableNotifications) {
-          new import_obsidian8.Notice(
+          new import_obsidian9.Notice(
             result ? `Successfully connected to ${provider}` : `Failed to connect to ${provider}`
           );
         }
@@ -15960,945 +13166,9 @@ var AIService = class extends CoreService {
   }
 };
 
-// src/registrations/AIRegistrations.ts
-var AI_SERVICES = [
-  {
-    id: "metricsTracker",
-    name: "Metrics Tracker",
-    factory: () => new MetricsTracker()
-  },
-  {
-    id: "operationEventEmitter",
-    name: "Operation Event Emitter",
-    factory: () => new OperationEventEmitter()
-  },
-  {
-    id: "adapterRegistry",
-    name: "AI Adapter Registry",
-    factory: ({ registry }) => new AdapterRegistry(
-      registry.getService("settingsService"),
-      registry.getService("jsonValidationService")
-    ),
-    dependencies: ["settingsService", "jsonValidationService"]
-  },
-  {
-    id: "generatorFactory",
-    name: "Generator Factory",
-    factory: ({ app, registry }) => new GeneratorFactory(
-      app,
-      registry.getService("settingsService"),
-      registry.getService("adapterRegistry"),
-      registry.getService("wikilinkProcessor")
-    ),
-    dependencies: ["settingsService", "adapterRegistry", "wikilinkProcessor"]
-  },
-  {
-    id: "queueManager",
-    name: "Queue Manager",
-    factory: () => new QueueManagerService((operation) => __async(void 0, null, function* () {
-      console.log("\u{1F987} Processing operation:", operation);
-      yield operation.execute();
-    }))
-  },
-  {
-    id: "aiOperationManager",
-    name: "AI Operation Manager",
-    factory: ({ registry }) => new AIOperationManager(
-      registry.getService("adapterRegistry"),
-      registry.getService("generatorFactory")
-    ),
-    dependencies: ["adapterRegistry", "generatorFactory"]
-  },
-  {
-    id: "aiService",
-    name: "AI Service",
-    factory: ({ app, registry }) => new AIService(
-      app,
-      registry.getService("aiOperationManager"),
-      registry.getService("settingsService"),
-      registry.getService("jsonValidationService"),
-      registry.getService("databaseService"),
-      registry.getService("wikilinkProcessor"),
-      {
-        defaultProvider: "openai" /* OpenAI */,
-        enableNotifications: true,
-        debug: false
-      }
-    ),
-    dependencies: [
-      "aiOperationManager",
-      "settingsService",
-      "jsonValidationService",
-      "databaseService",
-      "wikilinkProcessor"
-    ]
-  }
-];
-function reportError2(message, error) {
-  console.error(`\u{1F987} ${message}:`, error);
-  errorStore.reportError({
-    message: error ? `${message}: ${error.message}` : message,
-    source: "AI Services Registration"
-  });
-}
-function validateDependencies(dependencies, registry) {
-  return __async(this, null, function* () {
-    for (const depId of dependencies) {
-      try {
-        const service = registry.getService(depId);
-        if (!service) {
-          throw new Error(`Required dependency '${depId}' not found`);
-        }
-      } catch (error) {
-        throw new ServiceError(
-          "AIRegistrations",
-          `Dependency validation failed for '${depId}'`,
-          error instanceof Error ? error : void 0
-        );
-      }
-    }
-  });
-}
-function registerService2(config, context) {
-  return __async(this, null, function* () {
-    var _a;
-    console.log(`\u{1F987} Registering ${config.name}...`);
-    try {
-      if ((_a = config.dependencies) == null ? void 0 : _a.length) {
-        yield validateDependencies(config.dependencies, context.registry);
-      }
-      const service = config.factory(context);
-      yield context.registry.registerService(config.id, service);
-      if (typeof service.initialize === "function") {
-        yield service.initialize();
-      }
-      console.log(`\u{1F987} Initialized ${config.name}`);
-    } catch (error) {
-      reportError2(`Failed to register ${config.name}`, error instanceof Error ? error : void 0);
-      throw error;
-    }
-  });
-}
-function registerAIServices(app, plugin) {
-  return __async(this, null, function* () {
-    console.log("\u{1F987} Starting AI services registration");
-    const registry = ServiceRegistry.getInstance();
-    const context = { app, plugin, registry };
-    try {
-      for (const serviceConfig of AI_SERVICES) {
-        yield registerService2(serviceConfig, context);
-      }
-      console.log("\u{1F987} AI Services registered successfully");
-    } catch (error) {
-      reportError2("Failed to register AI services", error instanceof Error ? error : void 0);
-      throw error instanceof ServiceError ? error : new ServiceError("AIRegistrations", "AI services registration failed");
-    }
-  });
-}
-
 // src/services/file/FileProcessorService.ts
 var import_obsidian10 = require("obsidian");
-
-// node_modules/svelte/src/runtime/internal/disclose-version/index.js
-if (typeof window !== "undefined")
-  (window.__svelte || (window.__svelte = { v: /* @__PURE__ */ new Set() })).v.add(PUBLIC_VERSION);
-
-// src/components/modals/BatchProcessorModal.svelte
-var import_obsidian9 = require("obsidian");
-function add_css(target) {
-  append_styles(target, "svelte-95zn0x", '.batch-processor-modal.svelte-95zn0x.svelte-95zn0x{padding:var(--size-4);max-width:600px;width:100%}.modal-content.svelte-95zn0x.svelte-95zn0x{display:flex;flex-direction:column;gap:var(--size-4)}.modal-header.svelte-95zn0x.svelte-95zn0x{border-bottom:1px solid var(--background-modifier-border);padding-bottom:var(--size-4)}.modal-header.svelte-95zn0x h2.svelte-95zn0x{margin:0;color:var(--text-normal);font-size:var(--font-ui-large)}.modal-scrollable-content.svelte-95zn0x.svelte-95zn0x{max-height:400px;overflow-y:auto;padding:var(--size-2)}.file-tree-item.svelte-95zn0x.svelte-95zn0x{padding:var(--size-2) 0}.folder-header.svelte-95zn0x.svelte-95zn0x{display:flex;align-items:center;gap:var(--size-2)}.folder-toggle.svelte-95zn0x.svelte-95zn0x{cursor:pointer;transition:transform 0.2s ease;width:20px;height:20px;display:flex;align-items:center;justify-content:center}.folder-toggle.expanded.svelte-95zn0x.svelte-95zn0x{transform:rotate(90deg)}label.svelte-95zn0x.svelte-95zn0x{display:flex;align-items:center;gap:var(--size-2);cursor:pointer}input[type="checkbox"].svelte-95zn0x.svelte-95zn0x{cursor:pointer}.modal-footer.svelte-95zn0x.svelte-95zn0x{display:flex;justify-content:flex-end;gap:var(--size-4);padding-top:var(--size-4);border-top:1px solid var(--background-modifier-border)}button.svelte-95zn0x.svelte-95zn0x{padding:var(--size-2) var(--size-4);border-radius:var(--radius-s);border:none;cursor:pointer;font-weight:var(--font-bold)}button.mod-cta.svelte-95zn0x.svelte-95zn0x{background-color:var(--interactive-accent);color:var(--text-on-accent)}button.mod-cta.svelte-95zn0x.svelte-95zn0x:hover:not(:disabled){background-color:var(--interactive-accent-hover)}button.mod-cancel.svelte-95zn0x.svelte-95zn0x{background-color:var(--background-modifier-border);color:var(--text-normal)}button.mod-cancel.svelte-95zn0x.svelte-95zn0x:hover{background-color:var(--background-modifier-border-hover)}button.svelte-95zn0x.svelte-95zn0x:disabled{opacity:0.5;cursor:not-allowed}');
-}
-function get_each_context(ctx, list, i) {
-  const child_ctx = ctx.slice();
-  child_ctx[19] = list[i];
-  child_ctx[20] = list;
-  child_ctx[21] = i;
-  return child_ctx;
-}
-function get_each_context_1(ctx, list, i) {
-  const child_ctx = ctx.slice();
-  child_ctx[22] = list[i];
-  child_ctx[23] = list;
-  child_ctx[24] = i;
-  return child_ctx;
-}
-function create_else_block(ctx) {
-  let label;
-  let input;
-  let input_aria_label_value;
-  let t0;
-  let t1_value = (
-    /*node*/
-    ctx[19].name + ""
-  );
-  let t1;
-  let mounted;
-  let dispose;
-  function input_change_handler_2() {
-    ctx[14].call(
-      input,
-      /*each_value*/
-      ctx[20],
-      /*node_index*/
-      ctx[21]
-    );
-  }
-  function change_handler_2(...args) {
-    return (
-      /*change_handler_2*/
-      ctx[15](
-        /*node*/
-        ctx[19],
-        ...args
-      )
-    );
-  }
-  return {
-    c() {
-      label = element("label");
-      input = element("input");
-      t0 = space();
-      t1 = text(t1_value);
-      attr(input, "type", "checkbox");
-      attr(input, "aria-label", input_aria_label_value = `Select file ${/*node*/
-      ctx[19].name}`);
-      attr(input, "class", "svelte-95zn0x");
-      attr(label, "class", "svelte-95zn0x");
-    },
-    m(target, anchor) {
-      insert(target, label, anchor);
-      append(label, input);
-      input.checked = /*node*/
-      ctx[19].selected;
-      append(label, t0);
-      append(label, t1);
-      if (!mounted) {
-        dispose = [
-          listen(input, "change", input_change_handler_2),
-          listen(input, "change", change_handler_2)
-        ];
-        mounted = true;
-      }
-    },
-    p(new_ctx, dirty) {
-      ctx = new_ctx;
-      if (dirty & /*vaultStructure*/
-      2 && input_aria_label_value !== (input_aria_label_value = `Select file ${/*node*/
-      ctx[19].name}`)) {
-        attr(input, "aria-label", input_aria_label_value);
-      }
-      if (dirty & /*vaultStructure*/
-      2) {
-        input.checked = /*node*/
-        ctx[19].selected;
-      }
-      if (dirty & /*vaultStructure*/
-      2 && t1_value !== (t1_value = /*node*/
-      ctx[19].name + ""))
-        set_data(t1, t1_value);
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(label);
-      }
-      mounted = false;
-      run_all(dispose);
-    }
-  };
-}
-function create_if_block(ctx) {
-  let div1;
-  let div0;
-  let t1;
-  let label;
-  let input;
-  let input_aria_label_value;
-  let t2;
-  let t3_value = (
-    /*node*/
-    ctx[19].name + ""
-  );
-  let t3;
-  let div1_aria_expanded_value;
-  let t4;
-  let if_block_anchor;
-  let mounted;
-  let dispose;
-  function input_change_handler() {
-    ctx[8].call(
-      input,
-      /*each_value*/
-      ctx[20],
-      /*node_index*/
-      ctx[21]
-    );
-  }
-  function change_handler(...args) {
-    return (
-      /*change_handler*/
-      ctx[9](
-        /*node*/
-        ctx[19],
-        ...args
-      )
-    );
-  }
-  function click_handler(...args) {
-    return (
-      /*click_handler*/
-      ctx[10](
-        /*node*/
-        ctx[19],
-        ...args
-      )
-    );
-  }
-  function keydown_handler(...args) {
-    return (
-      /*keydown_handler*/
-      ctx[11](
-        /*node*/
-        ctx[19],
-        ...args
-      )
-    );
-  }
-  let if_block = (
-    /*node*/
-    ctx[19].expanded && /*node*/
-    ctx[19].children && create_if_block_1(ctx)
-  );
-  return {
-    c() {
-      div1 = element("div");
-      div0 = element("div");
-      div0.textContent = "\u25B6";
-      t1 = space();
-      label = element("label");
-      input = element("input");
-      t2 = space();
-      t3 = text(t3_value);
-      t4 = space();
-      if (if_block)
-        if_block.c();
-      if_block_anchor = empty();
-      attr(div0, "class", "folder-toggle svelte-95zn0x");
-      attr(div0, "aria-hidden", "true");
-      toggle_class(
-        div0,
-        "expanded",
-        /*node*/
-        ctx[19].expanded
-      );
-      attr(input, "type", "checkbox");
-      attr(input, "aria-label", input_aria_label_value = `Select folder ${/*node*/
-      ctx[19].name}`);
-      attr(input, "class", "svelte-95zn0x");
-      attr(label, "class", "folder-label svelte-95zn0x");
-      attr(div1, "class", "folder-header svelte-95zn0x");
-      attr(div1, "role", "button");
-      attr(div1, "tabindex", "0");
-      attr(div1, "aria-expanded", div1_aria_expanded_value = /*node*/
-      ctx[19].expanded);
-    },
-    m(target, anchor) {
-      insert(target, div1, anchor);
-      append(div1, div0);
-      append(div1, t1);
-      append(div1, label);
-      append(label, input);
-      input.checked = /*node*/
-      ctx[19].selected;
-      append(label, t2);
-      append(label, t3);
-      insert(target, t4, anchor);
-      if (if_block)
-        if_block.m(target, anchor);
-      insert(target, if_block_anchor, anchor);
-      if (!mounted) {
-        dispose = [
-          listen(input, "change", input_change_handler),
-          listen(input, "change", change_handler),
-          listen(div1, "click", click_handler),
-          listen(div1, "keydown", keydown_handler)
-        ];
-        mounted = true;
-      }
-    },
-    p(new_ctx, dirty) {
-      ctx = new_ctx;
-      if (dirty & /*vaultStructure*/
-      2) {
-        toggle_class(
-          div0,
-          "expanded",
-          /*node*/
-          ctx[19].expanded
-        );
-      }
-      if (dirty & /*vaultStructure*/
-      2 && input_aria_label_value !== (input_aria_label_value = `Select folder ${/*node*/
-      ctx[19].name}`)) {
-        attr(input, "aria-label", input_aria_label_value);
-      }
-      if (dirty & /*vaultStructure*/
-      2) {
-        input.checked = /*node*/
-        ctx[19].selected;
-      }
-      if (dirty & /*vaultStructure*/
-      2 && t3_value !== (t3_value = /*node*/
-      ctx[19].name + ""))
-        set_data(t3, t3_value);
-      if (dirty & /*vaultStructure*/
-      2 && div1_aria_expanded_value !== (div1_aria_expanded_value = /*node*/
-      ctx[19].expanded)) {
-        attr(div1, "aria-expanded", div1_aria_expanded_value);
-      }
-      if (
-        /*node*/
-        ctx[19].expanded && /*node*/
-        ctx[19].children
-      ) {
-        if (if_block) {
-          if_block.p(ctx, dirty);
-        } else {
-          if_block = create_if_block_1(ctx);
-          if_block.c();
-          if_block.m(if_block_anchor.parentNode, if_block_anchor);
-        }
-      } else if (if_block) {
-        if_block.d(1);
-        if_block = null;
-      }
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(div1);
-        detach(t4);
-        detach(if_block_anchor);
-      }
-      if (if_block)
-        if_block.d(detaching);
-      mounted = false;
-      run_all(dispose);
-    }
-  };
-}
-function create_if_block_1(ctx) {
-  let div;
-  let div_aria_label_value;
-  let each_value_1 = ensure_array_like(
-    /*node*/
-    ctx[19].children
-  );
-  let each_blocks = [];
-  for (let i = 0; i < each_value_1.length; i += 1) {
-    each_blocks[i] = create_each_block_1(get_each_context_1(ctx, each_value_1, i));
-  }
-  return {
-    c() {
-      div = element("div");
-      for (let i = 0; i < each_blocks.length; i += 1) {
-        each_blocks[i].c();
-      }
-      attr(div, "class", "folder-content");
-      attr(div, "role", "group");
-      attr(div, "aria-label", div_aria_label_value = `Contents of ${/*node*/
-      ctx[19].name}`);
-    },
-    m(target, anchor) {
-      insert(target, div, anchor);
-      for (let i = 0; i < each_blocks.length; i += 1) {
-        if (each_blocks[i]) {
-          each_blocks[i].m(div, null);
-        }
-      }
-    },
-    p(ctx2, dirty) {
-      if (dirty & /*vaultStructure, toggleSelection*/
-      10) {
-        each_value_1 = ensure_array_like(
-          /*node*/
-          ctx2[19].children
-        );
-        let i;
-        for (i = 0; i < each_value_1.length; i += 1) {
-          const child_ctx = get_each_context_1(ctx2, each_value_1, i);
-          if (each_blocks[i]) {
-            each_blocks[i].p(child_ctx, dirty);
-          } else {
-            each_blocks[i] = create_each_block_1(child_ctx);
-            each_blocks[i].c();
-            each_blocks[i].m(div, null);
-          }
-        }
-        for (; i < each_blocks.length; i += 1) {
-          each_blocks[i].d(1);
-        }
-        each_blocks.length = each_value_1.length;
-      }
-      if (dirty & /*vaultStructure*/
-      2 && div_aria_label_value !== (div_aria_label_value = `Contents of ${/*node*/
-      ctx2[19].name}`)) {
-        attr(div, "aria-label", div_aria_label_value);
-      }
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(div);
-      }
-      destroy_each(each_blocks, detaching);
-    }
-  };
-}
-function create_each_block_1(ctx) {
-  let div;
-  let label;
-  let input;
-  let input_aria_label_value;
-  let t0;
-  let t1_value = (
-    /*childNode*/
-    ctx[22].name + ""
-  );
-  let t1;
-  let t2;
-  let mounted;
-  let dispose;
-  function input_change_handler_1() {
-    ctx[12].call(
-      input,
-      /*each_value_1*/
-      ctx[23],
-      /*childNode_index*/
-      ctx[24]
-    );
-  }
-  function change_handler_1(...args) {
-    return (
-      /*change_handler_1*/
-      ctx[13](
-        /*childNode*/
-        ctx[22],
-        ...args
-      )
-    );
-  }
-  return {
-    c() {
-      div = element("div");
-      label = element("label");
-      input = element("input");
-      t0 = space();
-      t1 = text(t1_value);
-      t2 = space();
-      attr(input, "type", "checkbox");
-      attr(input, "aria-label", input_aria_label_value = `Select ${/*childNode*/
-      ctx[22].type} ${/*childNode*/
-      ctx[22].name}`);
-      attr(input, "class", "svelte-95zn0x");
-      attr(label, "class", "svelte-95zn0x");
-      attr(div, "class", "file-tree-item svelte-95zn0x");
-      set_style(div, "margin-left", "20px");
-    },
-    m(target, anchor) {
-      insert(target, div, anchor);
-      append(div, label);
-      append(label, input);
-      input.checked = /*childNode*/
-      ctx[22].selected;
-      append(label, t0);
-      append(label, t1);
-      append(div, t2);
-      if (!mounted) {
-        dispose = [
-          listen(input, "change", input_change_handler_1),
-          listen(input, "change", change_handler_1)
-        ];
-        mounted = true;
-      }
-    },
-    p(new_ctx, dirty) {
-      ctx = new_ctx;
-      if (dirty & /*vaultStructure*/
-      2 && input_aria_label_value !== (input_aria_label_value = `Select ${/*childNode*/
-      ctx[22].type} ${/*childNode*/
-      ctx[22].name}`)) {
-        attr(input, "aria-label", input_aria_label_value);
-      }
-      if (dirty & /*vaultStructure*/
-      2) {
-        input.checked = /*childNode*/
-        ctx[22].selected;
-      }
-      if (dirty & /*vaultStructure*/
-      2 && t1_value !== (t1_value = /*childNode*/
-      ctx[22].name + ""))
-        set_data(t1, t1_value);
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(div);
-      }
-      mounted = false;
-      run_all(dispose);
-    }
-  };
-}
-function create_each_block(ctx) {
-  let div;
-  let t;
-  function select_block_type(ctx2, dirty) {
-    if (
-      /*node*/
-      ctx2[19].type === "folder"
-    )
-      return create_if_block;
-    return create_else_block;
-  }
-  let current_block_type = select_block_type(ctx, -1);
-  let if_block = current_block_type(ctx);
-  return {
-    c() {
-      div = element("div");
-      if_block.c();
-      t = space();
-      attr(div, "class", "file-tree-item svelte-95zn0x");
-      set_style(
-        div,
-        "margin-left",
-        /*node*/
-        ctx[19].type === "folder" ? "0" : "20px"
-      );
-    },
-    m(target, anchor) {
-      insert(target, div, anchor);
-      if_block.m(div, null);
-      append(div, t);
-    },
-    p(ctx2, dirty) {
-      if (current_block_type === (current_block_type = select_block_type(ctx2, dirty)) && if_block) {
-        if_block.p(ctx2, dirty);
-      } else {
-        if_block.d(1);
-        if_block = current_block_type(ctx2);
-        if (if_block) {
-          if_block.c();
-          if_block.m(div, t);
-        }
-      }
-      if (dirty & /*vaultStructure*/
-      2) {
-        set_style(
-          div,
-          "margin-left",
-          /*node*/
-          ctx2[19].type === "folder" ? "0" : "20px"
-        );
-      }
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(div);
-      }
-      if_block.d();
-    }
-  };
-}
-function create_fragment(ctx) {
-  let div3;
-  let div2;
-  let header;
-  let t1;
-  let div0;
-  let t2;
-  let div1;
-  let button0;
-  let t3;
-  let button0_disabled_value;
-  let t4;
-  let button1;
-  let mounted;
-  let dispose;
-  let each_value = ensure_array_like(
-    /*vaultStructure*/
-    ctx[1]
-  );
-  let each_blocks = [];
-  for (let i = 0; i < each_value.length; i += 1) {
-    each_blocks[i] = create_each_block(get_each_context(ctx, each_value, i));
-  }
-  return {
-    c() {
-      div3 = element("div");
-      div2 = element("div");
-      header = element("header");
-      header.innerHTML = `<h2 class="svelte-95zn0x">Select Files/Folders to Process</h2>`;
-      t1 = space();
-      div0 = element("div");
-      for (let i = 0; i < each_blocks.length; i += 1) {
-        each_blocks[i].c();
-      }
-      t2 = space();
-      div1 = element("div");
-      button0 = element("button");
-      t3 = text("Process Selected");
-      t4 = space();
-      button1 = element("button");
-      button1.textContent = "Cancel";
-      attr(header, "class", "modal-header svelte-95zn0x");
-      attr(div0, "class", "modal-scrollable-content svelte-95zn0x");
-      attr(button0, "class", "mod-cta svelte-95zn0x");
-      button0.disabled = button0_disabled_value = /*selectedPaths*/
-      ctx[2].size === 0;
-      attr(button1, "class", "mod-cancel svelte-95zn0x");
-      attr(div1, "class", "modal-footer svelte-95zn0x");
-      attr(div2, "class", "modal-content svelte-95zn0x");
-      attr(div3, "class", "batch-processor-modal svelte-95zn0x");
-    },
-    m(target, anchor) {
-      insert(target, div3, anchor);
-      append(div3, div2);
-      append(div2, header);
-      append(div2, t1);
-      append(div2, div0);
-      for (let i = 0; i < each_blocks.length; i += 1) {
-        if (each_blocks[i]) {
-          each_blocks[i].m(div0, null);
-        }
-      }
-      append(div2, t2);
-      append(div2, div1);
-      append(div1, button0);
-      append(button0, t3);
-      append(div1, t4);
-      append(div1, button1);
-      if (!mounted) {
-        dispose = [
-          listen(
-            button0,
-            "click",
-            /*handleProcess*/
-            ctx[4]
-          ),
-          listen(button1, "click", function() {
-            if (is_function(
-              /*onClose*/
-              ctx[0]
-            ))
-              ctx[0].apply(this, arguments);
-          })
-        ];
-        mounted = true;
-      }
-    },
-    p(new_ctx, [dirty]) {
-      ctx = new_ctx;
-      if (dirty & /*vaultStructure, toggleSelection, toggleFolder*/
-      10) {
-        each_value = ensure_array_like(
-          /*vaultStructure*/
-          ctx[1]
-        );
-        let i;
-        for (i = 0; i < each_value.length; i += 1) {
-          const child_ctx = get_each_context(ctx, each_value, i);
-          if (each_blocks[i]) {
-            each_blocks[i].p(child_ctx, dirty);
-          } else {
-            each_blocks[i] = create_each_block(child_ctx);
-            each_blocks[i].c();
-            each_blocks[i].m(div0, null);
-          }
-        }
-        for (; i < each_blocks.length; i += 1) {
-          each_blocks[i].d(1);
-        }
-        each_blocks.length = each_value.length;
-      }
-      if (dirty & /*selectedPaths*/
-      4 && button0_disabled_value !== (button0_disabled_value = /*selectedPaths*/
-      ctx[2].size === 0)) {
-        button0.disabled = button0_disabled_value;
-      }
-    },
-    i: noop,
-    o: noop,
-    d(detaching) {
-      if (detaching) {
-        detach(div3);
-      }
-      destroy_each(each_blocks, detaching);
-      mounted = false;
-      run_all(dispose);
-    }
-  };
-}
-function toggleFolder(node, event) {
-  if (event instanceof KeyboardEvent && event.key !== "Enter" && event.key !== " ") {
-    return;
-  }
-  event.preventDefault();
-  node.expanded = !node.expanded;
-}
-function instance($$self, $$props, $$invalidate) {
-  var __awaiter = this && this.__awaiter || function(thisArg, _arguments, P, generator) {
-    function adopt(value) {
-      return value instanceof P ? value : new P(function(resolve) {
-        resolve(value);
-      });
-    }
-    return new (P || (P = Promise))(function(resolve, reject) {
-      function fulfilled(value) {
-        try {
-          step(generator.next(value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function rejected(value) {
-        try {
-          step(generator["throw"](value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function step(result) {
-        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
-      }
-      step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-  };
-  let { app } = $$props;
-  let { aiService } = $$props;
-  let { settingsService } = $$props;
-  let { onClose } = $$props;
-  let vaultStructure = [];
-  let selectedPaths = /* @__PURE__ */ new Set();
-  onMount(() => {
-    buildVaultStructure();
-  });
-  function buildVaultStructure() {
-    const rootFolder = app.vault.getRoot();
-    $$invalidate(1, vaultStructure = rootFolder.children.filter((child) => child instanceof import_obsidian9.TFolder || child instanceof import_obsidian9.TFile).map((child) => createNode(child)));
-  }
-  function createNode(item) {
-    if (item instanceof import_obsidian9.TFile) {
-      return {
-        name: item.name,
-        path: item.path,
-        type: "file",
-        selected: false
-      };
-    } else {
-      return {
-        name: item.name,
-        path: item.path,
-        type: "folder",
-        children: item.children.filter((child) => child instanceof import_obsidian9.TFolder || child instanceof import_obsidian9.TFile).map((child) => createNode(child)),
-        selected: false,
-        expanded: false
-      };
-    }
-  }
-  function toggleSelection(node, selected) {
-    node.selected = selected;
-    if (selected) {
-      selectedPaths.add(node.path);
-    } else {
-      selectedPaths.delete(node.path);
-    }
-    $$invalidate(2, selectedPaths);
-    if (node.type === "folder" && node.children) {
-      node.children.forEach((child) => toggleSelection(child, selected));
-    }
-  }
-  function handleProcess() {
-    return __awaiter(this, void 0, void 0, function* () {
-      if (selectedPaths.size === 0) {
-        new import_obsidian9.Notice("No files or folders selected.");
-        return;
-      }
-      try {
-        new import_obsidian9.Notice("Processing started...");
-        new import_obsidian9.Notice("Batch processing completed.");
-        onClose();
-      } catch (error) {
-        console.error("Error processing files:", error);
-        new import_obsidian9.Notice(`Error processing files: ${error instanceof Error ? error.message : "Unknown error"}`);
-      }
-    });
-  }
-  function input_change_handler(each_value, node_index) {
-    each_value[node_index].selected = this.checked;
-    $$invalidate(1, vaultStructure);
-  }
-  const change_handler = (node, e) => toggleSelection(node, e.currentTarget.checked);
-  const click_handler = (node, e) => toggleFolder(node, e);
-  const keydown_handler = (node, e) => toggleFolder(node, e);
-  function input_change_handler_1(each_value_1, childNode_index) {
-    each_value_1[childNode_index].selected = this.checked;
-    $$invalidate(1, vaultStructure);
-  }
-  const change_handler_1 = (childNode, e) => toggleSelection(childNode, e.currentTarget.checked);
-  function input_change_handler_2(each_value, node_index) {
-    each_value[node_index].selected = this.checked;
-    $$invalidate(1, vaultStructure);
-  }
-  const change_handler_2 = (node, e) => toggleSelection(node, e.currentTarget.checked);
-  $$self.$$set = ($$props2) => {
-    if ("app" in $$props2)
-      $$invalidate(5, app = $$props2.app);
-    if ("aiService" in $$props2)
-      $$invalidate(6, aiService = $$props2.aiService);
-    if ("settingsService" in $$props2)
-      $$invalidate(7, settingsService = $$props2.settingsService);
-    if ("onClose" in $$props2)
-      $$invalidate(0, onClose = $$props2.onClose);
-  };
-  return [
-    onClose,
-    vaultStructure,
-    selectedPaths,
-    toggleSelection,
-    handleProcess,
-    app,
-    aiService,
-    settingsService,
-    input_change_handler,
-    change_handler,
-    click_handler,
-    keydown_handler,
-    input_change_handler_1,
-    change_handler_1,
-    input_change_handler_2,
-    change_handler_2
-  ];
-}
-var BatchProcessorModal = class extends SvelteComponent {
-  constructor(options) {
-    super();
-    init(
-      this,
-      options,
-      instance,
-      create_fragment,
-      safe_not_equal,
-      {
-        app: 5,
-        aiService: 6,
-        settingsService: 7,
-        onClose: 0
-      },
-      add_css
-    );
-  }
-};
-var BatchProcessorModal_default = BatchProcessorModal;
-
-// src/services/file/FileProcessorService.ts
-var FileProcessorService = class extends CoreService {
+var _FileProcessorService = class extends CoreService {
   constructor(app, aiService, settingsService, databaseService, fileScanner, generatorFactory, store) {
     super("file-processor", "File Processor Service");
     this.app = app;
@@ -16908,90 +13178,242 @@ var FileProcessorService = class extends CoreService {
     this.fileScanner = fileScanner;
     this.generatorFactory = generatorFactory;
     this.store = store;
-    this.batchHandler = null;
+    this.isInitializing = false;
+    this.initializationError = null;
+    this.processingQueue = [];
+    this.activeChunks = /* @__PURE__ */ new Map();
+    this.processingStats = {
+      totalFiles: 0,
+      processedFiles: 0,
+      skippedFiles: 0,
+      errorFiles: 0,
+      startTime: 0,
+      averageProcessingTime: 0
+    };
+    // Default processing options
+    this.options = {
+      chunkSize: 10,
+      delayBetweenChunks: 1e3,
+      maxRetries: 3,
+      generateFrontMatter: true,
+      generateWikilinks: true,
+      maxConcurrentProcessing: 3
+    };
+    if (_FileProcessorService.instance) {
+      console.log("\u{1F987} FileProcessorService: Returning existing instance");
+      return _FileProcessorService.instance;
+    }
+    this.state = "uninitialized" /* Uninitialized */;
+    _FileProcessorService.instance = this;
+    console.log("\u{1F987} FileProcessorService: Created new instance with state:", this.state);
   }
-  /**
-   * Initialize the service
-   */
+  isReady() {
+    var _a, _b, _c, _d, _e;
+    const dependencyStates = {
+      aiService: (_a = this.aiService) == null ? void 0 : _a.isReady(),
+      settingsService: (_b = this.settingsService) == null ? void 0 : _b.isReady(),
+      fileScanner: (_c = this.fileScanner) == null ? void 0 : _c.isReady(),
+      generatorFactory: (_d = this.generatorFactory) == null ? void 0 : _d.isReady(),
+      databaseService: (_e = this.databaseService) == null ? void 0 : _e.isReady()
+    };
+    const allDependenciesReady = Object.values(dependencyStates).every((state) => state === true);
+    const storeInitialized = get_store_value(this.store) !== void 0;
+    console.log("\u{1F987} FileProcessorService.isReady check:", {
+      serviceState: this.state,
+      isInitializing: this.isInitializing,
+      hasError: this.initializationError !== null,
+      dependencyStates,
+      allDependenciesReady,
+      storeInitialized
+    });
+    return this.state === "ready" /* Ready */ && !this.isInitializing && this.initializationError === null && allDependenciesReady && storeInitialized;
+  }
   initializeInternal() {
     return __async(this, null, function* () {
-      try {
-        if (!this.fileScanner || !this.generatorFactory) {
-          throw new Error("Required services not available");
+      if (this.isInitializing) {
+        console.log("\u{1F987} FileProcessorService: Already initializing, waiting...");
+        while (this.isInitializing) {
+          yield new Promise((resolve) => setTimeout(resolve, 100));
         }
+        return;
+      }
+      try {
+        console.log("\u{1F987} FileProcessorService: Starting initialization...");
+        this.isInitializing = true;
+        this.state = "initializing" /* Initializing */;
+        const dependencies = [
+          { service: this.aiService, name: "AIService" },
+          { service: this.settingsService, name: "SettingsService" },
+          { service: this.fileScanner, name: "FileScannerService" },
+          { service: this.generatorFactory, name: "GeneratorFactory" },
+          { service: this.databaseService, name: "DatabaseService" }
+        ];
+        for (const { service, name } of dependencies) {
+          console.log(`\u{1F987} FileProcessorService: Checking dependency ${name}...`);
+          if (!service) {
+            throw new Error(`Required dependency ${name} not provided`);
+          }
+        }
+        console.log("\u{1F987} FileProcessorService: Waiting for dependencies...");
+        yield this.waitForDependencies();
+        console.log("\u{1F987} FileProcessorService: Initializing store...");
+        this.initializeStore();
+        console.log("\u{1F987} FileProcessorService: Loading settings...");
+        yield this.loadProcessingOptions();
+        console.log("\u{1F987} FileProcessorService: Setting ready state...");
+        this.state = "ready" /* Ready */;
+        this.isInitializing = false;
+        this.initializationError = null;
+        console.log("\u{1F987} FileProcessorService: Verifying ready state...");
+        if (!this.isReady()) {
+          throw new Error("Service failed to reach ready state after initialization");
+        }
+        console.log("\u{1F987} FileProcessorService: Initialization complete");
       } catch (error) {
-        throw new ServiceError(
-          this.serviceName,
-          "Failed to initialize file processor",
-          error instanceof Error ? error : void 0
-        );
+        console.error("\u{1F987} FileProcessorService: Initialization failed:", error);
+        this.handleInitializationError(error);
+        throw error;
+      } finally {
+        this.isInitializing = false;
       }
     });
   }
-  /**
-   * Clean up resources
-   */
-  destroyInternal() {
+  waitForDependencies() {
     return __async(this, null, function* () {
-      var _a;
-      (_a = this.batchHandler) == null ? void 0 : _a.close();
-      this.batchHandler = null;
+      const dependencies = [
+        { service: this.aiService, name: "AIService" },
+        { service: this.settingsService, name: "SettingsService" },
+        { service: this.fileScanner, name: "FileScannerService" },
+        { service: this.generatorFactory, name: "GeneratorFactory" }
+      ];
+      for (const { service, name } of dependencies) {
+        yield this.waitForDependency(service, name);
+      }
     });
   }
-  /**
-   * Process a single file with specified options
-   */
+  waitForDependency(service, name) {
+    return __async(this, null, function* () {
+      console.log(`\u{1F987} FileProcessorService: Waiting for ${name}...`);
+      const timeout = 3e4;
+      const startTime = Date.now();
+      let lastLog = 0;
+      while (!service.isReady()) {
+        const now2 = Date.now();
+        if (now2 - lastLog >= 5e3) {
+          console.log(`\u{1F987} FileProcessorService: Still waiting for ${name}... (${Math.round((now2 - startTime) / 1e3)}s)`);
+          lastLog = now2;
+        }
+        if (now2 - startTime > timeout) {
+          throw new Error(`Timeout waiting for ${name} to be ready`);
+        }
+        yield new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      console.log(`\u{1F987} FileProcessorService: ${name} is ready`);
+    });
+  }
+  initializeStore() {
+    const initialState2 = {
+      isProcessing: false,
+      currentFile: null,
+      progress: 0,
+      error: null,
+      queue: [],
+      state: "idle" /* IDLE */,
+      filesQueued: 0,
+      filesProcessed: 0,
+      filesRemaining: 0,
+      errors: [],
+      startTime: null,
+      estimatedTimeRemaining: null
+    };
+    this.store.set(initialState2);
+    const state = get_store_value(this.store);
+    if (!state) {
+      throw new Error("Failed to initialize processing state store");
+    }
+  }
+  loadProcessingOptions() {
+    return __async(this, null, function* () {
+      const settings = this.settingsService.getSettings();
+      this.options = __spreadProps(__spreadValues({}, this.options), {
+        generateFrontMatter: settings.frontMatter.autoGenerate,
+        generateWikilinks: settings.advanced.generateWikilinks,
+        maxConcurrentProcessing: settings.advanced.maxConcurrentProcessing,
+        chunkSize: settings.advanced.batchSize,
+        delayBetweenChunks: settings.advanced.delayBetweenChunks,
+        maxRetries: settings.advanced.maxRetries
+      });
+    });
+  }
+  setStatusBar(statusBar) {
+    this.statusBar = statusBar;
+  }
   processSingleFile(file, options) {
     return __async(this, null, function* () {
-      var _a, _b;
       if (!this.isReady()) {
         throw new ServiceError(this.serviceName, "Service not ready");
       }
       const startTime = Date.now();
+      let result = {
+        success: false,
+        path: file.path,
+        frontMatterGenerated: false,
+        wikilinksGenerated: false,
+        processingTime: 0
+      };
+      try {
+        this.updateProcessingState({
+          isProcessing: true,
+          currentFile: file.path,
+          state: "running" /* RUNNING */
+        });
+        result = yield this.processFile(file, options);
+        yield this.handleProcessingResult(result);
+        return result;
+      } catch (error) {
+        result = this.createErrorResult(file, error, startTime);
+        yield this.handleProcessingError(error, file);
+        return result;
+      } finally {
+        this.updateProcessingStats(result);
+        this.updateStatusBar(file.path);
+      }
+    });
+  }
+  processFile(file, options) {
+    return __async(this, null, function* () {
+      const startTime = Date.now();
+      const processOptions = __spreadValues(__spreadValues({}, this.options), options);
       let frontMatterGenerated = false;
       let wikilinksGenerated = false;
       try {
-        const settings = this.settingsService.getSettings();
-        const generateFM = (_a = options == null ? void 0 : options.generateFrontMatter) != null ? _a : settings.frontMatter.autoGenerate;
-        const generateWL = (_b = options == null ? void 0 : options.generateWikilinks) != null ? _b : settings.advanced.generateWikilinks;
-        if (generateFM) {
+        if (processOptions.generateFrontMatter) {
           const hasFM = yield this.fileScanner.hasFrontMatter(file);
           if (!hasFM) {
             yield this.generateFrontMatter(file);
             frontMatterGenerated = true;
           }
         }
-        if (generateWL) {
+        if (processOptions.generateWikilinks) {
           const wikilinkResult = yield this.generateWikilinks(file);
           wikilinksGenerated = wikilinkResult.success;
         }
-        const processingTime = Date.now() - startTime;
-        const result = {
+        return {
           success: true,
           path: file.path,
           frontMatterGenerated,
           wikilinksGenerated,
-          processingTime
+          processingTime: Date.now() - startTime
         };
-        yield this.handleSuccess(file, result);
-        return result;
       } catch (error) {
-        const processingTime = Date.now() - startTime;
-        this.handleProcessingError("Failed to process file", error);
-        return {
-          success: false,
-          path: file.path,
-          frontMatterGenerated,
-          wikilinksGenerated,
-          processingTime,
-          error: error instanceof Error ? error.message : "Unknown error"
-        };
+        throw new ServiceError(
+          this.serviceName,
+          `Failed to process file ${file.path}`,
+          error instanceof Error ? error : void 0
+        );
       }
     });
   }
-  /**
-   * Generate front matter for a file
-   */
   generateFrontMatter(file) {
     return __async(this, null, function* () {
       const frontMatter = `---
@@ -17003,128 +13425,114 @@ created: ${new Date().toISOString()}
       yield this.app.vault.modify(file, frontMatter + content);
     });
   }
-  /**
-   * Generate wikilinks using WikilinkGenerator
-   */
   generateWikilinks(file) {
     return __async(this, null, function* () {
-      try {
-        const content = yield this.app.vault.read(file);
-        const existingPages = this.getExistingPageNames();
-        const existingWikilinks = this.extractExistingWikilinks(content);
-        const wikilinkGenerator = yield this.generatorFactory.getWikilinkGenerator();
-        yield wikilinkGenerator.initialize();
-        const result = yield wikilinkGenerator.generate({
-          content,
-          existingPages
-        });
-        yield this.app.vault.modify(file, result.content);
-        return { success: true };
-      } catch (error) {
-        console.error(`Failed to generate wikilinks for ${file.path}:`, error);
-        throw error;
+      const wikilinkGenerator = yield this.generatorFactory.getWikilinkGenerator();
+      yield wikilinkGenerator.initialize();
+      const content = yield this.app.vault.read(file);
+      const existingPages = this.app.vault.getMarkdownFiles().map((f) => f.basename);
+      const result = yield wikilinkGenerator.generate({
+        content,
+        existingPages
+      });
+      yield this.app.vault.modify(file, result.content);
+      return { success: true };
+    });
+  }
+  handleInitializationError(error) {
+    this.initializationError = error instanceof Error ? error : new Error("Unknown error");
+    this.state = "error" /* Error */;
+    this.isInitializing = false;
+    console.error("\u{1F987} FileProcessorService: Initialization failed:", error);
+    throw new ServiceError(
+      this.serviceName,
+      "Failed to initialize file processor",
+      error instanceof Error ? error : void 0
+    );
+  }
+  handleProcessingResult(result) {
+    return __async(this, null, function* () {
+      yield this.databaseService.markFileAsProcessed({ path: result.path }, result);
+      if (result.success) {
+        new import_obsidian10.Notice(`Successfully processed ${result.path}`);
       }
     });
   }
-  /**
-   * Extract existing wikilinks from content
-   */
-  extractExistingWikilinks(content) {
-    const regex = /\[\[([^\]]+)\]\]/g;
-    const existingLinks = /* @__PURE__ */ new Set();
-    let match;
-    while ((match = regex.exec(content)) !== null) {
-      const link = match[1].split("|")[0].trim().toLowerCase();
-      existingLinks.add(link);
-    }
-    return existingLinks;
+  createErrorResult(file, error, startTime) {
+    return {
+      success: false,
+      path: file.path,
+      frontMatterGenerated: false,
+      wikilinksGenerated: false,
+      processingTime: Date.now() - startTime,
+      error: error instanceof Error ? error.message : "Unknown error"
+    };
   }
-  /**
-   * Get existing page names in the vault
-   */
-  getExistingPageNames() {
-    return this.app.vault.getMarkdownFiles().map((file) => file.basename);
-  }
-  /**
-   * Handle successful processing
-   */
-  handleSuccess(file, result) {
+  handleProcessingError(error, file) {
     return __async(this, null, function* () {
-      yield this.databaseService.markFileAsProcessed(file, result);
-      this.store.update((state) => __spreadProps(__spreadValues({}, state), {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.error("\u{1F987} Processing error:", error);
+      if (file) {
+        new import_obsidian10.Notice(`Error processing file ${file.path}: ${errorMessage}`);
+      }
+      this.updateProcessingState({
         isProcessing: false,
         currentFile: null,
-        // Changed from undefined to null
-        progress: 100,
-        error: null,
-        // Changed from undefined to null
-        queue: [],
-        state: "idle" /* IDLE */,
-        filesQueued: 0,
-        filesProcessed: 0,
-        filesRemaining: 0,
-        errors: [],
-        startTime: null,
-        // Changed from undefined to null
-        estimatedTimeRemaining: null
-        // Changed from undefined to null
-      }));
-      new import_obsidian10.Notice(`Successfully processed ${file.basename}`);
+        state: "error" /* ERROR */,
+        error: errorMessage
+      });
     });
   }
-  handleProcessingError(message, error, file) {
-    console.error("Processing error:", error);
-    if (file) {
-      new import_obsidian10.Notice(`Error processing file ${file.path}: ${error instanceof Error ? error.message : "Unknown error"}`);
-    }
-    this.store.update((state) => __spreadProps(__spreadValues({}, state), {
-      isProcessing: false,
-      currentFile: null,
-      // Changed from undefined to null
-      progress: 0,
-      error: error instanceof Error ? error.message : "Unknown error",
-      queue: [],
-      state: "error" /* ERROR */,
-      filesQueued: 0,
-      filesProcessed: 0,
-      filesRemaining: 0,
-      errors: [
-        ...state.errors,
-        {
-          filePath: (file == null ? void 0 : file.path) || "unknown",
-          error: error instanceof Error ? error.message : "Unknown error",
-          timestamp: Date.now(),
-          retryCount: 0
-        }
-      ],
-      startTime: null,
-      estimatedTimeRemaining: null
-    }));
+  updateProcessingState(update2) {
+    this.store.update((state) => __spreadValues(__spreadValues({}, state), update2));
   }
-  /**
-   * Open the batch processor modal
-   */
-  openBatchProcessor() {
-    if (!this.isReady()) {
-      throw new ServiceError(this.serviceName, "Service not ready");
+  updateProcessingStats(result) {
+    this.processingStats.processedFiles++;
+    if (!result.success) {
+      this.processingStats.errorFiles++;
     }
-    this.batchHandler = new BatchProcessorModal_default({
-      target: this.app.workspace.containerEl,
-      props: {
-        app: this.app,
-        aiService: this.aiService,
-        settingsService: this.settingsService,
-        onClose: () => {
-          this.batchHandler = null;
-        }
+    const totalTime = this.processingStats.averageProcessingTime * (this.processingStats.processedFiles - 1);
+    this.processingStats.averageProcessingTime = (totalTime + result.processingTime) / this.processingStats.processedFiles;
+  }
+  updateStatusBar(currentFile) {
+    if (!this.statusBar)
+      return;
+    const state = get_store_value(this.store);
+    this.statusBar.updateFromState({
+      currentFile: currentFile || null,
+      progress: state.filesProcessed / state.filesQueued * 100,
+      status: {
+        state,
+        filesQueued: state.filesQueued,
+        filesProcessed: state.filesProcessed,
+        filesRemaining: state.filesRemaining,
+        currentFile: currentFile || void 0,
+        errors: state.errors,
+        startTime: state.startTime || void 0,
+        estimatedTimeRemaining: state.estimatedTimeRemaining || void 0
+      }
+    });
+  }
+  destroyInternal() {
+    return __async(this, null, function* () {
+      try {
+        this.processingQueue = [];
+        this.activeChunks.clear();
+        this.initializeStore();
+        console.log("\u{1F987} FileProcessorService: Cleanup complete");
+        _FileProcessorService.instance = null;
+      } catch (error) {
+        console.error("\u{1F987} FileProcessorService: Error during cleanup:", error);
       }
     });
   }
 };
+var FileProcessorService = _FileProcessorService;
+FileProcessorService.instance = null;
 
 // src/generators/BatchProcessor.ts
 var import_obsidian11 = require("obsidian");
-var import_events3 = require("events");
+var import_events6 = require("events");
 
 // src/services/file/BatchHandler.ts
 var BatchHandler = class {
@@ -17188,7 +13596,7 @@ var VALIDATION_LIMITS = {
 };
 
 // src/generators/BatchProcessor.ts
-var BatchProcessor = class extends import_events3.EventEmitter {
+var BatchProcessor = class extends import_events6.EventEmitter {
   constructor(app, coreService, statusBar) {
     super();
     this.app = app;
@@ -17553,3149 +13961,97 @@ function registerFileServices(app) {
   });
 }
 
+// src/registrations/UIRegistrations.ts
+function registerUIServices() {
+  return __async(this, null, function* () {
+    const registry = ServiceRegistry.getInstance();
+    try {
+      yield registry.registerService(
+        uiStore.serviceId,
+        uiStore,
+        []
+        // No dependencies
+      );
+      yield registry.registerService(
+        processingStore.serviceId,
+        processingStore,
+        [uiStore.serviceId]
+        // Depends on UI store
+      );
+      console.log("\u{1F987} UI services registered successfully");
+    } catch (error) {
+      console.error("\u{1F987} Failed to register UI services:", error);
+      throw new ServiceError(
+        "UIRegistrations",
+        "Failed to register UI services",
+        error instanceof Error ? error : void 0
+      );
+    }
+  });
+}
+function initializeUIServices() {
+  return __async(this, null, function* () {
+    const registry = ServiceRegistry.getInstance();
+    try {
+      const ui = registry.getService(uiStore.serviceId);
+      const processing = registry.getService(processingStore.serviceId);
+      yield ui.initialize();
+      yield processing.initialize();
+      console.log("\u{1F987} UI services initialized successfully");
+    } catch (error) {
+      console.error("\u{1F987} Failed to initialize UI services:", error);
+      throw new ServiceError(
+        "UIRegistrations",
+        "Failed to initialize UI services",
+        error instanceof Error ? error : void 0
+      );
+    }
+  });
+}
+function destroyUIServices() {
+  return __async(this, null, function* () {
+    const registry = ServiceRegistry.getInstance();
+    try {
+      const ui = registry.getService(uiStore.serviceId);
+      const processing = registry.getService(processingStore.serviceId);
+      yield processing.destroy();
+      yield ui.destroy();
+      console.log("\u{1F987} UI services destroyed successfully");
+    } catch (error) {
+      console.error("\u{1F987} Failed to destroy UI services:", error);
+    }
+  });
+}
+
 // src/settings/GraphWeaverSettingTab.ts
-var import_obsidian23 = require("obsidian");
+var import_obsidian26 = require("obsidian");
 
-// node_modules/flowbite-svelte/dist/utils/Frame.svelte
-var import_tailwind_merge = __toESM(require_bundle_cjs());
-function create_dynamic_element(ctx) {
-  let svelte_element;
-  let use_action;
-  let current;
-  let mounted;
-  let dispose;
-  const default_slot_template = (
-    /*#slots*/
-    ctx[12].default
-  );
-  const default_slot = create_slot(
-    default_slot_template,
-    ctx,
-    /*$$scope*/
-    ctx[11],
-    null
-  );
-  let svelte_element_levels = [
-    { role: (
-      /*role*/
-      ctx[4]
-    ) },
-    /*$$restProps*/
-    ctx[6],
-    { class: (
-      /*divClass*/
-      ctx[5]
-    ) }
-  ];
-  let svelte_element_data = {};
-  for (let i = 0; i < svelte_element_levels.length; i += 1) {
-    svelte_element_data = assign(svelte_element_data, svelte_element_levels[i]);
-  }
-  return {
-    c() {
-      svelte_element = element(
-        /*tag*/
-        ctx[1]
-      );
-      if (default_slot)
-        default_slot.c();
-      set_dynamic_element_data(
-        /*tag*/
-        ctx[1]
-      )(svelte_element, svelte_element_data);
-    },
-    m(target, anchor) {
-      insert(target, svelte_element, anchor);
-      if (default_slot) {
-        default_slot.m(svelte_element, null);
-      }
-      ctx[18](svelte_element);
-      current = true;
-      if (!mounted) {
-        dispose = [
-          action_destroyer(use_action = /*use*/
-          ctx[2].call(
-            null,
-            svelte_element,
-            /*options*/
-            ctx[3]
-          )),
-          listen(
-            svelte_element,
-            "click",
-            /*click_handler*/
-            ctx[13]
-          ),
-          listen(
-            svelte_element,
-            "mouseenter",
-            /*mouseenter_handler*/
-            ctx[14]
-          ),
-          listen(
-            svelte_element,
-            "mouseleave",
-            /*mouseleave_handler*/
-            ctx[15]
-          ),
-          listen(
-            svelte_element,
-            "focusin",
-            /*focusin_handler*/
-            ctx[16]
-          ),
-          listen(
-            svelte_element,
-            "focusout",
-            /*focusout_handler*/
-            ctx[17]
-          )
-        ];
-        mounted = true;
-      }
-    },
-    p(ctx2, dirty) {
-      if (default_slot) {
-        if (default_slot.p && (!current || dirty & /*$$scope*/
-        2048)) {
-          update_slot_base(
-            default_slot,
-            default_slot_template,
-            ctx2,
-            /*$$scope*/
-            ctx2[11],
-            !current ? get_all_dirty_from_scope(
-              /*$$scope*/
-              ctx2[11]
-            ) : get_slot_changes(
-              default_slot_template,
-              /*$$scope*/
-              ctx2[11],
-              dirty,
-              null
-            ),
-            null
-          );
-        }
-      }
-      set_dynamic_element_data(
-        /*tag*/
-        ctx2[1]
-      )(svelte_element, svelte_element_data = get_spread_update(svelte_element_levels, [
-        (!current || dirty & /*role*/
-        16) && { role: (
-          /*role*/
-          ctx2[4]
-        ) },
-        dirty & /*$$restProps*/
-        64 && /*$$restProps*/
-        ctx2[6],
-        (!current || dirty & /*divClass*/
-        32) && { class: (
-          /*divClass*/
-          ctx2[5]
-        ) }
-      ]));
-      if (use_action && is_function(use_action.update) && dirty & /*options*/
-      8)
-        use_action.update.call(
-          null,
-          /*options*/
-          ctx2[3]
-        );
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(default_slot, local);
-      current = true;
-    },
-    o(local) {
-      transition_out(default_slot, local);
-      current = false;
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(svelte_element);
-      }
-      if (default_slot)
-        default_slot.d(detaching);
-      ctx[18](null);
-      mounted = false;
-      run_all(dispose);
-    }
-  };
-}
-function create_fragment2(ctx) {
-  let previous_tag = (
-    /*tag*/
-    ctx[1]
-  );
-  let svelte_element_anchor;
-  let current;
-  let svelte_element = (
-    /*tag*/
-    ctx[1] && create_dynamic_element(ctx)
-  );
-  return {
-    c() {
-      if (svelte_element)
-        svelte_element.c();
-      svelte_element_anchor = empty();
-    },
-    m(target, anchor) {
-      if (svelte_element)
-        svelte_element.m(target, anchor);
-      insert(target, svelte_element_anchor, anchor);
-      current = true;
-    },
-    p(ctx2, [dirty]) {
-      if (
-        /*tag*/
-        ctx2[1]
-      ) {
-        if (!previous_tag) {
-          svelte_element = create_dynamic_element(ctx2);
-          previous_tag = /*tag*/
-          ctx2[1];
-          svelte_element.c();
-          svelte_element.m(svelte_element_anchor.parentNode, svelte_element_anchor);
-        } else if (safe_not_equal(
-          previous_tag,
-          /*tag*/
-          ctx2[1]
-        )) {
-          svelte_element.d(1);
-          svelte_element = create_dynamic_element(ctx2);
-          previous_tag = /*tag*/
-          ctx2[1];
-          svelte_element.c();
-          svelte_element.m(svelte_element_anchor.parentNode, svelte_element_anchor);
-        } else {
-          svelte_element.p(ctx2, dirty);
-        }
-      } else if (previous_tag) {
-        svelte_element.d(1);
-        svelte_element = null;
-        previous_tag = /*tag*/
-        ctx2[1];
-      }
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(svelte_element, local);
-      current = true;
-    },
-    o(local) {
-      transition_out(svelte_element, local);
-      current = false;
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(svelte_element_anchor);
-      }
-      if (svelte_element)
-        svelte_element.d(detaching);
-    }
-  };
-}
-function instance2($$self, $$props, $$invalidate) {
-  const omit_props_names = ["tag", "color", "rounded", "border", "shadow", "node", "use", "options", "role"];
-  let $$restProps = compute_rest_props($$props, omit_props_names);
-  let { $$slots: slots = {}, $$scope } = $$props;
-  const noop2 = () => {
-  };
-  setContext("background", true);
-  let { tag = $$restProps.href ? "a" : "div" } = $$props;
-  let { color = "default" } = $$props;
-  let { rounded = false } = $$props;
-  let { border = false } = $$props;
-  let { shadow = false } = $$props;
-  let { node = void 0 } = $$props;
-  let { use = noop2 } = $$props;
-  let { options = {} } = $$props;
-  let { role = void 0 } = $$props;
-  const bgColors = {
-    gray: "bg-gray-50 dark:bg-gray-800",
-    red: "bg-red-50 dark:bg-gray-800",
-    yellow: "bg-yellow-50 dark:bg-gray-800 ",
-    green: "bg-green-50 dark:bg-gray-800 ",
-    indigo: "bg-indigo-50 dark:bg-gray-800 ",
-    purple: "bg-purple-50 dark:bg-gray-800 ",
-    pink: "bg-pink-50 dark:bg-gray-800 ",
-    blue: "bg-blue-50 dark:bg-gray-800 ",
-    light: "bg-gray-50 dark:bg-gray-700",
-    dark: "bg-gray-50 dark:bg-gray-800",
-    default: "bg-white dark:bg-gray-800",
-    dropdown: "bg-white dark:bg-gray-700",
-    navbar: "bg-white dark:bg-gray-900",
-    navbarUl: "bg-gray-50 dark:bg-gray-800",
-    form: "bg-gray-50 dark:bg-gray-700",
-    primary: "bg-primary-50 dark:bg-gray-800 ",
-    orange: "bg-orange-50 dark:bg-orange-800",
-    none: ""
-  };
-  const textColors = {
-    gray: "text-gray-800 dark:text-gray-300",
-    red: "text-red-800 dark:text-red-400",
-    yellow: "text-yellow-800 dark:text-yellow-300",
-    green: "text-green-800 dark:text-green-400",
-    indigo: "text-indigo-800 dark:text-indigo-400",
-    purple: "text-purple-800 dark:text-purple-400",
-    pink: "text-pink-800 dark:text-pink-400",
-    blue: "text-blue-800 dark:text-blue-400",
-    light: "text-gray-700 dark:text-gray-300",
-    dark: "text-gray-700 dark:text-gray-300",
-    default: "text-gray-500 dark:text-gray-400",
-    dropdown: "text-gray-700 dark:text-gray-200",
-    navbar: "text-gray-700 dark:text-gray-200",
-    navbarUl: "text-gray-700 dark:text-gray-400",
-    form: "text-gray-900 dark:text-white",
-    primary: "text-primary-800 dark:text-primary-400",
-    orange: "text-orange-800 dark:text-orange-400",
-    none: ""
-  };
-  const borderColors = {
-    gray: "border-gray-300 dark:border-gray-800 divide-gray-300 dark:divide-gray-800",
-    red: "border-red-300 dark:border-red-800 divide-red-300 dark:divide-red-800",
-    yellow: "border-yellow-300 dark:border-yellow-800 divide-yellow-300 dark:divide-yellow-800",
-    green: "border-green-300 dark:border-green-800 divide-green-300 dark:divide-green-800",
-    indigo: "border-indigo-300 dark:border-indigo-800 divide-indigo-300 dark:divide-indigo-800",
-    purple: "border-purple-300 dark:border-purple-800 divide-purple-300 dark:divide-purple-800",
-    pink: "border-pink-300 dark:border-pink-800 divide-pink-300 dark:divide-pink-800",
-    blue: "border-blue-300 dark:border-blue-800 divide-blue-300 dark:divide-blue-800",
-    light: "border-gray-500 divide-gray-500",
-    dark: "border-gray-500 divide-gray-500",
-    default: "border-gray-200 dark:border-gray-700 divide-gray-200 dark:divide-gray-700",
-    dropdown: "border-gray-100 dark:border-gray-600 divide-gray-100 dark:divide-gray-600",
-    navbar: "border-gray-100 dark:border-gray-700 divide-gray-100 dark:divide-gray-700",
-    navbarUl: "border-gray-100 dark:border-gray-700 divide-gray-100 dark:divide-gray-700",
-    form: "border-gray-300 dark:border-gray-700 divide-gray-300 dark:divide-gray-700",
-    primary: "border-primary-500 dark:border-primary-200  divide-primary-500 dark:divide-primary-200 ",
-    orange: "border-orange-300 dark:border-orange-800 divide-orange-300 dark:divide-orange-800",
-    none: ""
-  };
-  let divClass;
-  function click_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function mouseenter_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function mouseleave_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function focusin_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function focusout_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function svelte_element_binding($$value) {
-    binding_callbacks[$$value ? "unshift" : "push"](() => {
-      node = $$value;
-      $$invalidate(0, node);
-    });
-  }
-  $$self.$$set = ($$new_props) => {
-    $$invalidate(23, $$props = assign(assign({}, $$props), exclude_internal_props($$new_props)));
-    $$invalidate(6, $$restProps = compute_rest_props($$props, omit_props_names));
-    if ("tag" in $$new_props)
-      $$invalidate(1, tag = $$new_props.tag);
-    if ("color" in $$new_props)
-      $$invalidate(7, color = $$new_props.color);
-    if ("rounded" in $$new_props)
-      $$invalidate(8, rounded = $$new_props.rounded);
-    if ("border" in $$new_props)
-      $$invalidate(9, border = $$new_props.border);
-    if ("shadow" in $$new_props)
-      $$invalidate(10, shadow = $$new_props.shadow);
-    if ("node" in $$new_props)
-      $$invalidate(0, node = $$new_props.node);
-    if ("use" in $$new_props)
-      $$invalidate(2, use = $$new_props.use);
-    if ("options" in $$new_props)
-      $$invalidate(3, options = $$new_props.options);
-    if ("role" in $$new_props)
-      $$invalidate(4, role = $$new_props.role);
-    if ("$$scope" in $$new_props)
-      $$invalidate(11, $$scope = $$new_props.$$scope);
-  };
-  $$self.$$.update = () => {
-    if ($$self.$$.dirty & /*color*/
-    128) {
-      $:
-        $$invalidate(7, color = color != null ? color : "default");
-    }
-    if ($$self.$$.dirty & /*color*/
-    128) {
-      $:
-        setContext("color", color);
-    }
-    $:
-      $$invalidate(5, divClass = (0, import_tailwind_merge.twMerge)(bgColors[color], textColors[color], rounded && "rounded-lg", border && "border", borderColors[color], shadow && "shadow-md", $$props.class));
-  };
-  $$props = exclude_internal_props($$props);
-  return [
-    node,
-    tag,
-    use,
-    options,
-    role,
-    divClass,
-    $$restProps,
-    color,
-    rounded,
-    border,
-    shadow,
-    $$scope,
-    slots,
-    click_handler,
-    mouseenter_handler,
-    mouseleave_handler,
-    focusin_handler,
-    focusout_handler,
-    svelte_element_binding
-  ];
-}
-var Frame = class extends SvelteComponent {
-  constructor(options) {
-    super();
-    init(this, options, instance2, create_fragment2, safe_not_equal, {
-      tag: 1,
-      color: 7,
-      rounded: 8,
-      border: 9,
-      shadow: 10,
-      node: 0,
-      use: 2,
-      options: 3,
-      role: 4
-    });
-  }
-};
-var Frame_default = Frame;
+// node_modules/svelte/src/runtime/internal/disclose-version/index.js
+if (typeof window !== "undefined")
+  (window.__svelte || (window.__svelte = { v: /* @__PURE__ */ new Set() })).v.add(PUBLIC_VERSION);
 
-// node_modules/flowbite-svelte/dist/accordion/Accordion.svelte
-var import_tailwind_merge2 = __toESM(require_bundle_cjs());
-function create_default_slot(ctx) {
-  let current;
-  const default_slot_template = (
-    /*#slots*/
-    ctx[7].default
-  );
-  const default_slot = create_slot(
-    default_slot_template,
-    ctx,
-    /*$$scope*/
-    ctx[8],
-    null
-  );
-  return {
-    c() {
-      if (default_slot)
-        default_slot.c();
-    },
-    m(target, anchor) {
-      if (default_slot) {
-        default_slot.m(target, anchor);
-      }
-      current = true;
-    },
-    p(ctx2, dirty) {
-      if (default_slot) {
-        if (default_slot.p && (!current || dirty & /*$$scope*/
-        256)) {
-          update_slot_base(
-            default_slot,
-            default_slot_template,
-            ctx2,
-            /*$$scope*/
-            ctx2[8],
-            !current ? get_all_dirty_from_scope(
-              /*$$scope*/
-              ctx2[8]
-            ) : get_slot_changes(
-              default_slot_template,
-              /*$$scope*/
-              ctx2[8],
-              dirty,
-              null
-            ),
-            null
-          );
-        }
-      }
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(default_slot, local);
-      current = true;
-    },
-    o(local) {
-      transition_out(default_slot, local);
-      current = false;
-    },
-    d(detaching) {
-      if (default_slot)
-        default_slot.d(detaching);
-    }
-  };
-}
-function create_fragment3(ctx) {
-  let frame;
-  let current;
-  const frame_spread_levels = [
-    /*$$restProps*/
-    ctx[1],
-    { class: (
-      /*frameClass*/
-      ctx[0]
-    ) },
-    { color: "none" }
-  ];
-  let frame_props = {
-    $$slots: { default: [create_default_slot] },
-    $$scope: { ctx }
-  };
-  for (let i = 0; i < frame_spread_levels.length; i += 1) {
-    frame_props = assign(frame_props, frame_spread_levels[i]);
-  }
-  frame = new Frame_default({ props: frame_props });
-  return {
-    c() {
-      create_component(frame.$$.fragment);
-    },
-    m(target, anchor) {
-      mount_component(frame, target, anchor);
-      current = true;
-    },
-    p(ctx2, [dirty]) {
-      const frame_changes = dirty & /*$$restProps, frameClass*/
-      3 ? get_spread_update(frame_spread_levels, [
-        dirty & /*$$restProps*/
-        2 && get_spread_object(
-          /*$$restProps*/
-          ctx2[1]
-        ),
-        dirty & /*frameClass*/
-        1 && { class: (
-          /*frameClass*/
-          ctx2[0]
-        ) },
-        frame_spread_levels[2]
-      ]) : {};
-      if (dirty & /*$$scope*/
-      256) {
-        frame_changes.$$scope = { dirty, ctx: ctx2 };
-      }
-      frame.$set(frame_changes);
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(frame.$$.fragment, local);
-      current = true;
-    },
-    o(local) {
-      transition_out(frame.$$.fragment, local);
-      current = false;
-    },
-    d(detaching) {
-      destroy_component(frame, detaching);
-    }
-  };
-}
-function instance3($$self, $$props, $$invalidate) {
-  const omit_props_names = ["multiple", "flush", "activeClass", "inactiveClass", "defaultClass"];
-  let $$restProps = compute_rest_props($$props, omit_props_names);
-  let { $$slots: slots = {}, $$scope } = $$props;
-  let { multiple = false } = $$props;
-  let { flush: flush2 = false } = $$props;
-  let { activeClass = "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-800" } = $$props;
-  let { inactiveClass = "text-gray-500 dark:text-gray-400 hover:bg-gray-100 hover:dark:bg-gray-800" } = $$props;
-  let { defaultClass = "text-gray-500 dark:text-gray-400" } = $$props;
-  const ctx = {
-    flush: flush2,
-    activeClass: (0, import_tailwind_merge2.twMerge)(activeClass, $$props.classActive),
-    inactiveClass: (0, import_tailwind_merge2.twMerge)(inactiveClass, $$props.classInactive),
-    selected: multiple ? void 0 : writable()
-  };
-  setContext("ctx", ctx);
-  let frameClass;
-  $$self.$$set = ($$new_props) => {
-    $$invalidate(10, $$props = assign(assign({}, $$props), exclude_internal_props($$new_props)));
-    $$invalidate(1, $$restProps = compute_rest_props($$props, omit_props_names));
-    if ("multiple" in $$new_props)
-      $$invalidate(2, multiple = $$new_props.multiple);
-    if ("flush" in $$new_props)
-      $$invalidate(3, flush2 = $$new_props.flush);
-    if ("activeClass" in $$new_props)
-      $$invalidate(4, activeClass = $$new_props.activeClass);
-    if ("inactiveClass" in $$new_props)
-      $$invalidate(5, inactiveClass = $$new_props.inactiveClass);
-    if ("defaultClass" in $$new_props)
-      $$invalidate(6, defaultClass = $$new_props.defaultClass);
-    if ("$$scope" in $$new_props)
-      $$invalidate(8, $$scope = $$new_props.$$scope);
-  };
-  $$self.$$.update = () => {
-    $:
-      $$invalidate(0, frameClass = (0, import_tailwind_merge2.twMerge)(defaultClass, $$props.class));
-  };
-  $$props = exclude_internal_props($$props);
-  return [
-    frameClass,
-    $$restProps,
-    multiple,
-    flush2,
-    activeClass,
-    inactiveClass,
-    defaultClass,
-    slots,
-    $$scope
-  ];
-}
-var Accordion = class extends SvelteComponent {
-  constructor(options) {
-    super();
-    init(this, options, instance3, create_fragment3, safe_not_equal, {
-      multiple: 2,
-      flush: 3,
-      activeClass: 4,
-      inactiveClass: 5,
-      defaultClass: 6
-    });
-  }
-};
-var Accordion_default = Accordion;
-
-// node_modules/flowbite-svelte/dist/accordion/AccordionItem.svelte
-var import_tailwind_merge3 = __toESM(require_bundle_cjs());
-
-// node_modules/svelte/src/runtime/easing/index.js
-function cubicInOut(t) {
-  return t < 0.5 ? 4 * t * t * t : 0.5 * Math.pow(2 * t - 2, 3) + 1;
-}
-function cubicOut(t) {
-  const f = t - 1;
-  return f * f * f + 1;
-}
-
-// node_modules/svelte/src/runtime/transition/index.js
-function blur(node, { delay: delay2 = 0, duration = 400, easing = cubicInOut, amount = 5, opacity = 0 } = {}) {
-  const style = getComputedStyle(node);
-  const target_opacity = +style.opacity;
-  const f = style.filter === "none" ? "" : style.filter;
-  const od = target_opacity * (1 - opacity);
-  const [value, unit] = split_css_unit(amount);
-  return {
-    delay: delay2,
-    duration,
-    easing,
-    css: (_t, u) => `opacity: ${target_opacity - od * u}; filter: ${f} blur(${u * value}${unit});`
-  };
-}
-function fade(node, { delay: delay2 = 0, duration = 400, easing = identity } = {}) {
-  const o = +getComputedStyle(node).opacity;
-  return {
-    delay: delay2,
-    duration,
-    easing,
-    css: (t) => `opacity: ${t * o}`
-  };
-}
-function fly(node, { delay: delay2 = 0, duration = 400, easing = cubicOut, x = 0, y = 0, opacity = 0 } = {}) {
-  const style = getComputedStyle(node);
-  const target_opacity = +style.opacity;
-  const transform = style.transform === "none" ? "" : style.transform;
-  const od = target_opacity * (1 - opacity);
-  const [xValue, xUnit] = split_css_unit(x);
-  const [yValue, yUnit] = split_css_unit(y);
-  return {
-    delay: delay2,
-    duration,
-    easing,
-    css: (t, u) => `
-			transform: ${transform} translate(${(1 - t) * xValue}${xUnit}, ${(1 - t) * yValue}${yUnit});
-			opacity: ${target_opacity - od * u}`
-  };
-}
-function slide(node, { delay: delay2 = 0, duration = 400, easing = cubicOut, axis = "y" } = {}) {
-  const style = getComputedStyle(node);
-  const opacity = +style.opacity;
-  const primary_property = axis === "y" ? "height" : "width";
-  const primary_property_value = parseFloat(style[primary_property]);
-  const secondary_properties = axis === "y" ? ["top", "bottom"] : ["left", "right"];
-  const capitalized_secondary_properties = secondary_properties.map(
-    (e) => `${e[0].toUpperCase()}${e.slice(1)}`
-  );
-  const padding_start_value = parseFloat(style[`padding${capitalized_secondary_properties[0]}`]);
-  const padding_end_value = parseFloat(style[`padding${capitalized_secondary_properties[1]}`]);
-  const margin_start_value = parseFloat(style[`margin${capitalized_secondary_properties[0]}`]);
-  const margin_end_value = parseFloat(style[`margin${capitalized_secondary_properties[1]}`]);
-  const border_width_start_value = parseFloat(
-    style[`border${capitalized_secondary_properties[0]}Width`]
-  );
-  const border_width_end_value = parseFloat(
-    style[`border${capitalized_secondary_properties[1]}Width`]
-  );
-  return {
-    delay: delay2,
-    duration,
-    easing,
-    css: (t) => `overflow: hidden;opacity: ${Math.min(t * 20, 1) * opacity};${primary_property}: ${t * primary_property_value}px;padding-${secondary_properties[0]}: ${t * padding_start_value}px;padding-${secondary_properties[1]}: ${t * padding_end_value}px;margin-${secondary_properties[0]}: ${t * margin_start_value}px;margin-${secondary_properties[1]}: ${t * margin_end_value}px;border-${secondary_properties[0]}-width: ${t * border_width_start_value}px;border-${secondary_properties[1]}-width: ${t * border_width_end_value}px;`
-  };
-}
-
-// node_modules/flowbite-svelte/dist/accordion/AccordionItem.svelte
-var get_arrowdown_slot_changes = (dirty) => ({});
-var get_arrowdown_slot_context = (ctx) => ({});
-var get_arrowup_slot_changes = (dirty) => ({});
-var get_arrowup_slot_context = (ctx) => ({});
-var get_header_slot_changes = (dirty) => ({});
-var get_header_slot_context = (ctx) => ({});
-function create_else_block_1(ctx) {
-  let current;
-  const arrowdown_slot_template = (
-    /*#slots*/
-    ctx[22].arrowdown
-  );
-  const arrowdown_slot = create_slot(
-    arrowdown_slot_template,
-    ctx,
-    /*$$scope*/
-    ctx[21],
-    get_arrowdown_slot_context
-  );
-  const arrowdown_slot_or_fallback = arrowdown_slot || fallback_block_1(ctx);
-  return {
-    c() {
-      if (arrowdown_slot_or_fallback)
-        arrowdown_slot_or_fallback.c();
-    },
-    m(target, anchor) {
-      if (arrowdown_slot_or_fallback) {
-        arrowdown_slot_or_fallback.m(target, anchor);
-      }
-      current = true;
-    },
-    p(ctx2, dirty) {
-      if (arrowdown_slot) {
-        if (arrowdown_slot.p && (!current || dirty & /*$$scope*/
-        2097152)) {
-          update_slot_base(
-            arrowdown_slot,
-            arrowdown_slot_template,
-            ctx2,
-            /*$$scope*/
-            ctx2[21],
-            !current ? get_all_dirty_from_scope(
-              /*$$scope*/
-              ctx2[21]
-            ) : get_slot_changes(
-              arrowdown_slot_template,
-              /*$$scope*/
-              ctx2[21],
-              dirty,
-              get_arrowdown_slot_changes
-            ),
-            get_arrowdown_slot_context
-          );
-        }
-      }
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(arrowdown_slot_or_fallback, local);
-      current = true;
-    },
-    o(local) {
-      transition_out(arrowdown_slot_or_fallback, local);
-      current = false;
-    },
-    d(detaching) {
-      if (arrowdown_slot_or_fallback)
-        arrowdown_slot_or_fallback.d(detaching);
-    }
-  };
-}
-function create_if_block_12(ctx) {
-  let current;
-  const arrowup_slot_template = (
-    /*#slots*/
-    ctx[22].arrowup
-  );
-  const arrowup_slot = create_slot(
-    arrowup_slot_template,
-    ctx,
-    /*$$scope*/
-    ctx[21],
-    get_arrowup_slot_context
-  );
-  const arrowup_slot_or_fallback = arrowup_slot || fallback_block(ctx);
-  return {
-    c() {
-      if (arrowup_slot_or_fallback)
-        arrowup_slot_or_fallback.c();
-    },
-    m(target, anchor) {
-      if (arrowup_slot_or_fallback) {
-        arrowup_slot_or_fallback.m(target, anchor);
-      }
-      current = true;
-    },
-    p(ctx2, dirty) {
-      if (arrowup_slot) {
-        if (arrowup_slot.p && (!current || dirty & /*$$scope*/
-        2097152)) {
-          update_slot_base(
-            arrowup_slot,
-            arrowup_slot_template,
-            ctx2,
-            /*$$scope*/
-            ctx2[21],
-            !current ? get_all_dirty_from_scope(
-              /*$$scope*/
-              ctx2[21]
-            ) : get_slot_changes(
-              arrowup_slot_template,
-              /*$$scope*/
-              ctx2[21],
-              dirty,
-              get_arrowup_slot_changes
-            ),
-            get_arrowup_slot_context
-          );
-        }
-      }
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(arrowup_slot_or_fallback, local);
-      current = true;
-    },
-    o(local) {
-      transition_out(arrowup_slot_or_fallback, local);
-      current = false;
-    },
-    d(detaching) {
-      if (arrowup_slot_or_fallback)
-        arrowup_slot_or_fallback.d(detaching);
-    }
-  };
-}
-function fallback_block_1(ctx) {
-  let svg;
-  let path;
-  return {
-    c() {
-      svg = svg_element("svg");
-      path = svg_element("path");
-      attr(path, "stroke", "currentColor");
-      attr(path, "stroke-linecap", "round");
-      attr(path, "stroke-linejoin", "round");
-      attr(path, "stroke-width", "2");
-      attr(path, "d", "m1 1 4 4 4-4");
-      attr(svg, "class", "w-3 h-3 text-gray-800 dark:text-white");
-      attr(svg, "aria-hidden", "true");
-      attr(svg, "xmlns", "http://www.w3.org/2000/svg");
-      attr(svg, "fill", "none");
-      attr(svg, "viewBox", "0 0 10 6");
-    },
-    m(target, anchor) {
-      insert(target, svg, anchor);
-      append(svg, path);
-    },
-    p: noop,
-    d(detaching) {
-      if (detaching) {
-        detach(svg);
-      }
-    }
-  };
-}
-function fallback_block(ctx) {
-  let svg;
-  let path;
-  return {
-    c() {
-      svg = svg_element("svg");
-      path = svg_element("path");
-      attr(path, "stroke", "currentColor");
-      attr(path, "stroke-linecap", "round");
-      attr(path, "stroke-linejoin", "round");
-      attr(path, "stroke-width", "2");
-      attr(path, "d", "M9 5 5 1 1 5");
-      attr(svg, "class", "w-3 h-3 text-gray-800 dark:text-white");
-      attr(svg, "aria-hidden", "true");
-      attr(svg, "xmlns", "http://www.w3.org/2000/svg");
-      attr(svg, "fill", "none");
-      attr(svg, "viewBox", "0 0 10 6");
-    },
-    m(target, anchor) {
-      insert(target, svg, anchor);
-      append(svg, path);
-    },
-    p: noop,
-    d(detaching) {
-      if (detaching) {
-        detach(svg);
-      }
-    }
-  };
-}
-function create_else_block2(ctx) {
-  let div1;
-  let div0;
-  let current;
-  const default_slot_template = (
-    /*#slots*/
-    ctx[22].default
-  );
-  const default_slot = create_slot(
-    default_slot_template,
-    ctx,
-    /*$$scope*/
-    ctx[21],
-    null
-  );
-  return {
-    c() {
-      div1 = element("div");
-      div0 = element("div");
-      if (default_slot)
-        default_slot.c();
-      attr(
-        div0,
-        "class",
-        /*contentClass*/
-        ctx[3]
-      );
-      attr(div1, "class", "hidden");
-    },
-    m(target, anchor) {
-      insert(target, div1, anchor);
-      append(div1, div0);
-      if (default_slot) {
-        default_slot.m(div0, null);
-      }
-      current = true;
-    },
-    p(ctx2, dirty) {
-      if (default_slot) {
-        if (default_slot.p && (!current || dirty & /*$$scope*/
-        2097152)) {
-          update_slot_base(
-            default_slot,
-            default_slot_template,
-            ctx2,
-            /*$$scope*/
-            ctx2[21],
-            !current ? get_all_dirty_from_scope(
-              /*$$scope*/
-              ctx2[21]
-            ) : get_slot_changes(
-              default_slot_template,
-              /*$$scope*/
-              ctx2[21],
-              dirty,
-              null
-            ),
-            null
-          );
-        }
-      }
-      if (!current || dirty & /*contentClass*/
-      8) {
-        attr(
-          div0,
-          "class",
-          /*contentClass*/
-          ctx2[3]
-        );
-      }
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(default_slot, local);
-      current = true;
-    },
-    o(local) {
-      transition_out(default_slot, local);
-      current = false;
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(div1);
-      }
-      if (default_slot)
-        default_slot.d(detaching);
-    }
-  };
-}
-function create_if_block2(ctx) {
-  let div1;
-  let div0;
-  let div1_transition;
-  let current;
-  const default_slot_template = (
-    /*#slots*/
-    ctx[22].default
-  );
-  const default_slot = create_slot(
-    default_slot_template,
-    ctx,
-    /*$$scope*/
-    ctx[21],
-    null
-  );
-  return {
-    c() {
-      div1 = element("div");
-      div0 = element("div");
-      if (default_slot)
-        default_slot.c();
-      attr(
-        div0,
-        "class",
-        /*contentClass*/
-        ctx[3]
-      );
-    },
-    m(target, anchor) {
-      insert(target, div1, anchor);
-      append(div1, div0);
-      if (default_slot) {
-        default_slot.m(div0, null);
-      }
-      current = true;
-    },
-    p(new_ctx, dirty) {
-      ctx = new_ctx;
-      if (default_slot) {
-        if (default_slot.p && (!current || dirty & /*$$scope*/
-        2097152)) {
-          update_slot_base(
-            default_slot,
-            default_slot_template,
-            ctx,
-            /*$$scope*/
-            ctx[21],
-            !current ? get_all_dirty_from_scope(
-              /*$$scope*/
-              ctx[21]
-            ) : get_slot_changes(
-              default_slot_template,
-              /*$$scope*/
-              ctx[21],
-              dirty,
-              null
-            ),
-            null
-          );
-        }
-      }
-      if (!current || dirty & /*contentClass*/
-      8) {
-        attr(
-          div0,
-          "class",
-          /*contentClass*/
-          ctx[3]
-        );
-      }
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(default_slot, local);
-      if (local) {
-        add_render_callback(() => {
-          if (!current)
-            return;
-          if (!div1_transition)
-            div1_transition = create_bidirectional_transition(
-              div1,
-              /*multiple*/
-              ctx[4],
-              /*transitionParams*/
-              ctx[1],
-              true
-            );
-          div1_transition.run(1);
-        });
-      }
-      current = true;
-    },
-    o(local) {
-      transition_out(default_slot, local);
-      if (local) {
-        if (!div1_transition)
-          div1_transition = create_bidirectional_transition(
-            div1,
-            /*multiple*/
-            ctx[4],
-            /*transitionParams*/
-            ctx[1],
-            false
-          );
-        div1_transition.run(0);
-      }
-      current = false;
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(div1);
-      }
-      if (default_slot)
-        default_slot.d(detaching);
-      if (detaching && div1_transition)
-        div1_transition.end();
-    }
-  };
-}
-function create_fragment4(ctx) {
-  let h2;
-  let button;
-  let t0;
-  let current_block_type_index;
-  let if_block0;
-  let t1;
-  let current_block_type_index_1;
-  let if_block1;
-  let if_block1_anchor;
-  let current;
-  let mounted;
-  let dispose;
-  const header_slot_template = (
-    /*#slots*/
-    ctx[22].header
-  );
-  const header_slot = create_slot(
-    header_slot_template,
-    ctx,
-    /*$$scope*/
-    ctx[21],
-    get_header_slot_context
-  );
-  const if_block_creators = [create_if_block_12, create_else_block_1];
-  const if_blocks = [];
-  function select_block_type(ctx2, dirty) {
-    if (
-      /*open*/
-      ctx2[0]
-    )
-      return 0;
-    return 1;
-  }
-  current_block_type_index = select_block_type(ctx, -1);
-  if_block0 = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx);
-  const if_block_creators_1 = [create_if_block2, create_else_block2];
-  const if_blocks_1 = [];
-  function select_block_type_1(ctx2, dirty) {
-    if (
-      /*open*/
-      ctx2[0]
-    )
-      return 0;
-    return 1;
-  }
-  current_block_type_index_1 = select_block_type_1(ctx, -1);
-  if_block1 = if_blocks_1[current_block_type_index_1] = if_block_creators_1[current_block_type_index_1](ctx);
-  return {
-    c() {
-      h2 = element("h2");
-      button = element("button");
-      if (header_slot)
-        header_slot.c();
-      t0 = space();
-      if_block0.c();
-      t1 = space();
-      if_block1.c();
-      if_block1_anchor = empty();
-      attr(button, "type", "button");
-      attr(
-        button,
-        "class",
-        /*buttonClass*/
-        ctx[2]
-      );
-      attr(
-        button,
-        "aria-expanded",
-        /*open*/
-        ctx[0]
-      );
-      attr(h2, "class", "group");
-    },
-    m(target, anchor) {
-      insert(target, h2, anchor);
-      append(h2, button);
-      if (header_slot) {
-        header_slot.m(button, null);
-      }
-      append(button, t0);
-      if_blocks[current_block_type_index].m(button, null);
-      insert(target, t1, anchor);
-      if_blocks_1[current_block_type_index_1].m(target, anchor);
-      insert(target, if_block1_anchor, anchor);
-      current = true;
-      if (!mounted) {
-        dispose = listen(
-          button,
-          "click",
-          /*handleToggle*/
-          ctx[6]
-        );
-        mounted = true;
-      }
-    },
-    p(ctx2, [dirty]) {
-      if (header_slot) {
-        if (header_slot.p && (!current || dirty & /*$$scope*/
-        2097152)) {
-          update_slot_base(
-            header_slot,
-            header_slot_template,
-            ctx2,
-            /*$$scope*/
-            ctx2[21],
-            !current ? get_all_dirty_from_scope(
-              /*$$scope*/
-              ctx2[21]
-            ) : get_slot_changes(
-              header_slot_template,
-              /*$$scope*/
-              ctx2[21],
-              dirty,
-              get_header_slot_changes
-            ),
-            get_header_slot_context
-          );
-        }
-      }
-      let previous_block_index = current_block_type_index;
-      current_block_type_index = select_block_type(ctx2, dirty);
-      if (current_block_type_index === previous_block_index) {
-        if_blocks[current_block_type_index].p(ctx2, dirty);
-      } else {
-        group_outros();
-        transition_out(if_blocks[previous_block_index], 1, 1, () => {
-          if_blocks[previous_block_index] = null;
-        });
-        check_outros();
-        if_block0 = if_blocks[current_block_type_index];
-        if (!if_block0) {
-          if_block0 = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx2);
-          if_block0.c();
-        } else {
-          if_block0.p(ctx2, dirty);
-        }
-        transition_in(if_block0, 1);
-        if_block0.m(button, null);
-      }
-      if (!current || dirty & /*buttonClass*/
-      4) {
-        attr(
-          button,
-          "class",
-          /*buttonClass*/
-          ctx2[2]
-        );
-      }
-      if (!current || dirty & /*open*/
-      1) {
-        attr(
-          button,
-          "aria-expanded",
-          /*open*/
-          ctx2[0]
-        );
-      }
-      let previous_block_index_1 = current_block_type_index_1;
-      current_block_type_index_1 = select_block_type_1(ctx2, dirty);
-      if (current_block_type_index_1 === previous_block_index_1) {
-        if_blocks_1[current_block_type_index_1].p(ctx2, dirty);
-      } else {
-        group_outros();
-        transition_out(if_blocks_1[previous_block_index_1], 1, 1, () => {
-          if_blocks_1[previous_block_index_1] = null;
-        });
-        check_outros();
-        if_block1 = if_blocks_1[current_block_type_index_1];
-        if (!if_block1) {
-          if_block1 = if_blocks_1[current_block_type_index_1] = if_block_creators_1[current_block_type_index_1](ctx2);
-          if_block1.c();
-        } else {
-          if_block1.p(ctx2, dirty);
-        }
-        transition_in(if_block1, 1);
-        if_block1.m(if_block1_anchor.parentNode, if_block1_anchor);
-      }
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(header_slot, local);
-      transition_in(if_block0);
-      transition_in(if_block1);
-      current = true;
-    },
-    o(local) {
-      transition_out(header_slot, local);
-      transition_out(if_block0);
-      transition_out(if_block1);
-      current = false;
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(h2);
-        detach(t1);
-        detach(if_block1_anchor);
-      }
-      if (header_slot)
-        header_slot.d(detaching);
-      if_blocks[current_block_type_index].d();
-      if_blocks_1[current_block_type_index_1].d(detaching);
-      mounted = false;
-      dispose();
-    }
-  };
-}
-function instance4($$self, $$props, $$invalidate) {
-  var _a, _b;
-  let contentClass;
-  let $selected;
-  let { $$slots: slots = {}, $$scope } = $$props;
-  let { open = false } = $$props;
-  let { activeClass = void 0 } = $$props;
-  let { inactiveClass = void 0 } = $$props;
-  let { defaultClass = "flex items-center justify-between w-full font-medium text-left group-first:rounded-t-xl border-gray-200 dark:border-gray-700" } = $$props;
-  let { transitionType = "slide" } = $$props;
-  let { transitionParams = {} } = $$props;
-  let { paddingFlush = "py-5" } = $$props;
-  let { paddingDefault = "p-5" } = $$props;
-  let { textFlushOpen = "text-gray-900 dark:text-white" } = $$props;
-  let { textFlushDefault = "text-gray-500 dark:text-gray-400" } = $$props;
-  let { borderClass = "border-s border-e group-first:border-t" } = $$props;
-  let { borderOpenClass = "border-s border-e" } = $$props;
-  let { borderBottomClass = "border-b" } = $$props;
-  let { borderSharedClass = "border-gray-200 dark:border-gray-700" } = $$props;
-  let { classActive = void 0 } = $$props;
-  let { classInactive = void 0 } = $$props;
-  let activeCls = (0, import_tailwind_merge3.twMerge)(activeClass, classActive);
-  let inactiveCls = (0, import_tailwind_merge3.twMerge)(inactiveClass, classInactive);
-  const multiple = (node, params) => {
-    switch (transitionType) {
-      case "blur":
-        return blur(node, params);
-      case "fly":
-        return fly(node, params);
-      case "fade":
-        return fade(node, params);
-      default:
-        return slide(node, params);
-    }
-  };
-  const ctx = (_a = getContext("ctx")) != null ? _a : {};
-  const self2 = {};
-  const selected = (_b = ctx.selected) != null ? _b : writable();
-  component_subscribe($$self, selected, (value) => $$invalidate(23, $selected = value));
-  let _open = open;
-  open = false;
-  onMount(() => {
-    if (_open)
-      set_store_value(selected, $selected = self2, $selected);
-    return selected.subscribe((x) => $$invalidate(0, open = x === self2));
-  });
-  const handleToggle = (_) => selected.set(open ? {} : self2);
-  let buttonClass;
-  $$self.$$set = ($$new_props) => {
-    $$invalidate(29, $$props = assign(assign({}, $$props), exclude_internal_props($$new_props)));
-    if ("open" in $$new_props)
-      $$invalidate(0, open = $$new_props.open);
-    if ("activeClass" in $$new_props)
-      $$invalidate(7, activeClass = $$new_props.activeClass);
-    if ("inactiveClass" in $$new_props)
-      $$invalidate(8, inactiveClass = $$new_props.inactiveClass);
-    if ("defaultClass" in $$new_props)
-      $$invalidate(9, defaultClass = $$new_props.defaultClass);
-    if ("transitionType" in $$new_props)
-      $$invalidate(10, transitionType = $$new_props.transitionType);
-    if ("transitionParams" in $$new_props)
-      $$invalidate(1, transitionParams = $$new_props.transitionParams);
-    if ("paddingFlush" in $$new_props)
-      $$invalidate(11, paddingFlush = $$new_props.paddingFlush);
-    if ("paddingDefault" in $$new_props)
-      $$invalidate(12, paddingDefault = $$new_props.paddingDefault);
-    if ("textFlushOpen" in $$new_props)
-      $$invalidate(13, textFlushOpen = $$new_props.textFlushOpen);
-    if ("textFlushDefault" in $$new_props)
-      $$invalidate(14, textFlushDefault = $$new_props.textFlushDefault);
-    if ("borderClass" in $$new_props)
-      $$invalidate(15, borderClass = $$new_props.borderClass);
-    if ("borderOpenClass" in $$new_props)
-      $$invalidate(16, borderOpenClass = $$new_props.borderOpenClass);
-    if ("borderBottomClass" in $$new_props)
-      $$invalidate(17, borderBottomClass = $$new_props.borderBottomClass);
-    if ("borderSharedClass" in $$new_props)
-      $$invalidate(18, borderSharedClass = $$new_props.borderSharedClass);
-    if ("classActive" in $$new_props)
-      $$invalidate(19, classActive = $$new_props.classActive);
-    if ("classInactive" in $$new_props)
-      $$invalidate(20, classInactive = $$new_props.classInactive);
-    if ("$$scope" in $$new_props)
-      $$invalidate(21, $$scope = $$new_props.$$scope);
-  };
-  $$self.$$.update = () => {
-    $:
-      $$invalidate(2, buttonClass = (0, import_tailwind_merge3.twMerge)([
-        defaultClass,
-        ctx.flush || borderClass,
-        borderBottomClass,
-        borderSharedClass,
-        ctx.flush ? paddingFlush : paddingDefault,
-        open && (ctx.flush ? textFlushOpen : activeCls || ctx.activeClass),
-        !open && (ctx.flush ? textFlushDefault : inactiveCls || ctx.inactiveClass),
-        $$props.class
-      ]));
-    if ($$self.$$.dirty & /*paddingFlush, paddingDefault, borderOpenClass, borderBottomClass, borderSharedClass*/
-    464896) {
-      $:
-        $$invalidate(3, contentClass = (0, import_tailwind_merge3.twMerge)([
-          ctx.flush ? paddingFlush : paddingDefault,
-          ctx.flush ? "" : borderOpenClass,
-          borderBottomClass,
-          borderSharedClass
-        ]));
-    }
-  };
-  $$props = exclude_internal_props($$props);
-  return [
-    open,
-    transitionParams,
-    buttonClass,
-    contentClass,
-    multiple,
-    selected,
-    handleToggle,
-    activeClass,
-    inactiveClass,
-    defaultClass,
-    transitionType,
-    paddingFlush,
-    paddingDefault,
-    textFlushOpen,
-    textFlushDefault,
-    borderClass,
-    borderOpenClass,
-    borderBottomClass,
-    borderSharedClass,
-    classActive,
-    classInactive,
-    $$scope,
-    slots
-  ];
-}
-var AccordionItem = class extends SvelteComponent {
-  constructor(options) {
-    super();
-    init(this, options, instance4, create_fragment4, safe_not_equal, {
-      open: 0,
-      activeClass: 7,
-      inactiveClass: 8,
-      defaultClass: 9,
-      transitionType: 10,
-      transitionParams: 1,
-      paddingFlush: 11,
-      paddingDefault: 12,
-      textFlushOpen: 13,
-      textFlushDefault: 14,
-      borderClass: 15,
-      borderOpenClass: 16,
-      borderBottomClass: 17,
-      borderSharedClass: 18,
-      classActive: 19,
-      classInactive: 20
-    });
-  }
-};
-var AccordionItem_default = AccordionItem;
-
-// node_modules/flowbite-svelte/dist/darkmode/DarkMode.svelte
-var { document: document_1 } = globals;
-
-// node_modules/flowbite-svelte/dist/utils/Wrapper.svelte
-function create_else_block3(ctx) {
-  let current;
-  const default_slot_template = (
-    /*#slots*/
-    ctx[5].default
-  );
-  const default_slot = create_slot(
-    default_slot_template,
-    ctx,
-    /*$$scope*/
-    ctx[4],
-    null
-  );
-  return {
-    c() {
-      if (default_slot)
-        default_slot.c();
-    },
-    m(target, anchor) {
-      if (default_slot) {
-        default_slot.m(target, anchor);
-      }
-      current = true;
-    },
-    p(ctx2, dirty) {
-      if (default_slot) {
-        if (default_slot.p && (!current || dirty & /*$$scope*/
-        16)) {
-          update_slot_base(
-            default_slot,
-            default_slot_template,
-            ctx2,
-            /*$$scope*/
-            ctx2[4],
-            !current ? get_all_dirty_from_scope(
-              /*$$scope*/
-              ctx2[4]
-            ) : get_slot_changes(
-              default_slot_template,
-              /*$$scope*/
-              ctx2[4],
-              dirty,
-              null
-            ),
-            null
-          );
-        }
-      }
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(default_slot, local);
-      current = true;
-    },
-    o(local) {
-      transition_out(default_slot, local);
-      current = false;
-    },
-    d(detaching) {
-      if (default_slot)
-        default_slot.d(detaching);
-    }
-  };
-}
-function create_if_block3(ctx) {
-  let previous_tag = (
-    /*tag*/
-    ctx[0]
-  );
-  let svelte_element_anchor;
-  let current;
-  let svelte_element = (
-    /*tag*/
-    ctx[0] && create_dynamic_element2(ctx)
-  );
-  return {
-    c() {
-      if (svelte_element)
-        svelte_element.c();
-      svelte_element_anchor = empty();
-    },
-    m(target, anchor) {
-      if (svelte_element)
-        svelte_element.m(target, anchor);
-      insert(target, svelte_element_anchor, anchor);
-      current = true;
-    },
-    p(ctx2, dirty) {
-      if (
-        /*tag*/
-        ctx2[0]
-      ) {
-        if (!previous_tag) {
-          svelte_element = create_dynamic_element2(ctx2);
-          previous_tag = /*tag*/
-          ctx2[0];
-          svelte_element.c();
-          svelte_element.m(svelte_element_anchor.parentNode, svelte_element_anchor);
-        } else if (safe_not_equal(
-          previous_tag,
-          /*tag*/
-          ctx2[0]
-        )) {
-          svelte_element.d(1);
-          svelte_element = create_dynamic_element2(ctx2);
-          previous_tag = /*tag*/
-          ctx2[0];
-          svelte_element.c();
-          svelte_element.m(svelte_element_anchor.parentNode, svelte_element_anchor);
-        } else {
-          svelte_element.p(ctx2, dirty);
-        }
-      } else if (previous_tag) {
-        svelte_element.d(1);
-        svelte_element = null;
-        previous_tag = /*tag*/
-        ctx2[0];
-      }
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(svelte_element, local);
-      current = true;
-    },
-    o(local) {
-      transition_out(svelte_element, local);
-      current = false;
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(svelte_element_anchor);
-      }
-      if (svelte_element)
-        svelte_element.d(detaching);
-    }
-  };
-}
-function create_dynamic_element2(ctx) {
-  let svelte_element;
-  let use_action;
-  let current;
-  let mounted;
-  let dispose;
-  const default_slot_template = (
-    /*#slots*/
-    ctx[5].default
-  );
-  const default_slot = create_slot(
-    default_slot_template,
-    ctx,
-    /*$$scope*/
-    ctx[4],
-    null
-  );
-  let svelte_element_levels = [
-    /*$$restProps*/
-    ctx[3]
-  ];
-  let svelte_element_data = {};
-  for (let i = 0; i < svelte_element_levels.length; i += 1) {
-    svelte_element_data = assign(svelte_element_data, svelte_element_levels[i]);
-  }
-  return {
-    c() {
-      svelte_element = element(
-        /*tag*/
-        ctx[0]
-      );
-      if (default_slot)
-        default_slot.c();
-      set_dynamic_element_data(
-        /*tag*/
-        ctx[0]
-      )(svelte_element, svelte_element_data);
-    },
-    m(target, anchor) {
-      insert(target, svelte_element, anchor);
-      if (default_slot) {
-        default_slot.m(svelte_element, null);
-      }
-      current = true;
-      if (!mounted) {
-        dispose = action_destroyer(use_action = /*use*/
-        ctx[2].call(null, svelte_element));
-        mounted = true;
-      }
-    },
-    p(ctx2, dirty) {
-      if (default_slot) {
-        if (default_slot.p && (!current || dirty & /*$$scope*/
-        16)) {
-          update_slot_base(
-            default_slot,
-            default_slot_template,
-            ctx2,
-            /*$$scope*/
-            ctx2[4],
-            !current ? get_all_dirty_from_scope(
-              /*$$scope*/
-              ctx2[4]
-            ) : get_slot_changes(
-              default_slot_template,
-              /*$$scope*/
-              ctx2[4],
-              dirty,
-              null
-            ),
-            null
-          );
-        }
-      }
-      set_dynamic_element_data(
-        /*tag*/
-        ctx2[0]
-      )(svelte_element, svelte_element_data = get_spread_update(svelte_element_levels, [dirty & /*$$restProps*/
-      8 && /*$$restProps*/
-      ctx2[3]]));
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(default_slot, local);
-      current = true;
-    },
-    o(local) {
-      transition_out(default_slot, local);
-      current = false;
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(svelte_element);
-      }
-      if (default_slot)
-        default_slot.d(detaching);
-      mounted = false;
-      dispose();
-    }
-  };
-}
-function create_fragment5(ctx) {
-  let current_block_type_index;
-  let if_block;
-  let if_block_anchor;
-  let current;
-  const if_block_creators = [create_if_block3, create_else_block3];
-  const if_blocks = [];
-  function select_block_type(ctx2, dirty) {
-    if (
-      /*show*/
-      ctx2[1]
-    )
-      return 0;
-    return 1;
-  }
-  current_block_type_index = select_block_type(ctx, -1);
-  if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx);
-  return {
-    c() {
-      if_block.c();
-      if_block_anchor = empty();
-    },
-    m(target, anchor) {
-      if_blocks[current_block_type_index].m(target, anchor);
-      insert(target, if_block_anchor, anchor);
-      current = true;
-    },
-    p(ctx2, [dirty]) {
-      let previous_block_index = current_block_type_index;
-      current_block_type_index = select_block_type(ctx2, dirty);
-      if (current_block_type_index === previous_block_index) {
-        if_blocks[current_block_type_index].p(ctx2, dirty);
-      } else {
-        group_outros();
-        transition_out(if_blocks[previous_block_index], 1, 1, () => {
-          if_blocks[previous_block_index] = null;
-        });
-        check_outros();
-        if_block = if_blocks[current_block_type_index];
-        if (!if_block) {
-          if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx2);
-          if_block.c();
-        } else {
-          if_block.p(ctx2, dirty);
-        }
-        transition_in(if_block, 1);
-        if_block.m(if_block_anchor.parentNode, if_block_anchor);
-      }
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(if_block);
-      current = true;
-    },
-    o(local) {
-      transition_out(if_block);
-      current = false;
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(if_block_anchor);
-      }
-      if_blocks[current_block_type_index].d(detaching);
-    }
-  };
-}
-function instance5($$self, $$props, $$invalidate) {
-  const omit_props_names = ["tag", "show", "use"];
-  let $$restProps = compute_rest_props($$props, omit_props_names);
-  let { $$slots: slots = {}, $$scope } = $$props;
-  let { tag = "div" } = $$props;
-  let { show } = $$props;
-  let { use = () => {
-  } } = $$props;
-  $$self.$$set = ($$new_props) => {
-    $$props = assign(assign({}, $$props), exclude_internal_props($$new_props));
-    $$invalidate(3, $$restProps = compute_rest_props($$props, omit_props_names));
-    if ("tag" in $$new_props)
-      $$invalidate(0, tag = $$new_props.tag);
-    if ("show" in $$new_props)
-      $$invalidate(1, show = $$new_props.show);
-    if ("use" in $$new_props)
-      $$invalidate(2, use = $$new_props.use);
-    if ("$$scope" in $$new_props)
-      $$invalidate(4, $$scope = $$new_props.$$scope);
-  };
-  return [tag, show, use, $$restProps, $$scope, slots];
-}
-var Wrapper = class extends SvelteComponent {
-  constructor(options) {
-    super();
-    init(this, options, instance5, create_fragment5, safe_not_equal, { tag: 0, show: 1, use: 2 });
-  }
-};
-var Wrapper_default = Wrapper;
-
-// node_modules/flowbite-svelte/dist/forms/Input.svelte
-var import_tailwind_merge4 = __toESM(require_bundle_cjs());
-var get_right_slot_changes = (dirty) => ({});
-var get_right_slot_context = (ctx) => ({});
-var get_default_slot_changes = (dirty) => ({
-  props: dirty[0] & /*$$restProps, inputClass*/
-  72
-});
-var get_default_slot_context = (ctx) => ({
-  props: __spreadProps(__spreadValues(
-    {},
-    /*$$restProps*/
-    ctx[6]
-  ), {
-    class: (
-      /*inputClass*/
-      ctx[3]
-    )
-  })
-});
-var get_left_slot_changes = (dirty) => ({});
-var get_left_slot_context = (ctx) => ({});
-function create_if_block_13(ctx) {
-  let div;
-  let div_class_value;
-  let current;
-  const left_slot_template = (
-    /*#slots*/
-    ctx[11].left
-  );
-  const left_slot = create_slot(
-    left_slot_template,
-    ctx,
-    /*$$scope*/
-    ctx[26],
-    get_left_slot_context
-  );
-  return {
-    c() {
-      div = element("div");
-      if (left_slot)
-        left_slot.c();
-      attr(div, "class", div_class_value = (0, import_tailwind_merge4.twMerge)(
-        /*floatClass*/
-        ctx[2],
-        /*$$props*/
-        ctx[4].classLeft
-      ) + " start-0 ps-2.5 pointer-events-none");
-    },
-    m(target, anchor) {
-      insert(target, div, anchor);
-      if (left_slot) {
-        left_slot.m(div, null);
-      }
-      current = true;
-    },
-    p(ctx2, dirty) {
-      if (left_slot) {
-        if (left_slot.p && (!current || dirty[0] & /*$$scope*/
-        67108864)) {
-          update_slot_base(
-            left_slot,
-            left_slot_template,
-            ctx2,
-            /*$$scope*/
-            ctx2[26],
-            !current ? get_all_dirty_from_scope(
-              /*$$scope*/
-              ctx2[26]
-            ) : get_slot_changes(
-              left_slot_template,
-              /*$$scope*/
-              ctx2[26],
-              dirty,
-              get_left_slot_changes
-            ),
-            get_left_slot_context
-          );
-        }
-      }
-      if (!current || dirty[0] & /*floatClass, $$props*/
-      20 && div_class_value !== (div_class_value = (0, import_tailwind_merge4.twMerge)(
-        /*floatClass*/
-        ctx2[2],
-        /*$$props*/
-        ctx2[4].classLeft
-      ) + " start-0 ps-2.5 pointer-events-none")) {
-        attr(div, "class", div_class_value);
-      }
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(left_slot, local);
-      current = true;
-    },
-    o(local) {
-      transition_out(left_slot, local);
-      current = false;
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(div);
-      }
-      if (left_slot)
-        left_slot.d(detaching);
-    }
-  };
-}
-function fallback_block2(ctx) {
-  let input;
-  let mounted;
-  let dispose;
-  let input_levels = [
-    /*$$restProps*/
-    ctx[6],
-    { type: (
-      /*type*/
-      ctx[1]
-    ) },
-    { class: (
-      /*inputClass*/
-      ctx[3]
-    ) }
-  ];
-  let input_data = {};
-  for (let i = 0; i < input_levels.length; i += 1) {
-    input_data = assign(input_data, input_levels[i]);
-  }
-  return {
-    c() {
-      input = element("input");
-      set_attributes(input, input_data);
-    },
-    m(target, anchor) {
-      insert(target, input, anchor);
-      if (input.autofocus)
-        input.focus();
-      set_input_value(
-        input,
-        /*value*/
-        ctx[0]
-      );
-      if (!mounted) {
-        dispose = [
-          listen(
-            input,
-            "input",
-            /*input_input_handler*/
-            ctx[25]
-          ),
-          listen(
-            input,
-            "blur",
-            /*blur_handler*/
-            ctx[12]
-          ),
-          listen(
-            input,
-            "change",
-            /*change_handler*/
-            ctx[13]
-          ),
-          listen(
-            input,
-            "click",
-            /*click_handler*/
-            ctx[14]
-          ),
-          listen(
-            input,
-            "contextmenu",
-            /*contextmenu_handler*/
-            ctx[15]
-          ),
-          listen(
-            input,
-            "focus",
-            /*focus_handler*/
-            ctx[16]
-          ),
-          listen(
-            input,
-            "keydown",
-            /*keydown_handler*/
-            ctx[17]
-          ),
-          listen(
-            input,
-            "keypress",
-            /*keypress_handler*/
-            ctx[18]
-          ),
-          listen(
-            input,
-            "keyup",
-            /*keyup_handler*/
-            ctx[19]
-          ),
-          listen(
-            input,
-            "mouseover",
-            /*mouseover_handler*/
-            ctx[20]
-          ),
-          listen(
-            input,
-            "mouseenter",
-            /*mouseenter_handler*/
-            ctx[21]
-          ),
-          listen(
-            input,
-            "mouseleave",
-            /*mouseleave_handler*/
-            ctx[22]
-          ),
-          listen(
-            input,
-            "paste",
-            /*paste_handler*/
-            ctx[23]
-          ),
-          listen(
-            input,
-            "input",
-            /*input_handler*/
-            ctx[24]
-          )
-        ];
-        mounted = true;
-      }
-    },
-    p(ctx2, dirty) {
-      set_attributes(input, input_data = get_spread_update(input_levels, [
-        dirty[0] & /*$$restProps*/
-        64 && /*$$restProps*/
-        ctx2[6],
-        dirty[0] & /*type*/
-        2 && { type: (
-          /*type*/
-          ctx2[1]
-        ) },
-        dirty[0] & /*inputClass*/
-        8 && { class: (
-          /*inputClass*/
-          ctx2[3]
-        ) }
-      ]));
-      if (dirty[0] & /*value*/
-      1 && input.value !== /*value*/
-      ctx2[0]) {
-        set_input_value(
-          input,
-          /*value*/
-          ctx2[0]
-        );
-      }
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(input);
-      }
-      mounted = false;
-      run_all(dispose);
-    }
-  };
-}
-function create_if_block4(ctx) {
-  let div;
-  let div_class_value;
-  let current;
-  const right_slot_template = (
-    /*#slots*/
-    ctx[11].right
-  );
-  const right_slot = create_slot(
-    right_slot_template,
-    ctx,
-    /*$$scope*/
-    ctx[26],
-    get_right_slot_context
-  );
-  return {
-    c() {
-      div = element("div");
-      if (right_slot)
-        right_slot.c();
-      attr(div, "class", div_class_value = (0, import_tailwind_merge4.twMerge)(
-        /*floatClass*/
-        ctx[2],
-        /*$$props*/
-        ctx[4].classRight
-      ) + " end-0 pe-2.5");
-    },
-    m(target, anchor) {
-      insert(target, div, anchor);
-      if (right_slot) {
-        right_slot.m(div, null);
-      }
-      current = true;
-    },
-    p(ctx2, dirty) {
-      if (right_slot) {
-        if (right_slot.p && (!current || dirty[0] & /*$$scope*/
-        67108864)) {
-          update_slot_base(
-            right_slot,
-            right_slot_template,
-            ctx2,
-            /*$$scope*/
-            ctx2[26],
-            !current ? get_all_dirty_from_scope(
-              /*$$scope*/
-              ctx2[26]
-            ) : get_slot_changes(
-              right_slot_template,
-              /*$$scope*/
-              ctx2[26],
-              dirty,
-              get_right_slot_changes
-            ),
-            get_right_slot_context
-          );
-        }
-      }
-      if (!current || dirty[0] & /*floatClass, $$props*/
-      20 && div_class_value !== (div_class_value = (0, import_tailwind_merge4.twMerge)(
-        /*floatClass*/
-        ctx2[2],
-        /*$$props*/
-        ctx2[4].classRight
-      ) + " end-0 pe-2.5")) {
-        attr(div, "class", div_class_value);
-      }
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(right_slot, local);
-      current = true;
-    },
-    o(local) {
-      transition_out(right_slot, local);
-      current = false;
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(div);
-      }
-      if (right_slot)
-        right_slot.d(detaching);
-    }
-  };
-}
-function create_default_slot2(ctx) {
-  let t0;
-  let t1;
-  let if_block1_anchor;
-  let current;
-  let if_block0 = (
-    /*$$slots*/
-    ctx[5].left && create_if_block_13(ctx)
-  );
-  const default_slot_template = (
-    /*#slots*/
-    ctx[11].default
-  );
-  const default_slot = create_slot(
-    default_slot_template,
-    ctx,
-    /*$$scope*/
-    ctx[26],
-    get_default_slot_context
-  );
-  const default_slot_or_fallback = default_slot || fallback_block2(ctx);
-  let if_block1 = (
-    /*$$slots*/
-    ctx[5].right && create_if_block4(ctx)
-  );
-  return {
-    c() {
-      if (if_block0)
-        if_block0.c();
-      t0 = space();
-      if (default_slot_or_fallback)
-        default_slot_or_fallback.c();
-      t1 = space();
-      if (if_block1)
-        if_block1.c();
-      if_block1_anchor = empty();
-    },
-    m(target, anchor) {
-      if (if_block0)
-        if_block0.m(target, anchor);
-      insert(target, t0, anchor);
-      if (default_slot_or_fallback) {
-        default_slot_or_fallback.m(target, anchor);
-      }
-      insert(target, t1, anchor);
-      if (if_block1)
-        if_block1.m(target, anchor);
-      insert(target, if_block1_anchor, anchor);
-      current = true;
-    },
-    p(ctx2, dirty) {
-      if (
-        /*$$slots*/
-        ctx2[5].left
-      ) {
-        if (if_block0) {
-          if_block0.p(ctx2, dirty);
-          if (dirty[0] & /*$$slots*/
-          32) {
-            transition_in(if_block0, 1);
-          }
-        } else {
-          if_block0 = create_if_block_13(ctx2);
-          if_block0.c();
-          transition_in(if_block0, 1);
-          if_block0.m(t0.parentNode, t0);
-        }
-      } else if (if_block0) {
-        group_outros();
-        transition_out(if_block0, 1, 1, () => {
-          if_block0 = null;
-        });
-        check_outros();
-      }
-      if (default_slot) {
-        if (default_slot.p && (!current || dirty[0] & /*$$scope, $$restProps, inputClass*/
-        67108936)) {
-          update_slot_base(
-            default_slot,
-            default_slot_template,
-            ctx2,
-            /*$$scope*/
-            ctx2[26],
-            !current ? get_all_dirty_from_scope(
-              /*$$scope*/
-              ctx2[26]
-            ) : get_slot_changes(
-              default_slot_template,
-              /*$$scope*/
-              ctx2[26],
-              dirty,
-              get_default_slot_changes
-            ),
-            get_default_slot_context
-          );
-        }
-      } else {
-        if (default_slot_or_fallback && default_slot_or_fallback.p && (!current || dirty[0] & /*$$restProps, type, inputClass, value*/
-        75)) {
-          default_slot_or_fallback.p(ctx2, !current ? [-1, -1] : dirty);
-        }
-      }
-      if (
-        /*$$slots*/
-        ctx2[5].right
-      ) {
-        if (if_block1) {
-          if_block1.p(ctx2, dirty);
-          if (dirty[0] & /*$$slots*/
-          32) {
-            transition_in(if_block1, 1);
-          }
-        } else {
-          if_block1 = create_if_block4(ctx2);
-          if_block1.c();
-          transition_in(if_block1, 1);
-          if_block1.m(if_block1_anchor.parentNode, if_block1_anchor);
-        }
-      } else if (if_block1) {
-        group_outros();
-        transition_out(if_block1, 1, 1, () => {
-          if_block1 = null;
-        });
-        check_outros();
-      }
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(if_block0);
-      transition_in(default_slot_or_fallback, local);
-      transition_in(if_block1);
-      current = true;
-    },
-    o(local) {
-      transition_out(if_block0);
-      transition_out(default_slot_or_fallback, local);
-      transition_out(if_block1);
-      current = false;
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(t0);
-        detach(t1);
-        detach(if_block1_anchor);
-      }
-      if (if_block0)
-        if_block0.d(detaching);
-      if (default_slot_or_fallback)
-        default_slot_or_fallback.d(detaching);
-      if (if_block1)
-        if_block1.d(detaching);
-    }
-  };
-}
-function create_fragment6(ctx) {
-  let wrapper;
-  let current;
-  wrapper = new Wrapper_default({
-    props: {
-      class: "relative w-full",
-      show: (
-        /*$$slots*/
-        ctx[5].left || /*$$slots*/
-        ctx[5].right
-      ),
-      $$slots: { default: [create_default_slot2] },
-      $$scope: { ctx }
-    }
-  });
-  return {
-    c() {
-      create_component(wrapper.$$.fragment);
-    },
-    m(target, anchor) {
-      mount_component(wrapper, target, anchor);
-      current = true;
-    },
-    p(ctx2, dirty) {
-      const wrapper_changes = {};
-      if (dirty[0] & /*$$slots*/
-      32)
-        wrapper_changes.show = /*$$slots*/
-        ctx2[5].left || /*$$slots*/
-        ctx2[5].right;
-      if (dirty[0] & /*$$scope, floatClass, $$props, $$slots, $$restProps, type, inputClass, value*/
-      67108991) {
-        wrapper_changes.$$scope = { dirty, ctx: ctx2 };
-      }
-      wrapper.$set(wrapper_changes);
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(wrapper.$$.fragment, local);
-      current = true;
-    },
-    o(local) {
-      transition_out(wrapper.$$.fragment, local);
-      current = false;
-    },
-    d(detaching) {
-      destroy_component(wrapper, detaching);
-    }
-  };
-}
-function clampSize(s) {
-  return s && s === "xs" ? "sm" : s === "xl" ? "lg" : s;
-}
-function instance6($$self, $$props, $$invalidate) {
-  let _size;
-  const omit_props_names = ["type", "value", "size", "defaultClass", "color", "floatClass"];
-  let $$restProps = compute_rest_props($$props, omit_props_names);
-  let { $$slots: slots = {}, $$scope } = $$props;
-  const $$slots = compute_slots(slots);
-  let { type = "text" } = $$props;
-  let { value = void 0 } = $$props;
-  let { size = void 0 } = $$props;
-  let { defaultClass = "block w-full disabled:cursor-not-allowed disabled:opacity-50 rtl:text-right" } = $$props;
-  let { color = "base" } = $$props;
-  let { floatClass = "flex absolute inset-y-0 items-center text-gray-500 dark:text-gray-400" } = $$props;
-  const borderClasses = {
-    base: "border-gray-300 dark:border-gray-600",
-    tinted: "border-gray-300 dark:border-gray-500",
-    green: "border-green-500 dark:border-green-400",
-    red: "border-red-500 dark:border-red-400"
-  };
-  const ringClasses = {
-    base: "focus:border-primary-500 focus:ring-primary-500 dark:focus:border-primary-500 dark:focus:ring-primary-500",
-    green: "focus:ring-green-500 focus:border-green-500 dark:focus:border-green-500 dark:focus:ring-green-500",
-    red: "focus:ring-red-500 focus:border-red-500 dark:focus:ring-red-500 dark:focus:border-red-500"
-  };
-  const colorClasses = {
-    base: "bg-gray-50 text-gray-900 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400",
-    tinted: "bg-gray-50 text-gray-900 dark:bg-gray-600 dark:text-white dark:placeholder-gray-400",
-    green: "bg-green-50 text-green-900 placeholder-green-700 dark:text-green-400 dark:placeholder-green-500 dark:bg-gray-700",
-    red: "bg-red-50 text-red-900 placeholder-red-700 dark:text-red-500 dark:placeholder-red-500 dark:bg-gray-700"
-  };
-  let background = getContext("background");
-  let group = getContext("group");
-  const textSizes = {
-    sm: "sm:text-xs",
-    md: "text-sm",
-    lg: "sm:text-base"
-  };
-  const leftPadding = { sm: "ps-9", md: "ps-10", lg: "ps-11" };
-  const rightPadding = { sm: "pe-9", md: "pe-10", lg: "pe-11" };
-  const inputPadding = { sm: "p-2", md: "p-2.5", lg: "p-3" };
-  let inputClass2;
-  function blur_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function change_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function click_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function contextmenu_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function focus_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function keydown_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function keypress_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function keyup_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function mouseover_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function mouseenter_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function mouseleave_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function paste_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function input_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function input_input_handler() {
-    value = this.value;
-    $$invalidate(0, value);
-  }
-  $$self.$$set = ($$new_props) => {
-    $$invalidate(4, $$props = assign(assign({}, $$props), exclude_internal_props($$new_props)));
-    $$invalidate(6, $$restProps = compute_rest_props($$props, omit_props_names));
-    if ("type" in $$new_props)
-      $$invalidate(1, type = $$new_props.type);
-    if ("value" in $$new_props)
-      $$invalidate(0, value = $$new_props.value);
-    if ("size" in $$new_props)
-      $$invalidate(7, size = $$new_props.size);
-    if ("defaultClass" in $$new_props)
-      $$invalidate(8, defaultClass = $$new_props.defaultClass);
-    if ("color" in $$new_props)
-      $$invalidate(9, color = $$new_props.color);
-    if ("floatClass" in $$new_props)
-      $$invalidate(2, floatClass = $$new_props.floatClass);
-    if ("$$scope" in $$new_props)
-      $$invalidate(26, $$scope = $$new_props.$$scope);
-  };
-  $$self.$$.update = () => {
-    if ($$self.$$.dirty[0] & /*size*/
-    128) {
-      $:
-        $$invalidate(10, _size = size || clampSize(group == null ? void 0 : group.size) || "md");
-    }
-    $: {
-      const _color = color === "base" && background ? "tinted" : color;
-      $$invalidate(3, inputClass2 = (0, import_tailwind_merge4.twMerge)([
-        defaultClass,
-        inputPadding[_size],
-        $$slots.left && leftPadding[_size] || $$slots.right && rightPadding[_size],
-        ringClasses[color],
-        colorClasses[_color],
-        borderClasses[_color],
-        textSizes[_size],
-        group || "rounded-lg",
-        group && "first:rounded-s-lg last:rounded-e-lg",
-        group && "border-s-0 first:border-s last:border-e",
-        $$props.class
-      ]));
-    }
-  };
-  $$props = exclude_internal_props($$props);
-  return [
-    value,
-    type,
-    floatClass,
-    inputClass2,
-    $$props,
-    $$slots,
-    $$restProps,
-    size,
-    defaultClass,
-    color,
-    _size,
-    slots,
-    blur_handler,
-    change_handler,
-    click_handler,
-    contextmenu_handler,
-    focus_handler,
-    keydown_handler,
-    keypress_handler,
-    keyup_handler,
-    mouseover_handler,
-    mouseenter_handler,
-    mouseleave_handler,
-    paste_handler,
-    input_handler,
-    input_input_handler,
-    $$scope
-  ];
-}
-var Input = class extends SvelteComponent {
-  constructor(options) {
-    super();
-    init(
-      this,
-      options,
-      instance6,
-      create_fragment6,
-      safe_not_equal,
-      {
-        type: 1,
-        value: 0,
-        size: 7,
-        defaultClass: 8,
-        color: 9,
-        floatClass: 2
-      },
-      null,
-      [-1, -1]
-    );
-  }
-};
-var Input_default = Input;
-
-// node_modules/flowbite-svelte/dist/utils/generateId.js
-var n = Date.now();
-
-// node_modules/flowbite-svelte/dist/forms/Search.svelte
-function create_left_slot(ctx) {
-  let svg;
-  let path;
-  let svg_class_value;
-  return {
-    c() {
-      svg = svg_element("svg");
-      path = svg_element("path");
-      attr(path, "fill-rule", "evenodd");
-      attr(path, "d", "M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z");
-      attr(path, "clip-rule", "evenodd");
-      attr(svg, "slot", "left");
-      attr(svg, "class", svg_class_value = /*sizes*/
-      ctx[3][
-        /*size*/
-        ctx[1]
-      ]);
-      attr(svg, "fill", "currentColor");
-      attr(svg, "viewBox", "0 0 20 20");
-      attr(svg, "xmlns", "http://www.w3.org/2000/svg");
-    },
-    m(target, anchor) {
-      insert(target, svg, anchor);
-      append(svg, path);
-    },
-    p(ctx2, dirty) {
-      if (dirty & /*size*/
-      2 && svg_class_value !== (svg_class_value = /*sizes*/
-      ctx2[3][
-        /*size*/
-        ctx2[1]
-      ])) {
-        attr(svg, "class", svg_class_value);
-      }
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(svg);
-      }
-    }
-  };
-}
-function create_if_block5(ctx) {
-  let div;
-  let current;
-  const default_slot_template = (
-    /*#slots*/
-    ctx[7].default
-  );
-  const default_slot = create_slot(
-    default_slot_template,
-    ctx,
-    /*$$scope*/
-    ctx[21],
-    null
-  );
-  return {
-    c() {
-      div = element("div");
-      if (default_slot)
-        default_slot.c();
-      attr(div, "class", "flex absolute inset-y-0 end-0 items-center text-gray-500 dark:text-gray-400");
-    },
-    m(target, anchor) {
-      insert(target, div, anchor);
-      if (default_slot) {
-        default_slot.m(div, null);
-      }
-      current = true;
-    },
-    p(ctx2, dirty) {
-      if (default_slot) {
-        if (default_slot.p && (!current || dirty & /*$$scope*/
-        2097152)) {
-          update_slot_base(
-            default_slot,
-            default_slot_template,
-            ctx2,
-            /*$$scope*/
-            ctx2[21],
-            !current ? get_all_dirty_from_scope(
-              /*$$scope*/
-              ctx2[21]
-            ) : get_slot_changes(
-              default_slot_template,
-              /*$$scope*/
-              ctx2[21],
-              dirty,
-              null
-            ),
-            null
-          );
-        }
-      }
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(default_slot, local);
-      current = true;
-    },
-    o(local) {
-      transition_out(default_slot, local);
-      current = false;
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(div);
-      }
-      if (default_slot)
-        default_slot.d(detaching);
-    }
-  };
-}
-function create_default_slot3(ctx) {
-  let input;
-  let updating_value;
-  let t;
-  let if_block_anchor;
-  let current;
-  const input_spread_levels = [
-    { type: "search" },
-    { placeholder: (
-      /*placeholder*/
-      ctx[2]
-    ) },
-    { size: (
-      /*size*/
-      ctx[1]
-    ) },
-    /*$$restProps*/
-    ctx[5],
-    { class: (
-      /*$$props*/
-      ctx[6].class
-    ) }
-  ];
-  function input_value_binding(value) {
-    ctx[8](value);
-  }
-  let input_props = {
-    $$slots: { left: [create_left_slot] },
-    $$scope: { ctx }
-  };
-  for (let i = 0; i < input_spread_levels.length; i += 1) {
-    input_props = assign(input_props, input_spread_levels[i]);
-  }
-  if (
-    /*value*/
-    ctx[0] !== void 0
-  ) {
-    input_props.value = /*value*/
-    ctx[0];
-  }
-  input = new Input_default({ props: input_props });
-  binding_callbacks.push(() => bind(input, "value", input_value_binding));
-  input.$on(
-    "blur",
-    /*blur_handler*/
-    ctx[9]
-  );
-  input.$on(
-    "change",
-    /*change_handler*/
-    ctx[10]
-  );
-  input.$on(
-    "input",
-    /*input_handler*/
-    ctx[11]
-  );
-  input.$on(
-    "click",
-    /*click_handler*/
-    ctx[12]
-  );
-  input.$on(
-    "focus",
-    /*focus_handler*/
-    ctx[13]
-  );
-  input.$on(
-    "keydown",
-    /*keydown_handler*/
-    ctx[14]
-  );
-  input.$on(
-    "keypress",
-    /*keypress_handler*/
-    ctx[15]
-  );
-  input.$on(
-    "keyup",
-    /*keyup_handler*/
-    ctx[16]
-  );
-  input.$on(
-    "mouseenter",
-    /*mouseenter_handler*/
-    ctx[17]
-  );
-  input.$on(
-    "mouseleave",
-    /*mouseleave_handler*/
-    ctx[18]
-  );
-  input.$on(
-    "mouseover",
-    /*mouseover_handler*/
-    ctx[19]
-  );
-  input.$on(
-    "paste",
-    /*paste_handler*/
-    ctx[20]
-  );
-  let if_block = (
-    /*$$slots*/
-    ctx[4].default && create_if_block5(ctx)
-  );
-  return {
-    c() {
-      create_component(input.$$.fragment);
-      t = space();
-      if (if_block)
-        if_block.c();
-      if_block_anchor = empty();
-    },
-    m(target, anchor) {
-      mount_component(input, target, anchor);
-      insert(target, t, anchor);
-      if (if_block)
-        if_block.m(target, anchor);
-      insert(target, if_block_anchor, anchor);
-      current = true;
-    },
-    p(ctx2, dirty) {
-      const input_changes = dirty & /*placeholder, size, $$restProps, $$props*/
-      102 ? get_spread_update(input_spread_levels, [
-        input_spread_levels[0],
-        dirty & /*placeholder*/
-        4 && { placeholder: (
-          /*placeholder*/
-          ctx2[2]
-        ) },
-        dirty & /*size*/
-        2 && { size: (
-          /*size*/
-          ctx2[1]
-        ) },
-        dirty & /*$$restProps*/
-        32 && get_spread_object(
-          /*$$restProps*/
-          ctx2[5]
-        ),
-        dirty & /*$$props*/
-        64 && { class: (
-          /*$$props*/
-          ctx2[6].class
-        ) }
-      ]) : {};
-      if (dirty & /*$$scope, size*/
-      2097154) {
-        input_changes.$$scope = { dirty, ctx: ctx2 };
-      }
-      if (!updating_value && dirty & /*value*/
-      1) {
-        updating_value = true;
-        input_changes.value = /*value*/
-        ctx2[0];
-        add_flush_callback(() => updating_value = false);
-      }
-      input.$set(input_changes);
-      if (
-        /*$$slots*/
-        ctx2[4].default
-      ) {
-        if (if_block) {
-          if_block.p(ctx2, dirty);
-          if (dirty & /*$$slots*/
-          16) {
-            transition_in(if_block, 1);
-          }
-        } else {
-          if_block = create_if_block5(ctx2);
-          if_block.c();
-          transition_in(if_block, 1);
-          if_block.m(if_block_anchor.parentNode, if_block_anchor);
-        }
-      } else if (if_block) {
-        group_outros();
-        transition_out(if_block, 1, 1, () => {
-          if_block = null;
-        });
-        check_outros();
-      }
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(input.$$.fragment, local);
-      transition_in(if_block);
-      current = true;
-    },
-    o(local) {
-      transition_out(input.$$.fragment, local);
-      transition_out(if_block);
-      current = false;
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(t);
-        detach(if_block_anchor);
-      }
-      destroy_component(input, detaching);
-      if (if_block)
-        if_block.d(detaching);
-    }
-  };
-}
-function create_fragment7(ctx) {
-  let wrapper;
-  let current;
-  wrapper = new Wrapper_default({
-    props: {
-      class: "relative w-full",
-      show: (
-        /*$$slots*/
-        ctx[4].default
-      ),
-      $$slots: { default: [create_default_slot3] },
-      $$scope: { ctx }
-    }
-  });
-  return {
-    c() {
-      create_component(wrapper.$$.fragment);
-    },
-    m(target, anchor) {
-      mount_component(wrapper, target, anchor);
-      current = true;
-    },
-    p(ctx2, [dirty]) {
-      const wrapper_changes = {};
-      if (dirty & /*$$slots*/
-      16)
-        wrapper_changes.show = /*$$slots*/
-        ctx2[4].default;
-      if (dirty & /*$$scope, $$slots, placeholder, size, $$restProps, $$props, value*/
-      2097271) {
-        wrapper_changes.$$scope = { dirty, ctx: ctx2 };
-      }
-      wrapper.$set(wrapper_changes);
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(wrapper.$$.fragment, local);
-      current = true;
-    },
-    o(local) {
-      transition_out(wrapper.$$.fragment, local);
-      current = false;
-    },
-    d(detaching) {
-      destroy_component(wrapper, detaching);
-    }
-  };
-}
-function instance7($$self, $$props, $$invalidate) {
-  const omit_props_names = ["size", "placeholder", "value"];
-  let $$restProps = compute_rest_props($$props, omit_props_names);
-  let { $$slots: slots = {}, $$scope } = $$props;
-  const $$slots = compute_slots(slots);
-  let { size = "lg" } = $$props;
-  let { placeholder = "Search" } = $$props;
-  let { value = void 0 } = $$props;
-  const sizes = {
-    sm: "w-3.5 h-3.5",
-    md: "w-5 h-5",
-    lg: "w-6 h-6"
-  };
-  function input_value_binding(value$1) {
-    value = value$1;
-    $$invalidate(0, value);
-  }
-  function blur_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function change_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function input_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function click_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function focus_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function keydown_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function keypress_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function keyup_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function mouseenter_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function mouseleave_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function mouseover_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  function paste_handler(event) {
-    bubble.call(this, $$self, event);
-  }
-  $$self.$$set = ($$new_props) => {
-    $$invalidate(6, $$props = assign(assign({}, $$props), exclude_internal_props($$new_props)));
-    $$invalidate(5, $$restProps = compute_rest_props($$props, omit_props_names));
-    if ("size" in $$new_props)
-      $$invalidate(1, size = $$new_props.size);
-    if ("placeholder" in $$new_props)
-      $$invalidate(2, placeholder = $$new_props.placeholder);
-    if ("value" in $$new_props)
-      $$invalidate(0, value = $$new_props.value);
-    if ("$$scope" in $$new_props)
-      $$invalidate(21, $$scope = $$new_props.$$scope);
-  };
-  $$props = exclude_internal_props($$props);
-  return [
-    value,
-    size,
-    placeholder,
-    sizes,
-    $$slots,
-    $$restProps,
-    $$props,
-    slots,
-    input_value_binding,
-    blur_handler,
-    change_handler,
-    input_handler,
-    click_handler,
-    focus_handler,
-    keydown_handler,
-    keypress_handler,
-    keyup_handler,
-    mouseenter_handler,
-    mouseleave_handler,
-    mouseover_handler,
-    paste_handler,
-    $$scope
-  ];
-}
-var Search = class extends SvelteComponent {
-  constructor(options) {
-    super();
-    init(this, options, instance7, create_fragment7, safe_not_equal, { size: 1, placeholder: 2, value: 0 });
-  }
-};
-var Search_default = Search;
+// src/components/accordions/ModelHookupAccordion.svelte
+var import_obsidian12 = require("obsidian");
 
 // src/components/accordions/BaseAccordion.svelte
-var import_obsidian12 = require("obsidian");
-var get_default_slot_changes2 = (dirty) => ({
-  app: dirty & /*app*/
-  8,
-  settingsService: dirty & /*settingsService*/
-  16,
-  aiService: dirty & /*aiService*/
-  32
-});
-var get_default_slot_context2 = (ctx) => ({
-  app: (
-    /*app*/
-    ctx[3]
-  ),
-  settingsService: (
-    /*settingsService*/
-    ctx[4]
-  ),
-  aiService: (
-    /*aiService*/
-    ctx[5]
-  )
-});
-function create_default_slot_1(ctx) {
-  let div;
-  let current;
-  const default_slot_template = (
-    /*#slots*/
-    ctx[6].default
-  );
-  const default_slot = create_slot(
-    default_slot_template,
-    ctx,
-    /*$$scope*/
-    ctx[7],
-    get_default_slot_context2
-  );
-  return {
-    c() {
-      div = element("div");
-      if (default_slot)
-        default_slot.c();
-      attr(div, "class", "accordion-content");
-    },
-    m(target, anchor) {
-      insert(target, div, anchor);
-      if (default_slot) {
-        default_slot.m(div, null);
-      }
-      current = true;
-    },
-    p(ctx2, dirty) {
-      if (default_slot) {
-        if (default_slot.p && (!current || dirty & /*$$scope, app, settingsService, aiService*/
-        184)) {
-          update_slot_base(
-            default_slot,
-            default_slot_template,
-            ctx2,
-            /*$$scope*/
-            ctx2[7],
-            !current ? get_all_dirty_from_scope(
-              /*$$scope*/
-              ctx2[7]
-            ) : get_slot_changes(
-              default_slot_template,
-              /*$$scope*/
-              ctx2[7],
-              dirty,
-              get_default_slot_changes2
-            ),
-            get_default_slot_context2
-          );
-        }
-      }
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(default_slot, local);
-      current = true;
-    },
-    o(local) {
-      transition_out(default_slot, local);
-      current = false;
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(div);
-      }
-      if (default_slot)
-        default_slot.d(detaching);
-    }
-  };
+function add_css(target) {
+  append_styles(target, "svelte-1w24cbd", ".graphweaver-accordion.svelte-1w24cbd{border:1px solid var(--background-modifier-border);border-radius:var(--radius-m);margin-bottom:var(--size-4);overflow:hidden;background-color:var(--background-modifier-hover)}.graphweaver-accordion-header.svelte-1w24cbd{display:flex;justify-content:space-between;align-items:center;padding:var(--size-4) var(--size-6);cursor:pointer;user-select:none}.graphweaver-accordion-header.is-active.svelte-1w24cbd{background:var(--background-modifier-hover)}.graphweaver-accordion-toggle.svelte-1w24cbd{padding:var(--size-1);color:var(--text-muted);font-size:1.1em}.graphweaver-accordion-header.svelte-1w24cbd:focus{outline:2px solid var(--interactive-accent);outline-offset:-2px}.graphweaver-accordion-header.svelte-1w24cbd:hover{background-color:var(--background-modifier-hover)}.graphweaver-accordion-content.svelte-1w24cbd{padding:var(--size-4);background-color:var(--background-primary)}");
 }
-function create_if_block6(ctx) {
-  let span;
+function create_if_block_1(ctx) {
+  let div;
   let t;
   return {
     c() {
-      span = element("span");
+      div = element("div");
       t = text(
         /*description*/
         ctx[1]
       );
-      attr(span, "class", "accordion-description");
+      attr(div, "class", "setting-item-description");
     },
     m(target, anchor) {
-      insert(target, span, anchor);
-      append(span, t);
+      insert(target, div, anchor);
+      append(div, t);
     },
     p(ctx2, dirty) {
       if (dirty & /*description*/
@@ -20708,63 +14064,188 @@ function create_if_block6(ctx) {
     },
     d(detaching) {
       if (detaching) {
-        detach(span);
+        detach(div);
       }
     }
   };
 }
-function create_header_slot(ctx) {
-  let div2;
-  let div0;
-  let span;
-  let t0;
-  let t1;
-  let t2;
-  let div1;
-  let if_block = (
-    /*description*/
-    ctx[1] && create_if_block6(ctx)
+function create_if_block(ctx) {
+  let div;
+  let current;
+  const default_slot_template = (
+    /*#slots*/
+    ctx[5].default
+  );
+  const default_slot = create_slot(
+    default_slot_template,
+    ctx,
+    /*$$scope*/
+    ctx[4],
+    null
   );
   return {
     c() {
-      div2 = element("div");
+      div = element("div");
+      if (default_slot)
+        default_slot.c();
+      attr(div, "class", "graphweaver-accordion-content svelte-1w24cbd");
+    },
+    m(target, anchor) {
+      insert(target, div, anchor);
+      if (default_slot) {
+        default_slot.m(div, null);
+      }
+      current = true;
+    },
+    p(ctx2, dirty) {
+      if (default_slot) {
+        if (default_slot.p && (!current || dirty & /*$$scope*/
+        16)) {
+          update_slot_base(
+            default_slot,
+            default_slot_template,
+            ctx2,
+            /*$$scope*/
+            ctx2[4],
+            !current ? get_all_dirty_from_scope(
+              /*$$scope*/
+              ctx2[4]
+            ) : get_slot_changes(
+              default_slot_template,
+              /*$$scope*/
+              ctx2[4],
+              dirty,
+              null
+            ),
+            null
+          );
+        }
+      }
+    },
+    i(local) {
+      if (current)
+        return;
+      transition_in(default_slot, local);
+      current = true;
+    },
+    o(local) {
+      transition_out(default_slot, local);
+      current = false;
+    },
+    d(detaching) {
+      if (detaching) {
+        detach(div);
+      }
+      if (default_slot)
+        default_slot.d(detaching);
+    }
+  };
+}
+function create_fragment(ctx) {
+  let div4;
+  let div3;
+  let div1;
+  let div0;
+  let t0;
+  let t1;
+  let t2;
+  let div2;
+  let span;
+  let t3_value = (
+    /*isOpen*/
+    ctx[2] ? "\u2796" : "\u2795"
+  );
+  let t3;
+  let t4;
+  let current;
+  let mounted;
+  let dispose;
+  let if_block0 = (
+    /*description*/
+    ctx[1] && create_if_block_1(ctx)
+  );
+  let if_block1 = (
+    /*isOpen*/
+    ctx[2] && create_if_block(ctx)
+  );
+  return {
+    c() {
+      div4 = element("div");
+      div3 = element("div");
+      div1 = element("div");
       div0 = element("div");
-      span = element("span");
       t0 = text(
         /*title*/
         ctx[0]
       );
       t1 = space();
-      if (if_block)
-        if_block.c();
+      if (if_block0)
+        if_block0.c();
       t2 = space();
-      div1 = element("div");
-      div1.innerHTML = `<svg viewBox="0 0 24 24" width="24" height="24" class="chevron"><path fill="currentColor" d="M9.29 6.71a.996.996 0 000 1.41L13.17 12l-3.88 3.88a.996.996 0 101.41 1.41l4.59-4.59a.996.996 0 000-1.41l-4.59-4.59a.996.996 0 00-1.41 0z"></path></svg>`;
-      attr(span, "class", "accordion-title");
-      attr(div0, "class", "accordion-title-wrapper");
-      attr(div1, "class", "accordion-icon");
-      attr(div1, "aria-hidden", "true");
-      toggle_class(
-        div1,
-        "rotated",
+      div2 = element("div");
+      span = element("span");
+      t3 = text(t3_value);
+      t4 = space();
+      if (if_block1)
+        if_block1.c();
+      attr(div0, "class", "setting-item-heading");
+      attr(div1, "class", "setting-item-info");
+      attr(span, "class", "graphweaver-accordion-toggle svelte-1w24cbd");
+      attr(div2, "class", "setting-item-control");
+      attr(div3, "class", "graphweaver-accordion-header svelte-1w24cbd");
+      attr(div3, "role", "button");
+      attr(div3, "tabindex", "0");
+      attr(
+        div3,
+        "aria-expanded",
         /*isOpen*/
         ctx[2]
       );
-      attr(div2, "class", "accordion-header");
+      toggle_class(
+        div3,
+        "is-active",
+        /*isOpen*/
+        ctx[2]
+      );
+      attr(div4, "class", "graphweaver-accordion svelte-1w24cbd");
     },
     m(target, anchor) {
-      insert(target, div2, anchor);
-      append(div2, div0);
-      append(div0, span);
-      append(span, t0);
-      append(div0, t1);
-      if (if_block)
-        if_block.m(div0, null);
-      append(div2, t2);
-      append(div2, div1);
+      insert(target, div4, anchor);
+      append(div4, div3);
+      append(div3, div1);
+      append(div1, div0);
+      append(div0, t0);
+      append(div1, t1);
+      if (if_block0)
+        if_block0.m(div1, null);
+      append(div3, t2);
+      append(div3, div2);
+      append(div2, span);
+      append(span, t3);
+      append(div4, t4);
+      if (if_block1)
+        if_block1.m(div4, null);
+      current = true;
+      if (!mounted) {
+        dispose = [
+          listen(
+            div3,
+            "click",
+            /*toggleAccordion*/
+            ctx[3]
+          ),
+          listen(
+            div3,
+            "keydown",
+            /*keydown_handler*/
+            ctx[6]
+          )
+        ];
+        mounted = true;
+      }
     },
-    p(ctx2, dirty) {
-      if (dirty & /*title*/
+    p(ctx2, [dirty]) {
+      if (!current || dirty & /*title*/
       1)
         set_data(
           t0,
@@ -20775,142 +14256,96 @@ function create_header_slot(ctx) {
         /*description*/
         ctx2[1]
       ) {
-        if (if_block) {
-          if_block.p(ctx2, dirty);
+        if (if_block0) {
+          if_block0.p(ctx2, dirty);
         } else {
-          if_block = create_if_block6(ctx2);
-          if_block.c();
-          if_block.m(div0, null);
+          if_block0 = create_if_block_1(ctx2);
+          if_block0.c();
+          if_block0.m(div1, null);
         }
-      } else if (if_block) {
-        if_block.d(1);
-        if_block = null;
+      } else if (if_block0) {
+        if_block0.d(1);
+        if_block0 = null;
       }
-      if (dirty & /*isOpen*/
+      if ((!current || dirty & /*isOpen*/
+      4) && t3_value !== (t3_value = /*isOpen*/
+      ctx2[2] ? "\u2796" : "\u2795"))
+        set_data(t3, t3_value);
+      if (!current || dirty & /*isOpen*/
       4) {
-        toggle_class(
-          div1,
-          "rotated",
+        attr(
+          div3,
+          "aria-expanded",
           /*isOpen*/
           ctx2[2]
         );
       }
+      if (!current || dirty & /*isOpen*/
+      4) {
+        toggle_class(
+          div3,
+          "is-active",
+          /*isOpen*/
+          ctx2[2]
+        );
+      }
+      if (
+        /*isOpen*/
+        ctx2[2]
+      ) {
+        if (if_block1) {
+          if_block1.p(ctx2, dirty);
+          if (dirty & /*isOpen*/
+          4) {
+            transition_in(if_block1, 1);
+          }
+        } else {
+          if_block1 = create_if_block(ctx2);
+          if_block1.c();
+          transition_in(if_block1, 1);
+          if_block1.m(div4, null);
+        }
+      } else if (if_block1) {
+        group_outros();
+        transition_out(if_block1, 1, 1, () => {
+          if_block1 = null;
+        });
+        check_outros();
+      }
+    },
+    i(local) {
+      if (current)
+        return;
+      transition_in(if_block1);
+      current = true;
+    },
+    o(local) {
+      transition_out(if_block1);
+      current = false;
     },
     d(detaching) {
       if (detaching) {
-        detach(div2);
+        detach(div4);
       }
-      if (if_block)
-        if_block.d();
+      if (if_block0)
+        if_block0.d();
+      if (if_block1)
+        if_block1.d();
+      mounted = false;
+      run_all(dispose);
     }
   };
 }
-function create_default_slot4(ctx) {
-  let accordionitem;
-  let current;
-  accordionitem = new AccordionItem_default({
-    props: {
-      isOpen: (
-        /*isOpen*/
-        ctx[2]
-      ),
-      $$slots: {
-        header: [create_header_slot],
-        default: [create_default_slot_1]
-      },
-      $$scope: { ctx }
-    }
-  });
-  return {
-    c() {
-      create_component(accordionitem.$$.fragment);
-    },
-    m(target, anchor) {
-      mount_component(accordionitem, target, anchor);
-      current = true;
-    },
-    p(ctx2, dirty) {
-      const accordionitem_changes = {};
-      if (dirty & /*isOpen*/
-      4)
-        accordionitem_changes.isOpen = /*isOpen*/
-        ctx2[2];
-      if (dirty & /*$$scope, isOpen, description, title, app, settingsService, aiService*/
-      191) {
-        accordionitem_changes.$$scope = { dirty, ctx: ctx2 };
-      }
-      accordionitem.$set(accordionitem_changes);
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(accordionitem.$$.fragment, local);
-      current = true;
-    },
-    o(local) {
-      transition_out(accordionitem.$$.fragment, local);
-      current = false;
-    },
-    d(detaching) {
-      destroy_component(accordionitem, detaching);
-    }
-  };
-}
-function create_fragment8(ctx) {
-  let accordion;
-  let current;
-  accordion = new Accordion_default({
-    props: {
-      $$slots: { default: [create_default_slot4] },
-      $$scope: { ctx }
-    }
-  });
-  return {
-    c() {
-      create_component(accordion.$$.fragment);
-    },
-    m(target, anchor) {
-      mount_component(accordion, target, anchor);
-      current = true;
-    },
-    p(ctx2, [dirty]) {
-      const accordion_changes = {};
-      if (dirty & /*$$scope, isOpen, description, title, app, settingsService, aiService*/
-      191) {
-        accordion_changes.$$scope = { dirty, ctx: ctx2 };
-      }
-      accordion.$set(accordion_changes);
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(accordion.$$.fragment, local);
-      current = true;
-    },
-    o(local) {
-      transition_out(accordion.$$.fragment, local);
-      current = false;
-    },
-    d(detaching) {
-      destroy_component(accordion, detaching);
-    }
-  };
-}
-function instance8($$self, $$props, $$invalidate) {
+function instance($$self, $$props, $$invalidate) {
   let { $$slots: slots = {}, $$scope } = $$props;
   let { title } = $$props;
-  let { description } = $$props;
+  let { description = "" } = $$props;
   let { isOpen = false } = $$props;
-  let { app } = $$props;
-  let { settingsService } = $$props;
-  let { aiService } = $$props;
-  function showNotice(message) {
-    new import_obsidian12.Notice(message);
+  const dispatch = createEventDispatcher();
+  function toggleAccordion() {
+    dispatch("toggle", { isOpen: !isOpen });
   }
-  function handleError(context, error) {
-    console.error(`Error in ${context}:`, error);
-    showNotice(`Error in ${context}: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
+  const keydown_handler = (e) => e.key === "Enter" && toggleAccordion();
   $$self.$$set = ($$props2) => {
     if ("title" in $$props2)
       $$invalidate(0, title = $$props2.title);
@@ -20918,442 +14353,62 @@ function instance8($$self, $$props, $$invalidate) {
       $$invalidate(1, description = $$props2.description);
     if ("isOpen" in $$props2)
       $$invalidate(2, isOpen = $$props2.isOpen);
-    if ("app" in $$props2)
-      $$invalidate(3, app = $$props2.app);
-    if ("settingsService" in $$props2)
-      $$invalidate(4, settingsService = $$props2.settingsService);
-    if ("aiService" in $$props2)
-      $$invalidate(5, aiService = $$props2.aiService);
     if ("$$scope" in $$props2)
-      $$invalidate(7, $$scope = $$props2.$$scope);
+      $$invalidate(4, $$scope = $$props2.$$scope);
   };
-  return [title, description, isOpen, app, settingsService, aiService, slots, $$scope];
+  return [title, description, isOpen, toggleAccordion, $$scope, slots, keydown_handler];
 }
 var BaseAccordion = class extends SvelteComponent {
   constructor(options) {
     super();
-    init(this, options, instance8, create_fragment8, safe_not_equal, {
-      title: 0,
-      description: 1,
-      isOpen: 2,
-      app: 3,
-      settingsService: 4,
-      aiService: 5
-    });
+    init(this, options, instance, create_fragment, safe_not_equal, { title: 0, description: 1, isOpen: 2 }, add_css);
   }
 };
 var BaseAccordion_default = BaseAccordion;
 
 // src/components/accordions/ModelHookupAccordion.svelte
-var import_obsidian13 = require("obsidian");
 function add_css2(target) {
-  append_styles(target, "svelte-mi65e", ".model-hookup-settings.svelte-mi65e{display:flex;flex-direction:column;gap:var(--size-4)}.setting-item.svelte-mi65e{display:flex;justify-content:space-between;align-items:flex-start;padding:var(--size-2) 0}.setting-item-info.svelte-mi65e{flex:1;margin-right:var(--size-4)}.setting-item-name.svelte-mi65e{font-weight:var(--font-bold);color:var(--text-normal)}.setting-item-description.svelte-mi65e{color:var(--text-muted);font-size:var(--font-ui-small)}.setting-item-control.svelte-mi65e{flex:0 0 200px}select.svelte-mi65e,input.svelte-mi65e{width:100%;padding:var(--size-2);border:1px solid var(--background-modifier-border);border-radius:var(--radius-s);background-color:var(--background-primary);color:var(--text-normal)}.test-connection-button.svelte-mi65e{padding:var(--size-2) var(--size-4);background-color:var(--interactive-accent);color:var(--text-on-accent);border-radius:var(--radius-s);border:none;cursor:pointer;font-weight:var(--font-bold);transition:background-color 0.2s ease;align-self:flex-start}.test-connection-button.svelte-mi65e:hover:not(:disabled){background-color:var(--interactive-accent-hover)}.test-connection-button.svelte-mi65e:disabled{opacity:0.5;cursor:not-allowed}");
+  append_styles(target, "svelte-28mmqr", ".model-hookup-content.svelte-28mmqr{padding:var(--size-4)}");
 }
-function get_each_context2(ctx, list, i) {
-  const child_ctx = ctx.slice();
-  child_ctx[16] = list[i][0];
-  child_ctx[17] = list[i][1];
-  return child_ctx;
-}
-function create_each_block2(ctx) {
-  let option;
-  let t_value = (
-    /*label*/
-    ctx[17] + ""
-  );
-  let t;
-  let option_value_value;
+function create_default_slot(ctx) {
+  let div;
   return {
     c() {
-      option = element("option");
-      t = text(t_value);
-      option.__value = option_value_value = /*value*/
-      ctx[16];
-      set_input_value(option, option.__value);
+      div = element("div");
+      div.innerHTML = ``;
+      attr(div, "class", "model-hookup-content svelte-28mmqr");
     },
     m(target, anchor) {
-      insert(target, option, anchor);
-      append(option, t);
+      insert(target, div, anchor);
+      ctx[9](div);
     },
     p: noop,
     d(detaching) {
       if (detaching) {
-        detach(option);
+        detach(div);
       }
+      ctx[9](null);
     }
   };
 }
-function create_else_block4(ctx) {
-  let div4;
-  let div2;
-  let div0;
-  let t1;
-  let div1;
-  let t2;
-  let t3_value = (
-    /*providerOptions*/
-    ctx[7][
-      /*selectedProvider*/
-      ctx[4]
-    ] + ""
-  );
-  let t3;
-  let t4;
-  let div3;
-  let input;
-  let mounted;
-  let dispose;
-  return {
-    c() {
-      div4 = element("div");
-      div2 = element("div");
-      div0 = element("div");
-      div0.textContent = "API Key";
-      t1 = space();
-      div1 = element("div");
-      t2 = text("Your API key for ");
-      t3 = text(t3_value);
-      t4 = space();
-      div3 = element("div");
-      input = element("input");
-      attr(div0, "class", "setting-item-name svelte-mi65e");
-      attr(div1, "class", "setting-item-description svelte-mi65e");
-      attr(div2, "class", "setting-item-info svelte-mi65e");
-      attr(input, "type", "password");
-      attr(input, "class", "svelte-mi65e");
-      attr(div3, "class", "setting-item-control svelte-mi65e");
-      attr(div4, "class", "setting-item svelte-mi65e");
-    },
-    m(target, anchor) {
-      insert(target, div4, anchor);
-      append(div4, div2);
-      append(div2, div0);
-      append(div2, t1);
-      append(div2, div1);
-      append(div1, t2);
-      append(div1, t3);
-      append(div4, t4);
-      append(div4, div3);
-      append(div3, input);
-      set_input_value(
-        input,
-        /*apiKey*/
-        ctx[5]
-      );
-      if (!mounted) {
-        dispose = [
-          listen(
-            input,
-            "input",
-            /*input_input_handler_1*/
-            ctx[14]
-          ),
-          listen(
-            input,
-            "change",
-            /*handleApiKeyChange*/
-            ctx[9]
-          )
-        ];
-        mounted = true;
-      }
-    },
-    p(ctx2, dirty) {
-      if (dirty & /*selectedProvider*/
-      16 && t3_value !== (t3_value = /*providerOptions*/
-      ctx2[7][
-        /*selectedProvider*/
-        ctx2[4]
-      ] + ""))
-        set_data(t3, t3_value);
-      if (dirty & /*apiKey*/
-      32 && input.value !== /*apiKey*/
-      ctx2[5]) {
-        set_input_value(
-          input,
-          /*apiKey*/
-          ctx2[5]
-        );
-      }
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(div4);
-      }
-      mounted = false;
-      run_all(dispose);
-    }
-  };
-}
-function create_if_block7(ctx) {
-  let div4;
-  let div2;
-  let t3;
-  let div3;
-  let input;
-  let mounted;
-  let dispose;
-  return {
-    c() {
-      div4 = element("div");
-      div2 = element("div");
-      div2.innerHTML = `<div class="setting-item-name svelte-mi65e">LM Studio Port</div> <div class="setting-item-description svelte-mi65e">Port number for your local LM Studio instance</div>`;
-      t3 = space();
-      div3 = element("div");
-      input = element("input");
-      attr(div2, "class", "setting-item-info svelte-mi65e");
-      attr(input, "type", "number");
-      attr(input, "class", "svelte-mi65e");
-      attr(div3, "class", "setting-item-control svelte-mi65e");
-      attr(div4, "class", "setting-item svelte-mi65e");
-    },
-    m(target, anchor) {
-      insert(target, div4, anchor);
-      append(div4, div2);
-      append(div4, t3);
-      append(div4, div3);
-      append(div3, input);
-      set_input_value(
-        input,
-        /*lmStudioPort*/
-        ctx[6]
-      );
-      if (!mounted) {
-        dispose = [
-          listen(
-            input,
-            "input",
-            /*input_input_handler*/
-            ctx[13]
-          ),
-          listen(
-            input,
-            "change",
-            /*handlePortChange*/
-            ctx[10]
-          )
-        ];
-        mounted = true;
-      }
-    },
-    p(ctx2, dirty) {
-      if (dirty & /*lmStudioPort*/
-      64 && to_number(input.value) !== /*lmStudioPort*/
-      ctx2[6]) {
-        set_input_value(
-          input,
-          /*lmStudioPort*/
-          ctx2[6]
-        );
-      }
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(div4);
-      }
-      mounted = false;
-      run_all(dispose);
-    }
-  };
-}
-function create_default_slot5(ctx) {
-  let div5;
-  let div4;
-  let div2;
-  let t3;
-  let div3;
-  let select;
-  let t4;
-  let t5;
-  let button;
-  let t6_value = (
-    /*isLoading*/
-    ctx[3] ? "Testing..." : "Test Connection"
-  );
-  let t6;
-  let mounted;
-  let dispose;
-  let each_value = ensure_array_like(Object.entries(
-    /*providerOptions*/
-    ctx[7]
-  ));
-  let each_blocks = [];
-  for (let i = 0; i < each_value.length; i += 1) {
-    each_blocks[i] = create_each_block2(get_each_context2(ctx, each_value, i));
-  }
-  function select_block_type(ctx2, dirty) {
-    if (
-      /*selectedProvider*/
-      ctx2[4] === "lmstudio" /* LMStudio */
-    )
-      return create_if_block7;
-    return create_else_block4;
-  }
-  let current_block_type = select_block_type(ctx, -1);
-  let if_block = current_block_type(ctx);
-  return {
-    c() {
-      div5 = element("div");
-      div4 = element("div");
-      div2 = element("div");
-      div2.innerHTML = `<div class="setting-item-name svelte-mi65e">AI Provider</div> <div class="setting-item-description svelte-mi65e">Select your AI provider</div>`;
-      t3 = space();
-      div3 = element("div");
-      select = element("select");
-      for (let i = 0; i < each_blocks.length; i += 1) {
-        each_blocks[i].c();
-      }
-      t4 = space();
-      if_block.c();
-      t5 = space();
-      button = element("button");
-      t6 = text(t6_value);
-      attr(div2, "class", "setting-item-info svelte-mi65e");
-      attr(select, "class", "svelte-mi65e");
-      if (
-        /*selectedProvider*/
-        ctx[4] === void 0
-      )
-        add_render_callback(() => (
-          /*select_change_handler*/
-          ctx[12].call(select)
-        ));
-      attr(div3, "class", "setting-item-control svelte-mi65e");
-      attr(div4, "class", "setting-item svelte-mi65e");
-      attr(button, "class", "test-connection-button svelte-mi65e");
-      button.disabled = /*isLoading*/
-      ctx[3];
-      attr(div5, "class", "model-hookup-settings svelte-mi65e");
-    },
-    m(target, anchor) {
-      insert(target, div5, anchor);
-      append(div5, div4);
-      append(div4, div2);
-      append(div4, t3);
-      append(div4, div3);
-      append(div3, select);
-      for (let i = 0; i < each_blocks.length; i += 1) {
-        if (each_blocks[i]) {
-          each_blocks[i].m(select, null);
-        }
-      }
-      select_option(
-        select,
-        /*selectedProvider*/
-        ctx[4],
-        true
-      );
-      append(div5, t4);
-      if_block.m(div5, null);
-      append(div5, t5);
-      append(div5, button);
-      append(button, t6);
-      if (!mounted) {
-        dispose = [
-          listen(
-            select,
-            "change",
-            /*select_change_handler*/
-            ctx[12]
-          ),
-          listen(
-            select,
-            "change",
-            /*handleProviderChange*/
-            ctx[8]
-          ),
-          listen(
-            button,
-            "click",
-            /*testConnection*/
-            ctx[11]
-          )
-        ];
-        mounted = true;
-      }
-    },
-    p(ctx2, dirty) {
-      if (dirty & /*Object, providerOptions*/
-      128) {
-        each_value = ensure_array_like(Object.entries(
-          /*providerOptions*/
-          ctx2[7]
-        ));
-        let i;
-        for (i = 0; i < each_value.length; i += 1) {
-          const child_ctx = get_each_context2(ctx2, each_value, i);
-          if (each_blocks[i]) {
-            each_blocks[i].p(child_ctx, dirty);
-          } else {
-            each_blocks[i] = create_each_block2(child_ctx);
-            each_blocks[i].c();
-            each_blocks[i].m(select, null);
-          }
-        }
-        for (; i < each_blocks.length; i += 1) {
-          each_blocks[i].d(1);
-        }
-        each_blocks.length = each_value.length;
-      }
-      if (dirty & /*selectedProvider, Object, providerOptions*/
-      144) {
-        select_option(
-          select,
-          /*selectedProvider*/
-          ctx2[4]
-        );
-      }
-      if (current_block_type === (current_block_type = select_block_type(ctx2, dirty)) && if_block) {
-        if_block.p(ctx2, dirty);
-      } else {
-        if_block.d(1);
-        if_block = current_block_type(ctx2);
-        if (if_block) {
-          if_block.c();
-          if_block.m(div5, t5);
-        }
-      }
-      if (dirty & /*isLoading*/
-      8 && t6_value !== (t6_value = /*isLoading*/
-      ctx2[3] ? "Testing..." : "Test Connection"))
-        set_data(t6, t6_value);
-      if (dirty & /*isLoading*/
-      8) {
-        button.disabled = /*isLoading*/
-        ctx2[3];
-      }
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(div5);
-      }
-      destroy_each(each_blocks, detaching);
-      if_block.d();
-      mounted = false;
-      run_all(dispose);
-    }
-  };
-}
-function create_fragment9(ctx) {
+function create_fragment2(ctx) {
   let baseaccordion;
   let current;
   baseaccordion = new BaseAccordion_default({
     props: {
-      title: "\u{1F50C} Model Hookup",
-      description: "Configure AI providers and models",
-      app: (
-        /*app*/
+      title: (
+        /*title*/
         ctx[0]
       ),
-      settingsService: (
-        /*settingsService*/
+      description: (
+        /*description*/
         ctx[1]
       ),
-      aiService: (
-        /*aiService*/
+      isOpen: (
+        /*isOpen*/
         ctx[2]
       ),
-      $$slots: { default: [create_default_slot5] },
+      $$slots: { default: [create_default_slot] },
       $$scope: { ctx }
     }
   });
@@ -21367,20 +14422,20 @@ function create_fragment9(ctx) {
     },
     p(ctx2, [dirty]) {
       const baseaccordion_changes = {};
-      if (dirty & /*app*/
+      if (dirty & /*title*/
       1)
-        baseaccordion_changes.app = /*app*/
+        baseaccordion_changes.title = /*title*/
         ctx2[0];
-      if (dirty & /*settingsService*/
+      if (dirty & /*description*/
       2)
-        baseaccordion_changes.settingsService = /*settingsService*/
+        baseaccordion_changes.description = /*description*/
         ctx2[1];
-      if (dirty & /*aiService*/
+      if (dirty & /*isOpen*/
       4)
-        baseaccordion_changes.aiService = /*aiService*/
+        baseaccordion_changes.isOpen = /*isOpen*/
         ctx2[2];
-      if (dirty & /*$$scope, isLoading, lmStudioPort, selectedProvider, apiKey*/
-      1048696) {
+      if (dirty & /*$$scope, contentEl*/
+      32776) {
         baseaccordion_changes.$$scope = { dirty, ctx: ctx2 };
       }
       baseaccordion.$set(baseaccordion_changes);
@@ -21400,7 +14455,8 @@ function create_fragment9(ctx) {
     }
   };
 }
-function instance9($$self, $$props, $$invalidate) {
+function instance2($$self, $$props, $$invalidate) {
+  let $state;
   var __awaiter = this && this.__awaiter || function(thisArg, _arguments, P, generator) {
     function adopt(value) {
       return value instanceof P ? value : new P(function(resolve) {
@@ -21428,124 +14484,155 @@ function instance9($$self, $$props, $$invalidate) {
       step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
   };
+  let { title } = $$props;
+  let { description } = $$props;
   let { app } = $$props;
   let { settingsService } = $$props;
   let { aiService } = $$props;
-  let isLoading = false;
-  const providerOptions = {
-    ["openai" /* OpenAI */]: "OpenAI",
-    ["anthropic" /* Anthropic */]: "Anthropic",
-    ["google" /* Google */]: "Google Gemini",
-    ["groq" /* Groq */]: "Groq",
-    ["openrouter" /* OpenRouter */]: "OpenRouter",
-    ["lmstudio" /* LMStudio */]: "LM Studio"
-  };
-  let selectedProvider;
-  let apiKey;
-  let lmStudioPort;
-  onMount(() => {
-    $$invalidate(4, selectedProvider = settingsService.getSettings().aiProvider.selected);
-    $$invalidate(5, apiKey = settingsService.getSettings().aiProvider.apiKeys[selectedProvider] || "");
-    $$invalidate(6, lmStudioPort = settingsService.getSettings().localLMStudio.port);
+  let { isOpen = false } = $$props;
+  const state = writable({
+    selectedProvider: "openai" /* OpenAI */,
+    selectedModel: "",
+    apiKey: "",
+    isLoading: false
   });
-  function handleProviderChange(event) {
+  component_subscribe($$self, state, (value) => $$invalidate(8, $state = value));
+  let contentEl;
+  function handleProviderChange(provider) {
     return __awaiter(this, void 0, void 0, function* () {
-      const value = event.target.value;
-      try {
-        yield settingsService.updateNestedSetting("aiProvider", "selected", value);
-        $$invalidate(4, selectedProvider = value);
-        $$invalidate(5, apiKey = settingsService.getSettings().aiProvider.apiKeys[selectedProvider] || "");
-        yield aiService.reinitialize();
-        new import_obsidian13.Notice(`AI Service reinitialized with provider ${providerOptions[value]}.`);
-      } catch (error) {
-        console.error("Failed to reinitialize AI Service:", error);
-        new import_obsidian13.Notice(`Failed to reinitialize AI Service: ${error instanceof Error ? error.message : "Unknown error"}`);
-      }
+      state.update((s) => Object.assign(Object.assign({}, s), { selectedProvider: provider }));
+      const settings = settingsService.getSettings();
+      yield settingsService.updateNestedSetting("aiProvider", "selected", provider);
+      const apiKey = settings.aiProvider.apiKeys[provider] || "";
+      state.update((s) => Object.assign(Object.assign({}, s), { apiKey }));
     });
   }
-  function handleApiKeyChange(event) {
+  function handleModelChange(modelApiName) {
     return __awaiter(this, void 0, void 0, function* () {
-      const value = event.target.value;
-      try {
-        const currentApiKeys = settingsService.getNestedSetting("aiProvider", "apiKeys");
-        yield settingsService.updateNestedSetting("aiProvider", "apiKeys", Object.assign(Object.assign({}, currentApiKeys), { [selectedProvider]: value }));
-        $$invalidate(5, apiKey = value);
-      } catch (error) {
-        console.error("Error updating API key:", error);
-        new import_obsidian13.Notice(`Failed to update API key: ${error instanceof Error ? error.message : "Unknown error"}`);
-      }
+      state.update((s) => Object.assign(Object.assign({}, s), { selectedModel: modelApiName }));
+      const settings = settingsService.getSettings();
+      yield settingsService.updateNestedSetting("aiProvider", "selectedModels", Object.assign(Object.assign({}, settings.aiProvider.selectedModels), { [$state.selectedProvider]: modelApiName }));
     });
   }
-  function handlePortChange(event) {
+  function handleApiKeyChange(value) {
     return __awaiter(this, void 0, void 0, function* () {
-      const value = parseInt(event.target.value);
-      try {
-        yield settingsService.updateNestedSetting("localLMStudio", "port", value);
-        $$invalidate(6, lmStudioPort = value);
-      } catch (error) {
-        console.error("Error updating port:", error);
-        new import_obsidian13.Notice(`Failed to update port: ${error instanceof Error ? error.message : "Unknown error"}`);
-      }
+      state.update((s) => Object.assign(Object.assign({}, s), { apiKey: value }));
+      const settings = settingsService.getSettings();
+      yield settingsService.updateNestedSetting("aiProvider", "apiKeys", Object.assign(Object.assign({}, settings.aiProvider.apiKeys), { [$state.selectedProvider]: value }));
     });
   }
-  function testConnection() {
+  function handleTestConnection() {
     return __awaiter(this, void 0, void 0, function* () {
-      $$invalidate(3, isLoading = true);
+      if ($state.isLoading)
+        return;
+      state.update((s) => Object.assign(Object.assign({}, s), { isLoading: true }));
       try {
-        const result = yield aiService.testConnection(selectedProvider);
-        const providerName = providerOptions[selectedProvider];
-        new import_obsidian13.Notice(result ? `Successfully connected to ${providerName}` : `Failed to connect to ${providerName}. Please check your settings.`);
+        const result = yield aiService.testConnection($state.selectedProvider);
+        const model = AIModelUtils.getModelByApiName($state.selectedModel);
+        const modelName = (model === null || model === void 0 ? void 0 : model.name) || "selected model";
+        new import_obsidian12.Notice(result ? `Successfully connected to ${modelName}` : `Failed to connect to ${modelName}. Please check your settings.`);
       } catch (error) {
-        console.error("Error testing connection:", error);
-        new import_obsidian13.Notice(`Connection test failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+        console.error("\u{1F987} Error testing connection:", error);
+        new import_obsidian12.Notice(`Connection error: ${error instanceof Error ? error.message : "Unknown error"}`);
       } finally {
-        $$invalidate(3, isLoading = false);
+        state.update((s) => Object.assign(Object.assign({}, s), { isLoading: false }));
       }
     });
   }
-  function select_change_handler() {
-    selectedProvider = select_value(this);
-    $$invalidate(4, selectedProvider);
-    $$invalidate(7, providerOptions);
-  }
-  function input_input_handler() {
-    lmStudioPort = to_number(this.value);
-    $$invalidate(6, lmStudioPort);
-  }
-  function input_input_handler_1() {
-    apiKey = this.value;
-    $$invalidate(5, apiKey);
+  function div_binding($$value) {
+    binding_callbacks[$$value ? "unshift" : "push"](() => {
+      contentEl = $$value;
+      $$invalidate(3, contentEl);
+    });
   }
   $$self.$$set = ($$props2) => {
+    if ("title" in $$props2)
+      $$invalidate(0, title = $$props2.title);
+    if ("description" in $$props2)
+      $$invalidate(1, description = $$props2.description);
     if ("app" in $$props2)
-      $$invalidate(0, app = $$props2.app);
+      $$invalidate(5, app = $$props2.app);
     if ("settingsService" in $$props2)
-      $$invalidate(1, settingsService = $$props2.settingsService);
+      $$invalidate(6, settingsService = $$props2.settingsService);
     if ("aiService" in $$props2)
-      $$invalidate(2, aiService = $$props2.aiService);
+      $$invalidate(7, aiService = $$props2.aiService);
+    if ("isOpen" in $$props2)
+      $$invalidate(2, isOpen = $$props2.isOpen);
+  };
+  $$self.$$.update = () => {
+    if ($$self.$$.dirty & /*contentEl, $state*/
+    264) {
+      $:
+        if (contentEl && $state) {
+          contentEl.empty();
+          new import_obsidian12.Setting(contentEl).setName("AI Provider").setDesc("Choose your AI service provider").addDropdown((dropdown) => {
+            Object.values(AIProvider).forEach((provider) => {
+              dropdown.addOption(provider, provider);
+            });
+            dropdown.setValue($state.selectedProvider);
+            dropdown.onChange((value) => __awaiter(void 0, void 0, void 0, function* () {
+              yield handleProviderChange(value);
+            }));
+            return dropdown;
+          });
+          new import_obsidian12.Setting(contentEl).setName("AI Model").setDesc("Select the AI model to use").addDropdown((dropdown) => {
+            var _a;
+            const models = AIModelUtils.getModelsForProvider($state.selectedProvider);
+            models.forEach((model) => {
+              dropdown.addOption(model.apiName, model.name);
+            });
+            dropdown.setValue($state.selectedModel || ((_a = models[0]) === null || _a === void 0 ? void 0 : _a.apiName));
+            dropdown.onChange((value) => __awaiter(void 0, void 0, void 0, function* () {
+              yield handleModelChange(value);
+            }));
+            return dropdown;
+          });
+          new import_obsidian12.Setting(contentEl).setName("API Key").setDesc("Enter your API key for the selected provider").addText((text2) => {
+            text2.setPlaceholder("Enter API key").setValue($state.apiKey).onChange((value) => __awaiter(void 0, void 0, void 0, function* () {
+              yield handleApiKeyChange(value);
+            }));
+            text2.inputEl.type = "password";
+            return text2;
+          });
+          new import_obsidian12.Setting(contentEl).addButton((button) => {
+            button.setButtonText($state.isLoading ? "Testing..." : "Test Connection").setCta().setDisabled($state.isLoading || !$state.apiKey).onClick(handleTestConnection);
+            return button;
+          });
+        }
+    }
   };
   return [
+    title,
+    description,
+    isOpen,
+    contentEl,
+    state,
     app,
     settingsService,
     aiService,
-    isLoading,
-    selectedProvider,
-    apiKey,
-    lmStudioPort,
-    providerOptions,
-    handleProviderChange,
-    handleApiKeyChange,
-    handlePortChange,
-    testConnection,
-    select_change_handler,
-    input_input_handler,
-    input_input_handler_1
+    $state,
+    div_binding
   ];
 }
 var ModelHookupAccordion = class extends SvelteComponent {
   constructor(options) {
     super();
-    init(this, options, instance9, create_fragment9, safe_not_equal, { app: 0, settingsService: 1, aiService: 2 }, add_css2);
+    init(
+      this,
+      options,
+      instance2,
+      create_fragment2,
+      safe_not_equal,
+      {
+        title: 0,
+        description: 1,
+        app: 5,
+        settingsService: 6,
+        aiService: 7,
+        isOpen: 2
+      },
+      add_css2
+    );
   }
 };
 var ModelHookupAccordion_default = ModelHookupAccordion;
@@ -21553,508 +14640,129 @@ var ModelHookupAccordion_default = ModelHookupAccordion;
 // src/components/accordions/PropertyManagerAccordion.svelte
 var import_obsidian15 = require("obsidian");
 
-// src/components/modals/EditPropertiesModal.svelte
+// src/components/modals/PropertiesEditor.ts
 var import_obsidian14 = require("obsidian");
+
+// src/components/modals/PropertiesEditor.svelte
+var import_obsidian13 = require("obsidian");
 function add_css3(target) {
-  append_styles(target, "svelte-en16b6", ".edit-properties-modal.svelte-en16b6.svelte-en16b6{display:flex;flex-direction:column;gap:var(--size-4);padding:var(--size-4);max-width:800px;width:100%}.modal-header.svelte-en16b6.svelte-en16b6{border-bottom:1px solid var(--background-modifier-border);padding-bottom:var(--size-4)}.modal-header.svelte-en16b6 h2.svelte-en16b6{margin:0;color:var(--text-normal);font-size:var(--font-ui-large)}.select-all-container.svelte-en16b6.svelte-en16b6{margin-bottom:var(--size-4)}.select-all-label.svelte-en16b6.svelte-en16b6{display:flex;align-items:center;gap:var(--size-2);cursor:pointer}.table-container.svelte-en16b6.svelte-en16b6{overflow-x:auto;margin-bottom:var(--size-4)}table.svelte-en16b6.svelte-en16b6{width:100%;border-collapse:collapse}th.svelte-en16b6.svelte-en16b6,td.svelte-en16b6.svelte-en16b6{padding:var(--size-2) var(--size-4);border-bottom:1px solid var(--background-modifier-border)}.align-center.svelte-en16b6.svelte-en16b6{text-align:center}.align-left.svelte-en16b6.svelte-en16b6{text-align:left}.drag-handle.svelte-en16b6.svelte-en16b6{cursor:move;user-select:none}.property-input.svelte-en16b6.svelte-en16b6,.property-select.svelte-en16b6.svelte-en16b6{width:100%;background:var(--background-primary);border:1px solid var(--background-modifier-border);border-radius:var(--radius-s);padding:var(--size-2);color:var(--text-normal)}.modal-footer.svelte-en16b6.svelte-en16b6{display:flex;justify-content:flex-end;gap:var(--size-4);padding-top:var(--size-4);border-top:1px solid var(--background-modifier-border)}button.svelte-en16b6.svelte-en16b6{padding:var(--size-2) var(--size-4);border-radius:var(--radius-s);border:none;cursor:pointer;font-weight:var(--font-bold)}button.mod-cta.svelte-en16b6.svelte-en16b6{background-color:var(--interactive-accent);color:var(--text-on-accent)}button.mod-warning.svelte-en16b6.svelte-en16b6{background-color:var(--background-modifier-error);color:var(--text-on-accent)}button.mod-cancel.svelte-en16b6.svelte-en16b6{background-color:var(--background-modifier-border);color:var(--text-normal)}button.svelte-en16b6.svelte-en16b6:hover:not(:disabled){opacity:0.8}");
+  append_styles(target, "svelte-epbidv", ".properties-editor-content.svelte-epbidv{padding:var(--size-4)}.property-item{border:1px solid var(--background-modifier-border);border-radius:var(--radius-s);padding:var(--size-2) var(--size-4);margin-bottom:var(--size-2);display:flex;align-items:center}.property-item.drag-over{border-color:var(--interactive-accent)}.drag-handle{cursor:move;padding:0 var(--size-2);color:var(--text-muted);user-select:none}.dragging{opacity:0.5}.setting-item-control{flex-wrap:wrap;gap:var(--size-2)}.setting-item-info{display:none}.properties-editor-modal{z-index:var(--layer-modal)}.properties-editor-modal .setting-item-name,.properties-editor-modal .setting-item-description{color:var(--text-normal) !important;opacity:1 !important}.modal-active .properties-editor-modal{background-color:var(--background-primary);border:1px solid var(--background-modifier-border)}");
 }
-function get_each_context3(ctx, list, i) {
-  const child_ctx = ctx.slice();
-  child_ctx[19] = list[i];
-  child_ctx[20] = list;
-  child_ctx[21] = i;
-  return child_ctx;
-}
-function get_each_context_12(ctx, list, i) {
-  const child_ctx = ctx.slice();
-  child_ctx[22] = list[i];
-  return child_ctx;
-}
-function create_each_block_12(ctx) {
-  let option;
-  let t_value = (
-    /*type*/
-    ctx[22] + ""
-  );
-  let t;
-  let option_value_value;
+function create_fragment3(ctx) {
+  let div;
   return {
     c() {
-      option = element("option");
-      t = text(t_value);
-      option.__value = option_value_value = /*type*/
-      ctx[22];
-      set_input_value(option, option.__value);
+      div = element("div");
+      div.innerHTML = ``;
+      attr(div, "class", "properties-editor-content svelte-epbidv");
     },
     m(target, anchor) {
-      insert(target, option, anchor);
-      append(option, t);
+      insert(target, div, anchor);
+      ctx[5](div);
     },
     p: noop,
-    d(detaching) {
-      if (detaching) {
-        detach(option);
-      }
-    }
-  };
-}
-function create_each_block3(key_1, ctx) {
-  let tr;
-  let td0;
-  let t1;
-  let td1;
-  let input0;
-  let t2;
-  let td2;
-  let input1;
-  let t3;
-  let td3;
-  let select;
-  let t4;
-  let td4;
-  let input2;
-  let input2_data_index_value;
-  let t5;
-  let tr_data_index_value;
-  let mounted;
-  let dispose;
-  function input0_input_handler() {
-    ctx[13].call(
-      input0,
-      /*each_value*/
-      ctx[20],
-      /*index*/
-      ctx[21]
-    );
-  }
-  function input1_input_handler() {
-    ctx[14].call(
-      input1,
-      /*each_value*/
-      ctx[20],
-      /*index*/
-      ctx[21]
-    );
-  }
-  let each_value_1 = ensure_array_like(
-    /*propertyTypes*/
-    ctx[3]
-  );
-  let each_blocks = [];
-  for (let i = 0; i < each_value_1.length; i += 1) {
-    each_blocks[i] = create_each_block_12(get_each_context_12(ctx, each_value_1, i));
-  }
-  function select_change_handler() {
-    ctx[15].call(
-      select,
-      /*each_value*/
-      ctx[20],
-      /*index*/
-      ctx[21]
-    );
-  }
-  function dragstart_handler(...args) {
-    return (
-      /*dragstart_handler*/
-      ctx[16](
-        /*index*/
-        ctx[21],
-        ...args
-      )
-    );
-  }
-  function drop_handler(...args) {
-    return (
-      /*drop_handler*/
-      ctx[17](
-        /*index*/
-        ctx[21],
-        ...args
-      )
-    );
-  }
-  return {
-    key: key_1,
-    first: null,
-    c() {
-      tr = element("tr");
-      td0 = element("td");
-      td0.textContent = "\u2261";
-      t1 = space();
-      td1 = element("td");
-      input0 = element("input");
-      t2 = space();
-      td2 = element("td");
-      input1 = element("input");
-      t3 = space();
-      td3 = element("td");
-      select = element("select");
-      for (let i = 0; i < each_blocks.length; i += 1) {
-        each_blocks[i].c();
-      }
-      t4 = space();
-      td4 = element("td");
-      input2 = element("input");
-      t5 = space();
-      attr(td0, "class", "align-center drag-handle svelte-en16b6");
-      attr(input0, "type", "text");
-      attr(input0, "class", "property-input svelte-en16b6");
-      attr(td1, "class", "svelte-en16b6");
-      attr(input1, "type", "text");
-      attr(input1, "class", "property-input svelte-en16b6");
-      attr(td2, "class", "svelte-en16b6");
-      attr(select, "class", "property-select svelte-en16b6");
-      if (
-        /*property*/
-        ctx[19].type === void 0
-      )
-        add_render_callback(select_change_handler);
-      attr(td3, "class", "svelte-en16b6");
-      attr(input2, "type", "checkbox");
-      input2.checked = /*selectAllChecked*/
-      ctx[2];
-      attr(input2, "data-index", input2_data_index_value = /*index*/
-      ctx[21]);
-      attr(td4, "class", "align-center svelte-en16b6");
-      attr(tr, "draggable", "true");
-      attr(tr, "data-index", tr_data_index_value = /*index*/
-      ctx[21]);
-      this.first = tr;
-    },
-    m(target, anchor) {
-      insert(target, tr, anchor);
-      append(tr, td0);
-      append(tr, t1);
-      append(tr, td1);
-      append(td1, input0);
-      set_input_value(
-        input0,
-        /*property*/
-        ctx[19].name
-      );
-      append(tr, t2);
-      append(tr, td2);
-      append(td2, input1);
-      set_input_value(
-        input1,
-        /*property*/
-        ctx[19].description
-      );
-      append(tr, t3);
-      append(tr, td3);
-      append(td3, select);
-      for (let i = 0; i < each_blocks.length; i += 1) {
-        if (each_blocks[i]) {
-          each_blocks[i].m(select, null);
-        }
-      }
-      select_option(
-        select,
-        /*property*/
-        ctx[19].type,
-        true
-      );
-      append(tr, t4);
-      append(tr, td4);
-      append(td4, input2);
-      append(tr, t5);
-      if (!mounted) {
-        dispose = [
-          listen(input0, "input", input0_input_handler),
-          listen(input1, "input", input1_input_handler),
-          listen(select, "change", select_change_handler),
-          listen(tr, "dragstart", dragstart_handler),
-          listen(tr, "dragover", handleDragOver),
-          listen(tr, "drop", drop_handler)
-        ];
-        mounted = true;
-      }
-    },
-    p(new_ctx, dirty) {
-      ctx = new_ctx;
-      if (dirty & /*localProperties, propertyTypes*/
-      10 && input0.value !== /*property*/
-      ctx[19].name) {
-        set_input_value(
-          input0,
-          /*property*/
-          ctx[19].name
-        );
-      }
-      if (dirty & /*localProperties, propertyTypes*/
-      10 && input1.value !== /*property*/
-      ctx[19].description) {
-        set_input_value(
-          input1,
-          /*property*/
-          ctx[19].description
-        );
-      }
-      if (dirty & /*propertyTypes*/
-      8) {
-        each_value_1 = ensure_array_like(
-          /*propertyTypes*/
-          ctx[3]
-        );
-        let i;
-        for (i = 0; i < each_value_1.length; i += 1) {
-          const child_ctx = get_each_context_12(ctx, each_value_1, i);
-          if (each_blocks[i]) {
-            each_blocks[i].p(child_ctx, dirty);
-          } else {
-            each_blocks[i] = create_each_block_12(child_ctx);
-            each_blocks[i].c();
-            each_blocks[i].m(select, null);
-          }
-        }
-        for (; i < each_blocks.length; i += 1) {
-          each_blocks[i].d(1);
-        }
-        each_blocks.length = each_value_1.length;
-      }
-      if (dirty & /*localProperties, propertyTypes*/
-      10) {
-        select_option(
-          select,
-          /*property*/
-          ctx[19].type
-        );
-      }
-      if (dirty & /*selectAllChecked*/
-      4) {
-        input2.checked = /*selectAllChecked*/
-        ctx[2];
-      }
-      if (dirty & /*localProperties, propertyTypes*/
-      10 && input2_data_index_value !== (input2_data_index_value = /*index*/
-      ctx[21])) {
-        attr(input2, "data-index", input2_data_index_value);
-      }
-      if (dirty & /*localProperties, propertyTypes*/
-      10 && tr_data_index_value !== (tr_data_index_value = /*index*/
-      ctx[21])) {
-        attr(tr, "data-index", tr_data_index_value);
-      }
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(tr);
-      }
-      destroy_each(each_blocks, detaching);
-      mounted = false;
-      run_all(dispose);
-    }
-  };
-}
-function create_fragment10(ctx) {
-  let div4;
-  let header;
-  let t1;
-  let div3;
-  let div0;
-  let label;
-  let input;
-  let t2;
-  let span;
-  let t4;
-  let div1;
-  let table;
-  let thead;
-  let t14;
-  let tbody;
-  let each_blocks = [];
-  let each_1_lookup = /* @__PURE__ */ new Map();
-  let t15;
-  let div2;
-  let button0;
-  let t17;
-  let button1;
-  let t19;
-  let button2;
-  let mounted;
-  let dispose;
-  let each_value = ensure_array_like(
-    /*localProperties*/
-    ctx[1]
-  );
-  const get_key = (ctx2) => (
-    /*property*/
-    ctx2[19].name
-  );
-  for (let i = 0; i < each_value.length; i += 1) {
-    let child_ctx = get_each_context3(ctx, each_value, i);
-    let key = get_key(child_ctx);
-    each_1_lookup.set(key, each_blocks[i] = create_each_block3(key, child_ctx));
-  }
-  return {
-    c() {
-      div4 = element("div");
-      header = element("header");
-      header.innerHTML = `<h2 class="svelte-en16b6">Edit Properties</h2>`;
-      t1 = space();
-      div3 = element("div");
-      div0 = element("div");
-      label = element("label");
-      input = element("input");
-      t2 = space();
-      span = element("span");
-      span.textContent = "Select All";
-      t4 = space();
-      div1 = element("div");
-      table = element("table");
-      thead = element("thead");
-      thead.innerHTML = `<tr><th class="align-center svelte-en16b6">Drag</th> <th class="align-left svelte-en16b6">Name</th> <th class="align-left svelte-en16b6">Description</th> <th class="align-left svelte-en16b6">Type</th> <th class="align-center svelte-en16b6">Delete</th></tr>`;
-      t14 = space();
-      tbody = element("tbody");
-      for (let i = 0; i < each_blocks.length; i += 1) {
-        each_blocks[i].c();
-      }
-      t15 = space();
-      div2 = element("div");
-      button0 = element("button");
-      button0.textContent = "Delete Selected";
-      t17 = space();
-      button1 = element("button");
-      button1.textContent = "Save";
-      t19 = space();
-      button2 = element("button");
-      button2.textContent = "Cancel";
-      attr(header, "class", "modal-header svelte-en16b6");
-      attr(input, "type", "checkbox");
-      attr(label, "class", "select-all-label svelte-en16b6");
-      attr(div0, "class", "select-all-container svelte-en16b6");
-      attr(table, "class", "svelte-en16b6");
-      attr(div1, "class", "table-container svelte-en16b6");
-      attr(button0, "class", "mod-warning svelte-en16b6");
-      attr(button1, "class", "mod-cta svelte-en16b6");
-      attr(button2, "class", "mod-cancel svelte-en16b6");
-      attr(div2, "class", "modal-footer svelte-en16b6");
-      attr(div3, "class", "modal-content");
-      attr(div4, "class", "edit-properties-modal svelte-en16b6");
-    },
-    m(target, anchor) {
-      insert(target, div4, anchor);
-      append(div4, header);
-      append(div4, t1);
-      append(div4, div3);
-      append(div3, div0);
-      append(div0, label);
-      append(label, input);
-      input.checked = /*selectAllChecked*/
-      ctx[2];
-      append(label, t2);
-      append(label, span);
-      append(div3, t4);
-      append(div3, div1);
-      append(div1, table);
-      append(table, thead);
-      append(table, t14);
-      append(table, tbody);
-      for (let i = 0; i < each_blocks.length; i += 1) {
-        if (each_blocks[i]) {
-          each_blocks[i].m(tbody, null);
-        }
-      }
-      append(div3, t15);
-      append(div3, div2);
-      append(div2, button0);
-      append(div2, t17);
-      append(div2, button1);
-      append(div2, t19);
-      append(div2, button2);
-      if (!mounted) {
-        dispose = [
-          listen(
-            input,
-            "change",
-            /*input_change_handler*/
-            ctx[12]
-          ),
-          listen(
-            input,
-            "change",
-            /*handleSelectAll*/
-            ctx[4]
-          ),
-          listen(
-            button0,
-            "click",
-            /*handleDelete*/
-            ctx[5]
-          ),
-          listen(
-            button1,
-            "click",
-            /*handleSave*/
-            ctx[6]
-          ),
-          listen(button2, "click", function() {
-            if (is_function(
-              /*onClose*/
-              ctx[0]
-            ))
-              ctx[0].apply(this, arguments);
-          })
-        ];
-        mounted = true;
-      }
-    },
-    p(new_ctx, [dirty]) {
-      ctx = new_ctx;
-      if (dirty & /*selectAllChecked*/
-      4) {
-        input.checked = /*selectAllChecked*/
-        ctx[2];
-      }
-      if (dirty & /*localProperties, handleDragStart, handleDragOver, handleDrop, selectAllChecked, propertyTypes*/
-      398) {
-        each_value = ensure_array_like(
-          /*localProperties*/
-          ctx[1]
-        );
-        each_blocks = update_keyed_each(each_blocks, dirty, get_key, 1, ctx, each_value, each_1_lookup, tbody, destroy_block, create_each_block3, null, get_each_context3);
-      }
-    },
     i: noop,
     o: noop,
     d(detaching) {
       if (detaching) {
-        detach(div4);
+        detach(div);
       }
-      for (let i = 0; i < each_blocks.length; i += 1) {
-        each_blocks[i].d();
-      }
-      mounted = false;
-      run_all(dispose);
+      ctx[5](null);
     }
   };
 }
 function handleDragOver(event) {
-  var _a;
   event.preventDefault();
-  const target = event.target;
-  (_a = target.closest("tr")) === null || _a === void 0 ? void 0 : _a.classList.add("drag-over");
 }
-function instance10($$self, $$props, $$invalidate) {
+function instance3($$self, $$props, $$invalidate) {
   let { app } = $$props;
   let { properties } = $$props;
   let { onSubmit } = $$props;
   let { onClose } = $$props;
+  let contentEl;
   let localProperties = [...properties];
-  let selectAllChecked = false;
+  let selectedIndices = /* @__PURE__ */ new Set();
   let draggedIndex = null;
   const propertyTypes = ["string", "number", "boolean", "array", "date"];
-  function handleSelectAll(event) {
-    $$invalidate(2, selectAllChecked = event.target.checked);
+  onMount(() => {
+    console.log("\u{1F987} PropertiesEditor.svelte mounted");
+    console.log("\u{1F987} Initial properties:", properties);
+    renderProperties();
+  });
+  function renderProperties() {
+    console.log("\u{1F987} Rendering properties");
+    if (!contentEl) {
+      console.warn("\u{1F987} contentEl not found");
+      return;
+    }
+    contentEl.empty();
+    const table = contentEl.createEl("table", { cls: "property-table" });
+    const thead = table.createEl("thead");
+    const headerRow = thead.createEl("tr");
+    const selectAllTh = headerRow.createEl("th");
+    const selectAllCheckbox = selectAllTh.createEl("input", { type: "checkbox" });
+    selectAllCheckbox.checked = selectedIndices.size === localProperties.length;
+    selectAllCheckbox.onchange = () => handleSelectAll(selectAllCheckbox.checked);
+    headerRow.createEl("th", { text: "Name" });
+    headerRow.createEl("th", { text: "Description" });
+    headerRow.createEl("th", { text: "Type" });
+    const tbody = table.createEl("tbody");
+    localProperties.forEach((property, index) => {
+      const row = tbody.createEl("tr");
+      row.draggable = true;
+      row.addEventListener("dragstart", (e) => handleDragStart(e, index));
+      row.addEventListener("dragover", handleDragOver);
+      row.addEventListener("drop", (e) => handleDrop(e, index));
+      const selectTd = row.createEl("td");
+      const checkbox = selectTd.createEl("input", { type: "checkbox" });
+      checkbox.checked = selectedIndices.has(index);
+      checkbox.onchange = () => handleSelect(index, checkbox.checked);
+      const nameTd = row.createEl("td");
+      const nameInput = new import_obsidian13.TextComponent(nameTd);
+      nameInput.setValue(property.name).onChange((value) => updateProperty(index, "name", value));
+      const descTd = row.createEl("td");
+      const descInput = new import_obsidian13.TextComponent(descTd);
+      descInput.setValue(property.description).onChange((value) => updateProperty(index, "description", value));
+      const typeTd = row.createEl("td");
+      const typeDropdown = new import_obsidian13.DropdownComponent(typeTd);
+      propertyTypes.forEach((type) => {
+        typeDropdown.addOption(type, type);
+      });
+      typeDropdown.setValue(property.type).onChange((value) => updateProperty(index, "type", value));
+    });
+    new import_obsidian13.Setting(contentEl).addButton((button) => button.setButtonText("Delete Selected").setWarning().setDisabled(selectedIndices.size === 0).onClick(handleDelete)).addButton((button) => button.setButtonText("Save").setCta().onClick(handleSave)).addButton((button) => button.setButtonText("Cancel").onClick(onClose));
+  }
+  function updateProperty(index, key, value) {
+    localProperties[index] = Object.assign(Object.assign({}, localProperties[index]), { [key]: value });
+    localProperties = [...localProperties];
+  }
+  function handleSelect(index, selected) {
+    if (selected) {
+      selectedIndices.add(index);
+    } else {
+      selectedIndices.delete(index);
+    }
+    selectedIndices = new Set(selectedIndices);
+  }
+  function handleSelectAll(selected) {
+    if (selected) {
+      selectedIndices = new Set(localProperties.map((_, i) => i));
+    } else {
+      selectedIndices.clear();
+    }
   }
   function handleDelete() {
-    $$invalidate(1, localProperties = localProperties.filter((_, index) => {
-      const checkbox = document.querySelector(`input[data-index="${index}"]`);
-      return !(checkbox === null || checkbox === void 0 ? void 0 : checkbox.checked);
-    }));
-    $$invalidate(2, selectAllChecked = false);
+    localProperties = localProperties.filter((_, index) => !selectedIndices.has(index));
+    selectedIndices.clear();
+    renderProperties();
   }
   function handleSave() {
+    console.log("\u{1F987} Saving properties:", localProperties);
+    const invalidProperty = localProperties.find((p) => !p.name || !p.description);
+    if (invalidProperty) {
+      new import_obsidian13.Notice("All properties must have a name and description");
+      return;
+    }
     onSubmit(localProperties);
     onClose();
   }
@@ -22062,430 +14770,184 @@ function instance10($$self, $$props, $$invalidate) {
     var _a;
     draggedIndex = index;
     (_a = event.dataTransfer) === null || _a === void 0 ? void 0 : _a.setData("text/plain", index.toString());
-    const target = event.target;
-    target.classList.add("dragging");
   }
   function handleDrop(event, toIndex) {
     event.preventDefault();
-    document.querySelectorAll(".dragging, .drag-over").forEach((el) => {
-      el.classList.remove("dragging", "drag-over");
-    });
     if (draggedIndex !== null && draggedIndex !== toIndex) {
       const [movedItem] = localProperties.splice(draggedIndex, 1);
       localProperties.splice(toIndex, 0, movedItem);
-      $$invalidate(1, localProperties = [...localProperties]);
+      localProperties = [...localProperties];
+      renderProperties();
     }
     draggedIndex = null;
   }
-  function input_change_handler() {
-    selectAllChecked = this.checked;
-    $$invalidate(2, selectAllChecked);
+  function div_binding($$value) {
+    binding_callbacks[$$value ? "unshift" : "push"](() => {
+      contentEl = $$value;
+      $$invalidate(0, contentEl);
+    });
   }
-  function input0_input_handler(each_value, index) {
-    each_value[index].name = this.value;
-    $$invalidate(1, localProperties);
-    $$invalidate(3, propertyTypes);
-  }
-  function input1_input_handler(each_value, index) {
-    each_value[index].description = this.value;
-    $$invalidate(1, localProperties);
-    $$invalidate(3, propertyTypes);
-  }
-  function select_change_handler(each_value, index) {
-    each_value[index].type = select_value(this);
-    $$invalidate(1, localProperties);
-    $$invalidate(3, propertyTypes);
-  }
-  const dragstart_handler = (index, e) => handleDragStart(e, index);
-  const drop_handler = (index, e) => handleDrop(e, index);
   $$self.$$set = ($$props2) => {
     if ("app" in $$props2)
-      $$invalidate(9, app = $$props2.app);
+      $$invalidate(1, app = $$props2.app);
     if ("properties" in $$props2)
-      $$invalidate(10, properties = $$props2.properties);
+      $$invalidate(2, properties = $$props2.properties);
     if ("onSubmit" in $$props2)
-      $$invalidate(11, onSubmit = $$props2.onSubmit);
+      $$invalidate(3, onSubmit = $$props2.onSubmit);
     if ("onClose" in $$props2)
-      $$invalidate(0, onClose = $$props2.onClose);
+      $$invalidate(4, onClose = $$props2.onClose);
   };
-  return [
-    onClose,
-    localProperties,
-    selectAllChecked,
-    propertyTypes,
-    handleSelectAll,
-    handleDelete,
-    handleSave,
-    handleDragStart,
-    handleDrop,
-    app,
-    properties,
-    onSubmit,
-    input_change_handler,
-    input0_input_handler,
-    input1_input_handler,
-    select_change_handler,
-    dragstart_handler,
-    drop_handler
-  ];
+  return [contentEl, app, properties, onSubmit, onClose, div_binding];
 }
-var EditPropertiesModal = class extends SvelteComponent {
+var PropertiesEditor = class extends SvelteComponent {
   constructor(options) {
     super();
     init(
       this,
       options,
-      instance10,
-      create_fragment10,
+      instance3,
+      create_fragment3,
       safe_not_equal,
       {
-        app: 9,
-        properties: 10,
-        onSubmit: 11,
-        onClose: 0
+        app: 1,
+        properties: 2,
+        onSubmit: 3,
+        onClose: 4
       },
       add_css3
     );
   }
 };
-var EditPropertiesModal_default = EditPropertiesModal;
+var PropertiesEditor_default = PropertiesEditor;
+
+// src/components/modals/PropertiesEditor.ts
+var PropertiesEditor2 = class extends import_obsidian14.Modal {
+  constructor(app) {
+    console.log("\u{1F987} PropertiesEditor constructor called");
+    super(app);
+    this.contentComponent = null;
+    this.properties = [];
+    this.onSubmit = null;
+    this.isClosing = false;
+  }
+  openWithProperties(properties, onSubmit) {
+    console.log("\u{1F987} openWithProperties called with:", { propertiesCount: properties.length });
+    this.properties = properties;
+    this.onSubmit = onSubmit;
+    this.open();
+  }
+  onOpen() {
+    console.log("\u{1F50D} Modal onOpen called");
+    const settingsContainer = document.querySelector(".graphweaver-plugin-settings");
+    if (settingsContainer) {
+      settingsContainer.classList.add("modal-active");
+    }
+    this.titleEl.setText("Edit Properties");
+    this.containerEl.addClass("properties-editor-modal");
+    try {
+      console.log("\u{1F50D} Creating PropertiesEditorContent");
+      this.contentComponent = new PropertiesEditor_default({
+        target: this.contentEl,
+        props: {
+          app: this.app,
+          properties: this.properties,
+          onSubmit: (updatedProperties) => {
+            if (this.onSubmit && !this.isClosing) {
+              this.onSubmit(updatedProperties);
+            }
+            this.closeModal();
+          },
+          onClose: () => {
+            this.closeModal();
+          }
+        }
+      });
+    } catch (error) {
+      console.error("\u{1F50D} Error creating PropertiesEditorContent:", error);
+    }
+  }
+  closeModal() {
+    if (this.isClosing)
+      return;
+    console.log("\u{1F50D} Closing properties editor modal");
+    this.isClosing = true;
+    const settingsContainer = document.querySelector(".graphweaver-plugin-settings");
+    if (settingsContainer) {
+      settingsContainer.classList.remove("modal-active");
+    }
+    if (this.contentComponent) {
+      try {
+        console.log("\u{1F50D} Destroying Svelte component");
+        this.contentComponent.$destroy();
+        this.contentComponent = null;
+      } catch (error) {
+        console.error("\u{1F50D} Error destroying component:", error);
+      }
+    }
+    this.close();
+    uiStore.popModal();
+    setTimeout(() => {
+      this.isClosing = false;
+    }, 100);
+  }
+  onClose() {
+    if (!this.isClosing) {
+      this.closeModal();
+    }
+  }
+};
 
 // src/components/accordions/PropertyManagerAccordion.svelte
 function add_css4(target) {
-  append_styles(target, "svelte-165u5gt", ".property-manager-container.svelte-165u5gt{display:flex;flex-direction:column;gap:var(--size-4)}.property-form.svelte-165u5gt{display:flex;flex-direction:column;gap:var(--size-4)}.form-group.svelte-165u5gt{display:flex;flex-direction:column;gap:var(--size-2)}label.svelte-165u5gt{font-weight:var(--font-bold);color:var(--text-normal)}input.svelte-165u5gt,textarea.svelte-165u5gt,select.svelte-165u5gt{background:var(--background-primary);border:1px solid var(--background-modifier-border);border-radius:var(--radius-s);padding:var(--size-2);color:var(--text-normal);width:100%}textarea.svelte-165u5gt{resize:vertical;min-height:100px}.description.svelte-165u5gt{color:var(--text-muted);font-size:var(--font-ui-smaller)}.property-actions.svelte-165u5gt{display:flex;gap:var(--size-4);margin-top:var(--size-4)}button.svelte-165u5gt{padding:var(--size-2) var(--size-4);border-radius:var(--radius-s);border:none;cursor:pointer;font-weight:var(--font-bold);transition:background-color 0.2s ease}.add-button.svelte-165u5gt{background-color:var(--interactive-accent);color:var(--text-on-accent)}.add-button.svelte-165u5gt:hover:not(:disabled){background-color:var(--interactive-accent-hover)}.edit-button.svelte-165u5gt{background-color:var(--background-modifier-border);color:var(--text-normal)}.edit-button.svelte-165u5gt:hover{background-color:var(--background-modifier-border-hover)}button.svelte-165u5gt:disabled{opacity:0.5;cursor:not-allowed}");
+  append_styles(target, "svelte-114vcxw", ".property-manager-content.svelte-114vcxw{padding:var(--size-4)}.setting-item-error{color:var(--color-red);font-size:var(--font-ui-smaller);margin-top:var(--size-1)}.has-error{border-color:var(--color-red) !important}.setting-item:first-child{padding-top:0}.setting-item:last-child{padding-bottom:0;border-bottom:none}");
 }
-function get_each_context4(ctx, list, i) {
-  const child_ctx = ctx.slice();
-  child_ctx[16] = list[i][0];
-  child_ctx[17] = list[i][1];
-  return child_ctx;
-}
-function create_each_block4(ctx) {
-  let option;
-  let t_value = (
-    /*label*/
-    ctx[17] + ""
-  );
-  let t;
-  let option_value_value;
+function create_default_slot2(ctx) {
+  let div;
   return {
     c() {
-      option = element("option");
-      t = text(t_value);
-      option.__value = option_value_value = /*value*/
-      ctx[16];
-      set_input_value(option, option.__value);
+      div = element("div");
+      div.innerHTML = ``;
+      attr(div, "class", "property-manager-content svelte-114vcxw");
     },
     m(target, anchor) {
-      insert(target, option, anchor);
-      append(option, t);
+      insert(target, div, anchor);
+      ctx[9](div);
     },
     p: noop,
     d(detaching) {
       if (detaching) {
-        detach(option);
+        detach(div);
       }
+      ctx[9](null);
     }
   };
 }
-function create_default_slot6(ctx) {
-  let div5;
-  let div3;
-  let div0;
-  let label0;
-  let t1;
-  let input;
-  let t2;
-  let span0;
-  let t4;
-  let div1;
-  let label1;
-  let t6;
-  let textarea;
-  let t7;
-  let span1;
-  let t9;
-  let div2;
-  let label2;
-  let t11;
-  let select;
-  let t12;
-  let span2;
-  let t14;
-  let div4;
-  let button0;
-  let t15_value = (
-    /*isAddingProperty*/
-    ctx[6] ? "Adding..." : "Add Property"
-  );
-  let t15;
-  let t16;
-  let button1;
-  let mounted;
-  let dispose;
-  let each_value = ensure_array_like(Object.entries(
-    /*propertyTypes*/
-    ctx[7]
-  ));
-  let each_blocks = [];
-  for (let i = 0; i < each_value.length; i += 1) {
-    each_blocks[i] = create_each_block4(get_each_context4(ctx, each_value, i));
-  }
-  return {
-    c() {
-      div5 = element("div");
-      div3 = element("div");
-      div0 = element("div");
-      label0 = element("label");
-      label0.textContent = "Property Name";
-      t1 = space();
-      input = element("input");
-      t2 = space();
-      span0 = element("span");
-      span0.textContent = "The name of the property";
-      t4 = space();
-      div1 = element("div");
-      label1 = element("label");
-      label1.textContent = "Property Description";
-      t6 = space();
-      textarea = element("textarea");
-      t7 = space();
-      span1 = element("span");
-      span1.textContent = "A description of what the property represents";
-      t9 = space();
-      div2 = element("div");
-      label2 = element("label");
-      label2.textContent = "Property Type";
-      t11 = space();
-      select = element("select");
-      for (let i = 0; i < each_blocks.length; i += 1) {
-        each_blocks[i].c();
-      }
-      t12 = space();
-      span2 = element("span");
-      span2.textContent = "The data type of the property";
-      t14 = space();
-      div4 = element("div");
-      button0 = element("button");
-      t15 = text(t15_value);
-      t16 = space();
-      button1 = element("button");
-      button1.textContent = "Edit Properties";
-      attr(label0, "for", "property-name");
-      attr(label0, "class", "svelte-165u5gt");
-      attr(input, "id", "property-name");
-      attr(input, "type", "text");
-      attr(input, "placeholder", "Enter property name");
-      attr(input, "class", "svelte-165u5gt");
-      attr(span0, "class", "description svelte-165u5gt");
-      attr(div0, "class", "form-group svelte-165u5gt");
-      attr(label1, "for", "property-description");
-      attr(label1, "class", "svelte-165u5gt");
-      attr(textarea, "id", "property-description");
-      attr(textarea, "placeholder", "Enter property description");
-      attr(textarea, "rows", "4");
-      attr(textarea, "class", "svelte-165u5gt");
-      attr(span1, "class", "description svelte-165u5gt");
-      attr(div1, "class", "form-group svelte-165u5gt");
-      attr(label2, "for", "property-type");
-      attr(label2, "class", "svelte-165u5gt");
-      attr(select, "id", "property-type");
-      attr(select, "class", "svelte-165u5gt");
-      if (
-        /*propertyType*/
-        ctx[5] === void 0
-      )
-        add_render_callback(() => (
-          /*select_change_handler*/
-          ctx[12].call(select)
-        ));
-      attr(span2, "class", "description svelte-165u5gt");
-      attr(div2, "class", "form-group svelte-165u5gt");
-      attr(div3, "class", "property-form svelte-165u5gt");
-      attr(button0, "class", "add-button svelte-165u5gt");
-      button0.disabled = /*isAddingProperty*/
-      ctx[6];
-      attr(button1, "class", "edit-button svelte-165u5gt");
-      attr(div4, "class", "property-actions svelte-165u5gt");
-      attr(div5, "class", "property-manager-container svelte-165u5gt");
-    },
-    m(target, anchor) {
-      insert(target, div5, anchor);
-      append(div5, div3);
-      append(div3, div0);
-      append(div0, label0);
-      append(div0, t1);
-      append(div0, input);
-      set_input_value(
-        input,
-        /*propertyName*/
-        ctx[3]
-      );
-      append(div0, t2);
-      append(div0, span0);
-      append(div3, t4);
-      append(div3, div1);
-      append(div1, label1);
-      append(div1, t6);
-      append(div1, textarea);
-      set_input_value(
-        textarea,
-        /*propertyDescription*/
-        ctx[4]
-      );
-      append(div1, t7);
-      append(div1, span1);
-      append(div3, t9);
-      append(div3, div2);
-      append(div2, label2);
-      append(div2, t11);
-      append(div2, select);
-      for (let i = 0; i < each_blocks.length; i += 1) {
-        if (each_blocks[i]) {
-          each_blocks[i].m(select, null);
-        }
-      }
-      select_option(
-        select,
-        /*propertyType*/
-        ctx[5],
-        true
-      );
-      append(div2, t12);
-      append(div2, span2);
-      append(div5, t14);
-      append(div5, div4);
-      append(div4, button0);
-      append(button0, t15);
-      append(div4, t16);
-      append(div4, button1);
-      if (!mounted) {
-        dispose = [
-          listen(
-            input,
-            "input",
-            /*input_input_handler*/
-            ctx[10]
-          ),
-          listen(
-            textarea,
-            "input",
-            /*textarea_input_handler*/
-            ctx[11]
-          ),
-          listen(
-            select,
-            "change",
-            /*select_change_handler*/
-            ctx[12]
-          ),
-          listen(
-            button0,
-            "click",
-            /*addProperty*/
-            ctx[8]
-          ),
-          listen(
-            button1,
-            "click",
-            /*openEditModal*/
-            ctx[9]
-          )
-        ];
-        mounted = true;
-      }
-    },
-    p(ctx2, dirty) {
-      if (dirty & /*propertyName*/
-      8 && input.value !== /*propertyName*/
-      ctx2[3]) {
-        set_input_value(
-          input,
-          /*propertyName*/
-          ctx2[3]
-        );
-      }
-      if (dirty & /*propertyDescription*/
-      16) {
-        set_input_value(
-          textarea,
-          /*propertyDescription*/
-          ctx2[4]
-        );
-      }
-      if (dirty & /*Object, propertyTypes*/
-      128) {
-        each_value = ensure_array_like(Object.entries(
-          /*propertyTypes*/
-          ctx2[7]
-        ));
-        let i;
-        for (i = 0; i < each_value.length; i += 1) {
-          const child_ctx = get_each_context4(ctx2, each_value, i);
-          if (each_blocks[i]) {
-            each_blocks[i].p(child_ctx, dirty);
-          } else {
-            each_blocks[i] = create_each_block4(child_ctx);
-            each_blocks[i].c();
-            each_blocks[i].m(select, null);
-          }
-        }
-        for (; i < each_blocks.length; i += 1) {
-          each_blocks[i].d(1);
-        }
-        each_blocks.length = each_value.length;
-      }
-      if (dirty & /*propertyType, Object, propertyTypes*/
-      160) {
-        select_option(
-          select,
-          /*propertyType*/
-          ctx2[5]
-        );
-      }
-      if (dirty & /*isAddingProperty*/
-      64 && t15_value !== (t15_value = /*isAddingProperty*/
-      ctx2[6] ? "Adding..." : "Add Property"))
-        set_data(t15, t15_value);
-      if (dirty & /*isAddingProperty*/
-      64) {
-        button0.disabled = /*isAddingProperty*/
-        ctx2[6];
-      }
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(div5);
-      }
-      destroy_each(each_blocks, detaching);
-      mounted = false;
-      run_all(dispose);
-    }
-  };
-}
-function create_fragment11(ctx) {
+function create_fragment4(ctx) {
   let baseaccordion;
   let current;
   baseaccordion = new BaseAccordion_default({
     props: {
-      title: "\u{1F4CA} Property Management",
-      description: "Create and manage custom properties for your notes.",
-      app: (
-        /*app*/
-        ctx[0]
-      ),
-      settingsService: (
-        /*settingsService*/
+      title: (
+        /*title*/
         ctx[1]
       ),
-      aiService: (
-        /*aiService*/
+      description: (
+        /*description*/
         ctx[2]
       ),
-      $$slots: { default: [create_default_slot6] },
+      isOpen: (
+        /*isOpen*/
+        ctx[0]
+      ),
+      $$slots: { default: [create_default_slot2] },
       $$scope: { ctx }
     }
   });
+  baseaccordion.$on(
+    "toggle",
+    /*handleAccordionToggle*/
+    ctx[5]
+  );
   return {
     c() {
       create_component(baseaccordion.$$.fragment);
@@ -22496,20 +14958,20 @@ function create_fragment11(ctx) {
     },
     p(ctx2, [dirty]) {
       const baseaccordion_changes = {};
-      if (dirty & /*app*/
-      1)
-        baseaccordion_changes.app = /*app*/
-        ctx2[0];
-      if (dirty & /*settingsService*/
+      if (dirty & /*title*/
       2)
-        baseaccordion_changes.settingsService = /*settingsService*/
+        baseaccordion_changes.title = /*title*/
         ctx2[1];
-      if (dirty & /*aiService*/
+      if (dirty & /*description*/
       4)
-        baseaccordion_changes.aiService = /*aiService*/
+        baseaccordion_changes.description = /*description*/
         ctx2[2];
-      if (dirty & /*$$scope, isAddingProperty, propertyType, propertyDescription, propertyName*/
-      1048696) {
+      if (dirty & /*isOpen*/
+      1)
+        baseaccordion_changes.isOpen = /*isOpen*/
+        ctx2[0];
+      if (dirty & /*$$scope, contentEl*/
+      2097160) {
         baseaccordion_changes.$$scope = { dirty, ctx: ctx2 };
       }
       baseaccordion.$set(baseaccordion_changes);
@@ -22529,18 +14991,8 @@ function create_fragment11(ctx) {
     }
   };
 }
-function validateInput(value, type) {
-  const trimmed = value.trim();
-  const minLength = type === "name" ? 2 : 10;
-  if (!trimmed) {
-    return `Property ${type} cannot be empty.`;
-  }
-  if (trimmed.length < minLength) {
-    return `Property ${type} must be at least ${minLength} characters.`;
-  }
-  return null;
-}
-function instance11($$self, $$props, $$invalidate) {
+function instance4($$self, $$props, $$invalidate) {
+  let $propertyState;
   var __awaiter = this && this.__awaiter || function(thisArg, _arguments, P, generator) {
     function adopt(value) {
       return value instanceof P ? value : new P(function(resolve) {
@@ -22568,659 +15020,361 @@ function instance11($$self, $$props, $$invalidate) {
       step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
   };
+  let { title } = $$props;
+  let { description = "" } = $$props;
   let { app } = $$props;
   let { settingsService } = $$props;
-  let { aiService } = $$props;
-  let propertyName = "";
-  let propertyDescription = "";
-  let propertyType = "string";
-  let isAddingProperty = false;
+  let { isOpen = false } = $$props;
+  const propertyState = writable({
+    isAddingProperty: false,
+    formData: {
+      name: "",
+      description: "",
+      type: "string",
+      required: false,
+      multipleValues: false
+    },
+    validationErrors: {}
+  });
+  component_subscribe($$self, propertyState, (value) => $$invalidate(11, $propertyState = value));
+  let contentEl;
+  let shouldRenderContent = false;
+  let modal = null;
   const propertyTypes = {
-    "string": "Text",
-    "number": "Number",
-    "boolean": "True/False",
-    "array": "List",
-    "date": "Date"
+    "string": {
+      label: "Text",
+      description: "Plain text values"
+    },
+    "number": {
+      label: "Number",
+      description: "Numeric values"
+    },
+    "boolean": {
+      label: "True/False",
+      description: "Boolean values"
+    },
+    "array": {
+      label: "List",
+      description: "Multiple values in a list"
+    },
+    "date": {
+      label: "Date",
+      description: "Date and time values"
+    }
   };
-  function addProperty() {
-    return __awaiter(this, void 0, void 0, function* () {
-      try {
-        $$invalidate(6, isAddingProperty = true);
-        const nameError = validateInput(propertyName, "name");
-        const descriptionError = validateInput(propertyDescription, "description");
-        if (nameError || descriptionError) {
-          throw new Error(nameError || descriptionError || "Validation failed");
-        }
-        const newProperty = {
-          name: propertyName.trim(),
-          description: propertyDescription.trim(),
-          type: propertyType,
-          required: false,
-          multipleValues: false
-        };
-        const settings = settingsService.getSettings();
-        const customProperties = [...settings.frontMatter.customProperties, newProperty];
-        yield settingsService.updateSettings(Object.assign(Object.assign({}, settings), {
-          frontMatter: Object.assign(Object.assign({}, settings.frontMatter), { customProperties })
-        }));
-        resetForm();
-        new import_obsidian15.Notice(`Property "${newProperty.name}" has been added successfully.`);
-      } catch (error) {
-        console.error("Error adding property:", error);
-        new import_obsidian15.Notice(`Failed to add property: ${error instanceof Error ? error.message : "Unknown error"}`);
-      } finally {
-        $$invalidate(6, isAddingProperty = false);
-      }
-    });
+  onDestroy(() => {
+    if (modal) {
+      modal.close();
+      modal = null;
+    }
+    $$invalidate(3, contentEl = null);
+  });
+  function handleAccordionToggle(event) {
+    $$invalidate(0, isOpen = event.detail.isOpen);
+    if (isOpen) {
+      $$invalidate(8, shouldRenderContent = true);
+    }
   }
-  function resetForm() {
-    $$invalidate(3, propertyName = "");
-    $$invalidate(4, propertyDescription = "");
-    $$invalidate(5, propertyType = "string");
+  function renderSettingsContent() {
+    if (!contentEl || !contentEl.isConnected)
+      return;
+    contentEl.empty();
+    new import_obsidian15.Setting(contentEl).setName("Property Name").setDesc("Enter a name for the property").addText((text2) => {
+      text2.setPlaceholder("Enter property name").setValue($propertyState.formData.name).onChange((value) => handleFieldChange("name", value));
+      return text2;
+    });
+    new import_obsidian15.Setting(contentEl).setName("Property Description").setDesc("Describe what this property is used for").addTextArea((text2) => {
+      text2.setPlaceholder("Enter property description").setValue($propertyState.formData.description).onChange((value) => handleFieldChange("description", value));
+      text2.inputEl.rows = 4;
+      return text2;
+    });
+    new import_obsidian15.Setting(contentEl).addButton((button) => {
+      button.setButtonText("Edit Properties").setCta().onClick(openEditModal);
+      return button;
+    });
+    $$invalidate(8, shouldRenderContent = false);
   }
   function openEditModal() {
+    if (modal)
+      return;
+    console.log("\u{1F50D} Opening properties editor modal");
     try {
-      const currentProperties = settingsService.getSettings().frontMatter.customProperties;
-      const modal = new EditPropertiesModal_default({
-        target: document.body,
-        props: {
-          app,
-          properties: currentProperties,
-          onSubmit: handlePropertiesUpdate,
-          onClose: () => modal.close()
+      const properties = getCurrentPropertyState().customProperties;
+      console.log("\u{1F50D} Current properties:", properties);
+      modal = new PropertiesEditor2(app);
+      modal.customCloseHandler = () => {
+        console.log("\u{1F50D} Modal custom close handler");
+        if (modal) {
+          modal.close();
+          modal = null;
         }
+        uiStore.popModal();
+      };
+      const handleUpdate = (updatedProps) => __awaiter(this, void 0, void 0, function* () {
+        console.log("\u{1F50D} Properties update handler");
+        yield handlePropertiesUpdate(updatedProps);
+        modal === null || modal === void 0 ? void 0 : modal.close();
+        modal = null;
+        uiStore.popModal();
       });
+      uiStore.pushModal("properties-editor");
+      modal.openWithProperties(properties, handleUpdate);
     } catch (error) {
-      console.error("Error opening edit modal:", error);
-      new import_obsidian15.Notice(`Failed to open edit modal: ${error instanceof Error ? error.message : "Unknown error"}`);
+      console.error("\u{1F50D} Error opening modal:", error);
+      uiStore.popModal();
+      modal === null || modal === void 0 ? void 0 : modal.close();
+      modal = null;
+      new import_obsidian15.Notice(`Failed to open properties editor: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   }
   function handlePropertiesUpdate(updatedProperties) {
     return __awaiter(this, void 0, void 0, function* () {
       try {
-        const settings = settingsService.getSettings();
-        yield settingsService.updateSettings(Object.assign(Object.assign({}, settings), {
-          frontMatter: Object.assign(Object.assign({}, settings.frontMatter), { customProperties: updatedProperties })
-        }));
+        yield updatePropertyState({ customProperties: updatedProperties });
         new import_obsidian15.Notice("Properties updated successfully");
+        $$invalidate(8, shouldRenderContent = true);
       } catch (error) {
-        console.error("Error updating properties:", error);
+        console.error("\u{1F987} Error updating properties:", error);
         new import_obsidian15.Notice(`Failed to update properties: ${error instanceof Error ? error.message : "Unknown error"}`);
       }
     });
   }
-  function input_input_handler() {
-    propertyName = this.value;
-    $$invalidate(3, propertyName);
+  function getCurrentPropertyState() {
+    const settings = settingsService.getSettings();
+    return {
+      customProperties: settings.frontMatter.customProperties || []
+    };
   }
-  function textarea_input_handler() {
-    propertyDescription = this.value;
-    $$invalidate(4, propertyDescription);
+  function updatePropertyState(state) {
+    return __awaiter(this, void 0, void 0, function* () {
+      if (!settingsService.isReady()) {
+        throw new Error("Settings service not ready");
+      }
+      const settings = settingsService.getSettings();
+      yield settingsService.updateSettings(Object.assign(Object.assign({}, settings), {
+        frontMatter: Object.assign(Object.assign({}, settings.frontMatter), { customProperties: state.customProperties })
+      }));
+    });
   }
-  function select_change_handler() {
-    propertyType = select_value(this);
-    $$invalidate(5, propertyType);
-    $$invalidate(7, propertyTypes);
+  function validateField(field, value) {
+    switch (field) {
+      case "name":
+        if (!(value === null || value === void 0 ? void 0 : value.trim()))
+          return "Property name is required";
+        if (value.trim().length < 2)
+          return "Property name must be at least 2 characters";
+        break;
+      case "description":
+        if (!(value === null || value === void 0 ? void 0 : value.trim()))
+          return "Property description is required";
+        if (value.trim().length < 10)
+          return "Property description must be at least 10 characters";
+        break;
+      case "type":
+        if (!value)
+          return "Property type is required";
+        if (!Object.keys(propertyTypes).includes(value))
+          return "Invalid property type";
+        break;
+    }
+    return null;
+  }
+  function handleFieldChange(field, value) {
+    propertyState.update((s) => {
+      const error = validateField(field, value);
+      return Object.assign(Object.assign({}, s), {
+        formData: Object.assign(Object.assign({}, s.formData), { [field]: value }),
+        validationErrors: Object.assign(Object.assign({}, s.validationErrors), { [field]: error || "" })
+      });
+    });
+  }
+  function div_binding($$value) {
+    binding_callbacks[$$value ? "unshift" : "push"](() => {
+      contentEl = $$value;
+      $$invalidate(3, contentEl);
+    });
   }
   $$self.$$set = ($$props2) => {
+    if ("title" in $$props2)
+      $$invalidate(1, title = $$props2.title);
+    if ("description" in $$props2)
+      $$invalidate(2, description = $$props2.description);
     if ("app" in $$props2)
-      $$invalidate(0, app = $$props2.app);
+      $$invalidate(6, app = $$props2.app);
     if ("settingsService" in $$props2)
-      $$invalidate(1, settingsService = $$props2.settingsService);
-    if ("aiService" in $$props2)
-      $$invalidate(2, aiService = $$props2.aiService);
+      $$invalidate(7, settingsService = $$props2.settingsService);
+    if ("isOpen" in $$props2)
+      $$invalidate(0, isOpen = $$props2.isOpen);
+  };
+  $$self.$$.update = () => {
+    if ($$self.$$.dirty & /*shouldRenderContent, isOpen, contentEl*/
+    265) {
+      $:
+        if (shouldRenderContent && isOpen && contentEl) {
+          renderSettingsContent();
+        }
+    }
   };
   return [
+    isOpen,
+    title,
+    description,
+    contentEl,
+    propertyState,
+    handleAccordionToggle,
     app,
     settingsService,
-    aiService,
-    propertyName,
-    propertyDescription,
-    propertyType,
-    isAddingProperty,
-    propertyTypes,
-    addProperty,
-    openEditModal,
-    input_input_handler,
-    textarea_input_handler,
-    select_change_handler
+    shouldRenderContent,
+    div_binding
   ];
 }
 var PropertyManagerAccordion = class extends SvelteComponent {
   constructor(options) {
     super();
-    init(this, options, instance11, create_fragment11, safe_not_equal, { app: 0, settingsService: 1, aiService: 2 }, add_css4);
+    init(
+      this,
+      options,
+      instance4,
+      create_fragment4,
+      safe_not_equal,
+      {
+        title: 1,
+        description: 2,
+        app: 6,
+        settingsService: 7,
+        isOpen: 0
+      },
+      add_css4
+    );
   }
 };
 var PropertyManagerAccordion_default = PropertyManagerAccordion;
 
 // src/components/accordions/TagManagerAccordion.svelte
-var import_obsidian17 = require("obsidian");
+var import_obsidian18 = require("obsidian");
+
+// src/components/modals/TagEditor.svelte
+var import_obsidian16 = require("obsidian");
 
 // src/components/modals/EditTagsModal.svelte
-var import_obsidian16 = require("obsidian");
+var import_obsidian17 = require("obsidian");
 function add_css5(target) {
-  append_styles(target, "svelte-6yt03h", ".edit-tags-modal.svelte-6yt03h.svelte-6yt03h{display:flex;flex-direction:column;gap:var(--size-4);padding:var(--size-4);max-width:800px;width:100%}.modal-header.svelte-6yt03h.svelte-6yt03h{border-bottom:1px solid var(--background-modifier-border);padding-bottom:var(--size-4)}.modal-header.svelte-6yt03h h2.svelte-6yt03h{margin:0;color:var(--text-normal);font-size:var(--font-ui-large)}.search-sort-container.svelte-6yt03h.svelte-6yt03h{display:flex;gap:var(--size-4);margin-bottom:var(--size-4)}.sort-button.svelte-6yt03h.svelte-6yt03h{display:flex;align-items:center;gap:var(--size-2);padding:var(--size-2) var(--size-4);background-color:var(--background-secondary);border:1px solid var(--background-modifier-border);border-radius:var(--radius-s);color:var(--text-normal);cursor:pointer}.sort-button.svelte-6yt03h.svelte-6yt03h:hover{background-color:var(--background-modifier-hover)}.sort-icon.svelte-6yt03h.svelte-6yt03h{transition:transform 0.2s ease}.sort-icon.desc.svelte-6yt03h.svelte-6yt03h{transform:rotate(180deg)}.select-all-container.svelte-6yt03h.svelte-6yt03h{margin-bottom:var(--size-4)}.select-all-label.svelte-6yt03h.svelte-6yt03h{display:flex;align-items:center;gap:var(--size-2);cursor:pointer}.table-container.svelte-6yt03h.svelte-6yt03h{overflow-x:auto;margin-bottom:var(--size-4)}table.svelte-6yt03h.svelte-6yt03h{width:100%;border-collapse:collapse}th.svelte-6yt03h.svelte-6yt03h,td.svelte-6yt03h.svelte-6yt03h{padding:var(--size-2) var(--size-4);border-bottom:1px solid var(--background-modifier-border)}.align-center.svelte-6yt03h.svelte-6yt03h{text-align:center}.align-left.svelte-6yt03h.svelte-6yt03h{text-align:left}.tag-input.svelte-6yt03h.svelte-6yt03h,.tag-textarea.svelte-6yt03h.svelte-6yt03h{width:100%;background:var(--background-primary);border:1px solid var(--background-modifier-border);border-radius:var(--radius-s);padding:var(--size-2);color:var(--text-normal)}.tag-textarea.svelte-6yt03h.svelte-6yt03h{resize:vertical}.modal-footer.svelte-6yt03h.svelte-6yt03h{display:flex;justify-content:flex-end;gap:var(--size-4);padding-top:var(--size-4);border-top:1px solid var(--background-modifier-border)}button.svelte-6yt03h.svelte-6yt03h{padding:var(--size-2) var(--size-4);border-radius:var(--radius-s);border:none;cursor:pointer;font-weight:var(--font-bold)}button.mod-cta.svelte-6yt03h.svelte-6yt03h{background-color:var(--interactive-accent);color:var(--text-on-accent)}button.mod-warning.svelte-6yt03h.svelte-6yt03h{background-color:var(--background-modifier-error);color:var(--text-on-accent)}button.mod-cancel.svelte-6yt03h.svelte-6yt03h{background-color:var(--background-modifier-border);color:var(--text-normal)}button.svelte-6yt03h.svelte-6yt03h:hover:not(:disabled){opacity:0.8}");
+  append_styles(target, "svelte-yi24wz", ".edit-tags-container.svelte-yi24wz{display:flex;flex-direction:column;gap:var(--size-2);padding:var(--size-4);max-height:70vh;overflow-y:auto}.tag-item{border:1px solid var(--background-modifier-border);border-radius:var(--radius-s);padding:var(--size-2) var(--size-4);margin-bottom:var(--size-2)}.setting-item-control{flex-wrap:wrap;gap:var(--size-2)}.setting-item-info{display:none}.search-input{width:200px}.tag-item textarea{min-height:60px;resize:vertical}");
 }
-function get_each_context5(ctx, list, i) {
-  const child_ctx = ctx.slice();
-  child_ctx[17] = list[i];
-  child_ctx[18] = list;
-  child_ctx[19] = i;
-  return child_ctx;
-}
-function create_else_block5(ctx) {
-  let t;
+function create_fragment5(ctx) {
+  let div;
   return {
     c() {
-      t = text("\u25BC");
+      div = element("div");
+      attr(div, "class", "edit-tags-container svelte-yi24wz");
     },
     m(target, anchor) {
-      insert(target, t, anchor);
+      insert(target, div, anchor);
+      ctx[7](div);
     },
+    p: noop,
+    i: noop,
+    o: noop,
     d(detaching) {
       if (detaching) {
-        detach(t);
+        detach(div);
       }
+      ctx[7](null);
     }
   };
 }
-function create_if_block8(ctx) {
-  let t;
-  return {
-    c() {
-      t = text("\u25B2");
-    },
-    m(target, anchor) {
-      insert(target, t, anchor);
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(t);
-      }
-    }
-  };
-}
-function create_each_block5(key_1, ctx) {
-  let tr;
-  let td0;
-  let input0;
-  let t0;
-  let td1;
-  let textarea;
-  let t1;
-  let td2;
-  let input1;
-  let input1_data_index_value;
-  let t2;
-  let mounted;
-  let dispose;
-  function input0_input_handler() {
-    ctx[15].call(
-      input0,
-      /*each_value*/
-      ctx[18],
-      /*index*/
-      ctx[19]
-    );
-  }
-  function textarea_input_handler() {
-    ctx[16].call(
-      textarea,
-      /*each_value*/
-      ctx[18],
-      /*index*/
-      ctx[19]
-    );
-  }
-  return {
-    key: key_1,
-    first: null,
-    c() {
-      tr = element("tr");
-      td0 = element("td");
-      input0 = element("input");
-      t0 = space();
-      td1 = element("td");
-      textarea = element("textarea");
-      t1 = space();
-      td2 = element("td");
-      input1 = element("input");
-      t2 = space();
-      attr(input0, "type", "text");
-      attr(input0, "class", "tag-input svelte-6yt03h");
-      attr(td0, "class", "svelte-6yt03h");
-      attr(textarea, "class", "tag-textarea svelte-6yt03h");
-      attr(textarea, "rows", "2");
-      attr(td1, "class", "svelte-6yt03h");
-      attr(input1, "type", "checkbox");
-      input1.checked = /*selectAllChecked*/
-      ctx[3];
-      attr(input1, "data-index", input1_data_index_value = /*index*/
-      ctx[19]);
-      attr(td2, "class", "align-center svelte-6yt03h");
-      this.first = tr;
-    },
-    m(target, anchor) {
-      insert(target, tr, anchor);
-      append(tr, td0);
-      append(td0, input0);
-      set_input_value(
-        input0,
-        /*tag*/
-        ctx[17].name
-      );
-      append(tr, t0);
-      append(tr, td1);
-      append(td1, textarea);
-      set_input_value(
-        textarea,
-        /*tag*/
-        ctx[17].description
-      );
-      append(tr, t1);
-      append(tr, td2);
-      append(td2, input1);
-      append(tr, t2);
-      if (!mounted) {
-        dispose = [
-          listen(input0, "input", input0_input_handler),
-          listen(textarea, "input", textarea_input_handler)
-        ];
-        mounted = true;
-      }
-    },
-    p(new_ctx, dirty) {
-      ctx = new_ctx;
-      if (dirty & /*filteredTags*/
-      16 && input0.value !== /*tag*/
-      ctx[17].name) {
-        set_input_value(
-          input0,
-          /*tag*/
-          ctx[17].name
-        );
-      }
-      if (dirty & /*filteredTags*/
-      16) {
-        set_input_value(
-          textarea,
-          /*tag*/
-          ctx[17].description
-        );
-      }
-      if (dirty & /*selectAllChecked*/
-      8) {
-        input1.checked = /*selectAllChecked*/
-        ctx[3];
-      }
-      if (dirty & /*filteredTags*/
-      16 && input1_data_index_value !== (input1_data_index_value = /*index*/
-      ctx[19])) {
-        attr(input1, "data-index", input1_data_index_value);
-      }
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(tr);
-      }
-      mounted = false;
-      run_all(dispose);
-    }
-  };
-}
-function create_fragment12(ctx) {
-  let div6;
-  let header;
-  let t1;
-  let div5;
-  let div1;
-  let search;
-  let updating_value;
-  let t2;
-  let button0;
-  let div0;
-  let t3;
-  let button0_title_value;
-  let t4;
-  let div2;
-  let label;
-  let input;
-  let t5;
-  let span;
-  let t7;
-  let div3;
-  let table;
-  let thead;
-  let t13;
-  let tbody;
-  let each_blocks = [];
-  let each_1_lookup = /* @__PURE__ */ new Map();
-  let t14;
-  let div4;
-  let button1;
-  let t16;
-  let button2;
-  let t18;
-  let button3;
-  let current;
-  let mounted;
-  let dispose;
-  function search_value_binding(value) {
-    ctx[13](value);
-  }
-  let search_props = {
-    size: "md",
-    placeholder: "Search tags..."
-  };
-  if (
-    /*searchQuery*/
-    ctx[1] !== void 0
-  ) {
-    search_props.value = /*searchQuery*/
-    ctx[1];
-  }
-  search = new Search_default({ props: search_props });
-  binding_callbacks.push(() => bind(search, "value", search_value_binding));
-  function select_block_type(ctx2, dirty) {
-    if (
-      /*sortDirection*/
-      ctx2[2] === "asc"
-    )
-      return create_if_block8;
-    return create_else_block5;
-  }
-  let current_block_type = select_block_type(ctx, -1);
-  let if_block = current_block_type(ctx);
-  let each_value = ensure_array_like(
-    /*filteredTags*/
-    ctx[4]
-  );
-  const get_key = (ctx2) => (
-    /*tag*/
-    ctx2[17].name
-  );
-  for (let i = 0; i < each_value.length; i += 1) {
-    let child_ctx = get_each_context5(ctx, each_value, i);
-    let key = get_key(child_ctx);
-    each_1_lookup.set(key, each_blocks[i] = create_each_block5(key, child_ctx));
-  }
-  return {
-    c() {
-      div6 = element("div");
-      header = element("header");
-      header.innerHTML = `<h2 class="svelte-6yt03h">Edit Tags</h2>`;
-      t1 = space();
-      div5 = element("div");
-      div1 = element("div");
-      create_component(search.$$.fragment);
-      t2 = space();
-      button0 = element("button");
-      div0 = element("div");
-      if_block.c();
-      t3 = text("\r\n          Sort A-Z");
-      t4 = space();
-      div2 = element("div");
-      label = element("label");
-      input = element("input");
-      t5 = space();
-      span = element("span");
-      span.textContent = "Select All";
-      t7 = space();
-      div3 = element("div");
-      table = element("table");
-      thead = element("thead");
-      thead.innerHTML = `<tr><th class="align-left svelte-6yt03h">Name</th> <th class="align-left svelte-6yt03h">Description</th> <th class="align-center svelte-6yt03h">Delete</th></tr>`;
-      t13 = space();
-      tbody = element("tbody");
-      for (let i = 0; i < each_blocks.length; i += 1) {
-        each_blocks[i].c();
-      }
-      t14 = space();
-      div4 = element("div");
-      button1 = element("button");
-      button1.textContent = "Delete Selected";
-      t16 = space();
-      button2 = element("button");
-      button2.textContent = "Save";
-      t18 = space();
-      button3 = element("button");
-      button3.textContent = "Cancel";
-      attr(header, "class", "modal-header svelte-6yt03h");
-      attr(div0, "class", "sort-icon svelte-6yt03h");
-      toggle_class(
-        div0,
-        "desc",
-        /*sortDirection*/
-        ctx[2] === "desc"
-      );
-      attr(button0, "class", "sort-button svelte-6yt03h");
-      attr(button0, "title", button0_title_value = `Sort ${/*sortDirection*/
-      ctx[2] === "asc" ? "descending" : "ascending"}`);
-      attr(div1, "class", "search-sort-container svelte-6yt03h");
-      attr(input, "type", "checkbox");
-      attr(label, "class", "select-all-label svelte-6yt03h");
-      attr(div2, "class", "select-all-container svelte-6yt03h");
-      attr(table, "class", "svelte-6yt03h");
-      attr(div3, "class", "table-container svelte-6yt03h");
-      attr(button1, "class", "mod-warning svelte-6yt03h");
-      attr(button2, "class", "mod-cta svelte-6yt03h");
-      attr(button3, "class", "mod-cancel svelte-6yt03h");
-      attr(div4, "class", "modal-footer svelte-6yt03h");
-      attr(div5, "class", "modal-content");
-      attr(div6, "class", "edit-tags-modal svelte-6yt03h");
-    },
-    m(target, anchor) {
-      insert(target, div6, anchor);
-      append(div6, header);
-      append(div6, t1);
-      append(div6, div5);
-      append(div5, div1);
-      mount_component(search, div1, null);
-      append(div1, t2);
-      append(div1, button0);
-      append(button0, div0);
-      if_block.m(div0, null);
-      append(button0, t3);
-      append(div5, t4);
-      append(div5, div2);
-      append(div2, label);
-      append(label, input);
-      input.checked = /*selectAllChecked*/
-      ctx[3];
-      append(label, t5);
-      append(label, span);
-      append(div5, t7);
-      append(div5, div3);
-      append(div3, table);
-      append(table, thead);
-      append(table, t13);
-      append(table, tbody);
-      for (let i = 0; i < each_blocks.length; i += 1) {
-        if (each_blocks[i]) {
-          each_blocks[i].m(tbody, null);
-        }
-      }
-      append(div5, t14);
-      append(div5, div4);
-      append(div4, button1);
-      append(div4, t16);
-      append(div4, button2);
-      append(div4, t18);
-      append(div4, button3);
-      current = true;
-      if (!mounted) {
-        dispose = [
-          listen(
-            button0,
-            "click",
-            /*toggleSort*/
-            ctx[5]
-          ),
-          listen(
-            input,
-            "change",
-            /*input_change_handler*/
-            ctx[14]
-          ),
-          listen(
-            input,
-            "change",
-            /*handleSelectAll*/
-            ctx[6]
-          ),
-          listen(
-            button1,
-            "click",
-            /*handleDelete*/
-            ctx[7]
-          ),
-          listen(
-            button2,
-            "click",
-            /*handleSave*/
-            ctx[8]
-          ),
-          listen(button3, "click", function() {
-            if (is_function(
-              /*onClose*/
-              ctx[0]
-            ))
-              ctx[0].apply(this, arguments);
-          })
-        ];
-        mounted = true;
-      }
-    },
-    p(new_ctx, [dirty]) {
-      ctx = new_ctx;
-      const search_changes = {};
-      if (!updating_value && dirty & /*searchQuery*/
-      2) {
-        updating_value = true;
-        search_changes.value = /*searchQuery*/
-        ctx[1];
-        add_flush_callback(() => updating_value = false);
-      }
-      search.$set(search_changes);
-      if (current_block_type !== (current_block_type = select_block_type(ctx, dirty))) {
-        if_block.d(1);
-        if_block = current_block_type(ctx);
-        if (if_block) {
-          if_block.c();
-          if_block.m(div0, null);
-        }
-      }
-      if (!current || dirty & /*sortDirection*/
-      4) {
-        toggle_class(
-          div0,
-          "desc",
-          /*sortDirection*/
-          ctx[2] === "desc"
-        );
-      }
-      if (!current || dirty & /*sortDirection*/
-      4 && button0_title_value !== (button0_title_value = `Sort ${/*sortDirection*/
-      ctx[2] === "asc" ? "descending" : "ascending"}`)) {
-        attr(button0, "title", button0_title_value);
-      }
-      if (dirty & /*selectAllChecked*/
-      8) {
-        input.checked = /*selectAllChecked*/
-        ctx[3];
-      }
-      if (dirty & /*selectAllChecked, filteredTags*/
-      24) {
-        each_value = ensure_array_like(
-          /*filteredTags*/
-          ctx[4]
-        );
-        each_blocks = update_keyed_each(each_blocks, dirty, get_key, 1, ctx, each_value, each_1_lookup, tbody, destroy_block, create_each_block5, null, get_each_context5);
-      }
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(search.$$.fragment, local);
-      current = true;
-    },
-    o(local) {
-      transition_out(search.$$.fragment, local);
-      current = false;
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(div6);
-      }
-      destroy_component(search);
-      if_block.d();
-      for (let i = 0; i < each_blocks.length; i += 1) {
-        each_blocks[i].d();
-      }
-      mounted = false;
-      run_all(dispose);
-    }
-  };
-}
-function instance12($$self, $$props, $$invalidate) {
+function instance5($$self, $$props, $$invalidate) {
   let filteredTags;
-  let { app } = $$props;
   let { tags } = $$props;
   let { onSubmit } = $$props;
   let { onClose } = $$props;
   let localTags = [...tags];
-  let selectAllChecked = false;
+  let selectedIndices = /* @__PURE__ */ new Set();
   let searchQuery = "";
   let sortDirection = "asc";
-  function toggleSort() {
-    $$invalidate(2, sortDirection = sortDirection === "asc" ? "desc" : "asc");
+  let containerEl;
+  onMount(() => {
+    renderTags();
+  });
+  function renderTags() {
+    if (!containerEl)
+      return;
+    containerEl.empty();
+    new import_obsidian17.Setting(containerEl).addSearch((search) => search.setPlaceholder("Search tags...").setValue(searchQuery).onChange((value) => {
+      $$invalidate(5, searchQuery = value);
+      renderTags();
+    })).addExtraButton((button) => button.setIcon(sortDirection === "asc" ? "chevron-up" : "chevron-down").setTooltip(`Sort ${sortDirection === "asc" ? "descending" : "ascending"}`).onClick(() => {
+      $$invalidate(6, sortDirection = sortDirection === "asc" ? "desc" : "asc");
+      renderTags();
+    }));
+    new import_obsidian17.Setting(containerEl).addToggle((toggle) => toggle.setValue(selectedIndices.size === localTags.length).setTooltip("Select all").onChange((value) => handleSelectAll(value))).addButton((button) => button.setButtonText("Delete Selected").setWarning().setDisabled(selectedIndices.size === 0).onClick(handleDelete));
+    filteredTags.forEach((tag, index) => {
+      new import_obsidian17.Setting(containerEl).setClass("tag-item").addToggle((toggle) => toggle.setValue(selectedIndices.has(index)).onChange((value) => handleSelect(index, value))).addText((text2) => text2.setValue(tag.name).setPlaceholder("Tag name").onChange((value) => updateTag(index, "name", value))).addTextArea((text2) => text2.setValue(tag.description).setPlaceholder("Description").onChange((value) => updateTag(index, "description", value)));
+    });
+    new import_obsidian17.Setting(containerEl).addButton((button) => button.setButtonText("Save").setCta().onClick(handleSave)).addButton((button) => button.setButtonText("Cancel").onClick(onClose));
   }
-  function handleSelectAll(event) {
-    $$invalidate(3, selectAllChecked = event.target.checked);
+  function updateTag(index, key, value) {
+    const tagIndex = localTags.indexOf(filteredTags[index]);
+    if (tagIndex !== -1) {
+      $$invalidate(4, localTags[tagIndex] = Object.assign(Object.assign({}, localTags[tagIndex]), { [key]: value }), localTags);
+      $$invalidate(4, localTags = [...localTags]);
+      renderTags();
+    }
+  }
+  function handleSelect(index, selected) {
+    const tagIndex = localTags.indexOf(filteredTags[index]);
+    if (tagIndex !== -1) {
+      if (selected) {
+        selectedIndices.add(tagIndex);
+      } else {
+        selectedIndices.delete(tagIndex);
+      }
+      selectedIndices = new Set(selectedIndices);
+      renderTags();
+    }
+  }
+  function handleSelectAll(selected) {
+    if (selected) {
+      selectedIndices = new Set(filteredTags.map((_, i) => i));
+    } else {
+      selectedIndices.clear();
+    }
+    renderTags();
   }
   function handleDelete() {
-    $$invalidate(12, localTags = localTags.filter((_, index) => {
-      const checkbox = document.querySelector(`input[data-index="${index}"]`);
-      return !(checkbox === null || checkbox === void 0 ? void 0 : checkbox.checked);
-    }));
-    $$invalidate(3, selectAllChecked = false);
+    const indicesToDelete = Array.from(selectedIndices);
+    $$invalidate(4, localTags = localTags.filter((_, index) => !indicesToDelete.includes(index)));
+    selectedIndices.clear();
+    renderTags();
   }
   function handleSave() {
+    const invalidTag = localTags.find((t) => !t.name || !t.description);
+    if (invalidTag) {
+      new import_obsidian17.Notice("All tags must have a name and description");
+      return;
+    }
     onSubmit(localTags);
     onClose();
   }
-  function search_value_binding(value) {
-    searchQuery = value;
-    $$invalidate(1, searchQuery);
-  }
-  function input_change_handler() {
-    selectAllChecked = this.checked;
-    $$invalidate(3, selectAllChecked);
-  }
-  function input0_input_handler(each_value, index) {
-    each_value[index].name = this.value;
-    $$invalidate(4, filteredTags), $$invalidate(12, localTags), $$invalidate(1, searchQuery), $$invalidate(2, sortDirection);
-  }
-  function textarea_input_handler(each_value, index) {
-    each_value[index].description = this.value;
-    $$invalidate(4, filteredTags), $$invalidate(12, localTags), $$invalidate(1, searchQuery), $$invalidate(2, sortDirection);
+  function div_binding($$value) {
+    binding_callbacks[$$value ? "unshift" : "push"](() => {
+      containerEl = $$value;
+      $$invalidate(0, containerEl);
+    });
   }
   $$self.$$set = ($$props2) => {
-    if ("app" in $$props2)
-      $$invalidate(9, app = $$props2.app);
     if ("tags" in $$props2)
-      $$invalidate(10, tags = $$props2.tags);
+      $$invalidate(1, tags = $$props2.tags);
     if ("onSubmit" in $$props2)
-      $$invalidate(11, onSubmit = $$props2.onSubmit);
+      $$invalidate(2, onSubmit = $$props2.onSubmit);
     if ("onClose" in $$props2)
-      $$invalidate(0, onClose = $$props2.onClose);
+      $$invalidate(3, onClose = $$props2.onClose);
   };
   $$self.$$.update = () => {
     if ($$self.$$.dirty & /*localTags, searchQuery, sortDirection*/
-    4102) {
+    112) {
       $:
-        $$invalidate(4, filteredTags = localTags.filter((tag) => {
+        filteredTags = localTags.filter((tag) => {
           if (!searchQuery)
             return true;
           const query = searchQuery.toLowerCase();
@@ -23228,253 +15382,146 @@ function instance12($$self, $$props, $$invalidate) {
         }).sort((a, b) => {
           const comparison = a.name.localeCompare(b.name);
           return sortDirection === "asc" ? comparison : -comparison;
-        }));
+        });
     }
   };
   return [
-    onClose,
-    searchQuery,
-    sortDirection,
-    selectAllChecked,
-    filteredTags,
-    toggleSort,
-    handleSelectAll,
-    handleDelete,
-    handleSave,
-    app,
+    containerEl,
     tags,
     onSubmit,
+    onClose,
     localTags,
-    search_value_binding,
-    input_change_handler,
-    input0_input_handler,
-    textarea_input_handler
+    searchQuery,
+    sortDirection,
+    div_binding
   ];
 }
-var EditTagsModal = class extends SvelteComponent {
+var EditTagsModal_1 = class extends SvelteComponent {
   constructor(options) {
     super();
-    init(
-      this,
-      options,
-      instance12,
-      create_fragment12,
-      safe_not_equal,
-      {
-        app: 9,
-        tags: 10,
-        onSubmit: 11,
-        onClose: 0
-      },
-      add_css5
-    );
+    init(this, options, instance5, create_fragment5, safe_not_equal, { tags: 1, onSubmit: 2, onClose: 3 }, add_css5);
   }
 };
-var EditTagsModal_default = EditTagsModal;
+var EditTagsModal_default = EditTagsModal_1;
+
+// src/services/tags/TagManagementService.ts
+var TagManagementService = class {
+  constructor(app, plugin) {
+    this.app = app;
+    this.isInitialized = false;
+    this.plugin = plugin;
+    this.metadataPath = `${this.plugin.manifest.dir}/tag-metadata.json`;
+  }
+  initialize() {
+    return __async(this, null, function* () {
+      try {
+        yield this.ensureMetadataFile();
+        this.isInitialized = true;
+      } catch (error) {
+        console.error("\u{1F987} Failed to initialize tag service:", error);
+        yield this.saveMetadata({ tags: [], customTags: [] });
+      }
+    });
+  }
+  ensureMetadataFile() {
+    return __async(this, null, function* () {
+      try {
+        const adapter = this.plugin.app.vault.adapter;
+        const exists = yield adapter.exists(this.metadataPath);
+        if (!exists) {
+          yield this.saveMetadata({ tags: [], customTags: [] });
+        }
+      } catch (error) {
+        console.error("\u{1F987} Error checking metadata file:", error);
+        throw new Error("Failed to initialize tag service");
+      }
+    });
+  }
+  isReady() {
+    return this.isInitialized;
+  }
+  updateTags(tags) {
+    return __async(this, null, function* () {
+      const currentData = yield this.loadMetadata();
+      currentData.tags = tags;
+      yield this.saveMetadata(currentData);
+    });
+  }
+  getTags() {
+    return __async(this, null, function* () {
+      const metadata = yield this.loadMetadata();
+      return metadata.tags;
+    });
+  }
+  saveMetadata(data) {
+    return __async(this, null, function* () {
+      try {
+        const adapter = this.app.vault.adapter;
+        const dataString = JSON.stringify(data, null, 2);
+        yield adapter.write(this.metadataPath, dataString);
+      } catch (error) {
+        console.error("\u{1F987} Failed to save metadata:", error);
+        throw new Error("Failed to save metadata");
+      }
+    });
+  }
+  loadMetadata() {
+    return __async(this, null, function* () {
+      try {
+        const adapter = this.app.vault.adapter;
+        const dataString = yield adapter.read(this.metadataPath);
+        return JSON.parse(dataString);
+      } catch (error) {
+        console.error("\u{1F987} Failed to load metadata:", error);
+        throw new Error("Failed to load metadata");
+      }
+    });
+  }
+};
 
 // src/components/accordions/TagManagerAccordion.svelte
 function add_css6(target) {
-  append_styles(target, "svelte-1nc1b3i", ".tag-manager-container.svelte-1nc1b3i{display:flex;flex-direction:column;gap:var(--size-4)}.tag-form.svelte-1nc1b3i{display:flex;flex-direction:column;gap:var(--size-4)}.form-group.svelte-1nc1b3i{display:flex;flex-direction:column;gap:var(--size-2)}label.svelte-1nc1b3i{font-weight:var(--font-bold);color:var(--text-normal)}input.svelte-1nc1b3i,textarea.svelte-1nc1b3i{background:var(--background-primary);border:1px solid var(--background-modifier-border);border-radius:var(--radius-s);padding:var(--size-2);color:var(--text-normal);width:100%}textarea.svelte-1nc1b3i{resize:vertical;min-height:100px}.description.svelte-1nc1b3i{color:var(--text-muted);font-size:var(--font-ui-smaller)}.tag-actions.svelte-1nc1b3i{display:flex;gap:var(--size-4);margin-top:var(--size-4)}button.svelte-1nc1b3i{padding:var(--size-2) var(--size-4);border-radius:var(--radius-s);border:none;cursor:pointer;font-weight:var(--font-bold);transition:background-color 0.2s ease}.add-button.svelte-1nc1b3i{background-color:var(--interactive-accent);color:var(--text-on-accent)}.add-button.svelte-1nc1b3i:hover:not(:disabled){background-color:var(--interactive-accent-hover)}.edit-button.svelte-1nc1b3i{background-color:var(--background-modifier-border);color:var(--text-normal)}.edit-button.svelte-1nc1b3i:hover{background-color:var(--background-modifier-border-hover)}button.svelte-1nc1b3i:disabled{opacity:0.5;cursor:not-allowed}");
+  append_styles(target, "svelte-1rapyyn", ".tag-manager-content.svelte-1rapyyn{padding:var(--size-4)}.setting-item-error{color:var(--color-red);font-size:var(--font-ui-smaller);margin-top:var(--size-1)}.has-error{border-color:var(--color-red) !important}.setting-item:first-child{padding-top:0}.setting-item:last-child{padding-bottom:0;border-bottom:none}");
 }
-function create_default_slot7(ctx) {
-  let div4;
-  let div2;
-  let div0;
-  let label0;
-  let t1;
-  let input;
-  let t2;
-  let span0;
-  let t4;
-  let div1;
-  let label1;
-  let t6;
-  let textarea;
-  let t7;
-  let span1;
-  let t9;
-  let div3;
-  let button0;
-  let t10_value = (
-    /*isAddingTag*/
-    ctx[5] ? "Adding..." : "Add Tag"
-  );
-  let t10;
-  let t11;
-  let button1;
-  let mounted;
-  let dispose;
+function create_default_slot3(ctx) {
+  let div;
   return {
     c() {
-      div4 = element("div");
-      div2 = element("div");
-      div0 = element("div");
-      label0 = element("label");
-      label0.textContent = "Tag Name";
-      t1 = space();
-      input = element("input");
-      t2 = space();
-      span0 = element("span");
-      span0.textContent = "The name of the tag";
-      t4 = space();
-      div1 = element("div");
-      label1 = element("label");
-      label1.textContent = "Tag Description";
-      t6 = space();
-      textarea = element("textarea");
-      t7 = space();
-      span1 = element("span");
-      span1.textContent = "A description of what the tag represents";
-      t9 = space();
-      div3 = element("div");
-      button0 = element("button");
-      t10 = text(t10_value);
-      t11 = space();
-      button1 = element("button");
-      button1.textContent = "Edit Tags";
-      attr(label0, "for", "tag-name");
-      attr(label0, "class", "svelte-1nc1b3i");
-      attr(input, "id", "tag-name");
-      attr(input, "type", "text");
-      attr(input, "placeholder", "Enter tag name");
-      attr(input, "class", "svelte-1nc1b3i");
-      attr(span0, "class", "description svelte-1nc1b3i");
-      attr(div0, "class", "form-group svelte-1nc1b3i");
-      attr(label1, "for", "tag-description");
-      attr(label1, "class", "svelte-1nc1b3i");
-      attr(textarea, "id", "tag-description");
-      attr(textarea, "placeholder", "Enter tag description");
-      attr(textarea, "rows", "4");
-      attr(textarea, "class", "svelte-1nc1b3i");
-      attr(span1, "class", "description svelte-1nc1b3i");
-      attr(div1, "class", "form-group svelte-1nc1b3i");
-      attr(div2, "class", "tag-form svelte-1nc1b3i");
-      attr(button0, "class", "add-button svelte-1nc1b3i");
-      button0.disabled = /*isAddingTag*/
-      ctx[5];
-      attr(button1, "class", "edit-button svelte-1nc1b3i");
-      attr(div3, "class", "tag-actions svelte-1nc1b3i");
-      attr(div4, "class", "tag-manager-container svelte-1nc1b3i");
+      div = element("div");
+      div.innerHTML = ``;
+      attr(div, "class", "tag-manager-content svelte-1rapyyn");
     },
     m(target, anchor) {
-      insert(target, div4, anchor);
-      append(div4, div2);
-      append(div2, div0);
-      append(div0, label0);
-      append(div0, t1);
-      append(div0, input);
-      set_input_value(
-        input,
-        /*tagName*/
-        ctx[3]
-      );
-      append(div0, t2);
-      append(div0, span0);
-      append(div2, t4);
-      append(div2, div1);
-      append(div1, label1);
-      append(div1, t6);
-      append(div1, textarea);
-      set_input_value(
-        textarea,
-        /*tagDescription*/
-        ctx[4]
-      );
-      append(div1, t7);
-      append(div1, span1);
-      append(div4, t9);
-      append(div4, div3);
-      append(div3, button0);
-      append(button0, t10);
-      append(div3, t11);
-      append(div3, button1);
-      if (!mounted) {
-        dispose = [
-          listen(
-            input,
-            "input",
-            /*input_input_handler*/
-            ctx[8]
-          ),
-          listen(
-            textarea,
-            "input",
-            /*textarea_input_handler*/
-            ctx[9]
-          ),
-          listen(
-            button0,
-            "click",
-            /*addTag*/
-            ctx[6]
-          ),
-          listen(
-            button1,
-            "click",
-            /*openEditModal*/
-            ctx[7]
-          )
-        ];
-        mounted = true;
-      }
+      insert(target, div, anchor);
+      ctx[9](div);
     },
-    p(ctx2, dirty) {
-      if (dirty & /*tagName*/
-      8 && input.value !== /*tagName*/
-      ctx2[3]) {
-        set_input_value(
-          input,
-          /*tagName*/
-          ctx2[3]
-        );
-      }
-      if (dirty & /*tagDescription*/
-      16) {
-        set_input_value(
-          textarea,
-          /*tagDescription*/
-          ctx2[4]
-        );
-      }
-      if (dirty & /*isAddingTag*/
-      32 && t10_value !== (t10_value = /*isAddingTag*/
-      ctx2[5] ? "Adding..." : "Add Tag"))
-        set_data(t10, t10_value);
-      if (dirty & /*isAddingTag*/
-      32) {
-        button0.disabled = /*isAddingTag*/
-        ctx2[5];
-      }
-    },
+    p: noop,
     d(detaching) {
       if (detaching) {
-        detach(div4);
+        detach(div);
       }
-      mounted = false;
-      run_all(dispose);
+      ctx[9](null);
     }
   };
 }
-function create_fragment13(ctx) {
+function create_fragment6(ctx) {
   let baseaccordion;
   let current;
   baseaccordion = new BaseAccordion_default({
     props: {
-      title: "\u{1F3F7}\uFE0F Tag Management",
-      description: "Create and manage custom tags for your notes.",
-      app: (
-        /*app*/
+      title: (
+        /*title*/
         ctx[0]
       ),
-      settingsService: (
-        /*settingsService*/
+      description: (
+        /*description*/
         ctx[1]
       ),
-      aiService: (
-        /*aiService*/
+      isOpen: (
+        /*isOpen*/
         ctx[2]
       ),
-      $$slots: { default: [create_default_slot7] },
+      $$slots: { default: [create_default_slot3] },
       $$scope: { ctx }
     }
   });
@@ -23488,20 +15535,20 @@ function create_fragment13(ctx) {
     },
     p(ctx2, [dirty]) {
       const baseaccordion_changes = {};
-      if (dirty & /*app*/
+      if (dirty & /*title*/
       1)
-        baseaccordion_changes.app = /*app*/
+        baseaccordion_changes.title = /*title*/
         ctx2[0];
-      if (dirty & /*settingsService*/
+      if (dirty & /*description*/
       2)
-        baseaccordion_changes.settingsService = /*settingsService*/
+        baseaccordion_changes.description = /*description*/
         ctx2[1];
-      if (dirty & /*aiService*/
+      if (dirty & /*isOpen*/
       4)
-        baseaccordion_changes.aiService = /*aiService*/
+        baseaccordion_changes.isOpen = /*isOpen*/
         ctx2[2];
-      if (dirty & /*$$scope, isAddingTag, tagDescription, tagName*/
-      8248) {
+      if (dirty & /*$$scope, contentEl*/
+      524296) {
         baseaccordion_changes.$$scope = { dirty, ctx: ctx2 };
       }
       baseaccordion.$set(baseaccordion_changes);
@@ -23521,18 +15568,8 @@ function create_fragment13(ctx) {
     }
   };
 }
-function validateInput2(value, type) {
-  const trimmed = value.trim();
-  const minLength = type === "name" ? 2 : 10;
-  if (!trimmed) {
-    return `Tag ${type} cannot be empty.`;
-  }
-  if (trimmed.length < minLength) {
-    return `Tag ${type} must be at least ${minLength} characters.`;
-  }
-  return null;
-}
-function instance13($$self, $$props, $$invalidate) {
+function instance6($$self, $$props, $$invalidate) {
+  let $tagState;
   var __awaiter = this && this.__awaiter || function(thisArg, _arguments, P, generator) {
     function adopt(value) {
       return value instanceof P ? value : new P(function(resolve) {
@@ -23560,623 +15597,327 @@ function instance13($$self, $$props, $$invalidate) {
       step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
   };
+  let { title } = $$props;
+  let { description } = $$props;
   let { app } = $$props;
   let { settingsService } = $$props;
-  let { aiService } = $$props;
-  let tagName = "";
-  let tagDescription = "";
-  let isAddingTag = false;
+  let { isOpen = false } = $$props;
+  let { tagManagementService = void 0 } = $$props;
+  const settingsStore2 = getContext("settingsStore");
+  const tagState = writable({
+    isAddingTag: false,
+    isServiceReady: false,
+    formData: {
+      name: "",
+      description: "",
+      type: "string",
+      required: false,
+      multipleValues: false
+    },
+    validationErrors: {},
+    currentTags: []
+  });
+  component_subscribe($$self, tagState, (value) => $$invalidate(8, $tagState = value));
+  const propertyTypes = {
+    "string": {
+      label: "Text",
+      description: "Plain text value"
+    },
+    "number": {
+      label: "Number",
+      description: "Numeric value"
+    },
+    "boolean": {
+      label: "True/False",
+      description: "Boolean value"
+    },
+    "array": {
+      label: "List",
+      description: "Multiple values"
+    },
+    "date": {
+      label: "Date",
+      description: "Date/time value"
+    }
+  };
+  let contentEl;
+  onMount(() => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+      if (!app) {
+        throw new Error("App instance not available");
+      }
+      if (!tagManagementService) {
+        const plugin = getContext("plugin");
+        $$invalidate(5, tagManagementService = new TagManagementService(app, plugin));
+        yield tagManagementService.initialize();
+      }
+      const currentTags = yield tagManagementService.getTags();
+      tagState.update((s) => Object.assign(Object.assign({}, s), { isServiceReady: true, currentTags }));
+    } catch (error) {
+      console.error("\u{1F987} Failed to initialize tag service:", error);
+      new import_obsidian18.Notice("Failed to initialize tag management");
+    }
+  }));
+  function validateField(field, value) {
+    switch (field) {
+      case "name":
+        if (!(value === null || value === void 0 ? void 0 : value.trim()))
+          return "Tag name is required";
+        if (value.trim().length < 2)
+          return "Tag name must be at least 2 characters";
+        if (!/^[a-zA-Z0-9_-]+$/.test(value.trim()))
+          return "Tag name can only contain letters, numbers, dashes, and underscores";
+        if ($tagState.currentTags.some((t) => t.name.toLowerCase() === value.trim().toLowerCase()))
+          return "Tag name already exists";
+        break;
+      case "description":
+        if (!(value === null || value === void 0 ? void 0 : value.trim()))
+          return "Tag description is required";
+        if (value.trim().length < 5)
+          return "Tag description must be at least 5 characters";
+        break;
+      case "type":
+        if (!value)
+          return "Tag type is required";
+        if (!Object.keys(propertyTypes).includes(value))
+          return "Invalid tag type";
+        break;
+    }
+    return null;
+  }
+  function handleFieldChange(field, value) {
+    tagState.update((s) => {
+      const error = validateField(field, value);
+      return Object.assign(Object.assign({}, s), {
+        formData: Object.assign(Object.assign({}, s.formData), { [field]: value }),
+        validationErrors: Object.assign(Object.assign({}, s.validationErrors), { [field]: error || "" })
+      });
+    });
+  }
   function addTag() {
     return __awaiter(this, void 0, void 0, function* () {
+      if ($tagState.isAddingTag || !$tagState.isServiceReady || !tagManagementService)
+        return;
       try {
-        $$invalidate(5, isAddingTag = true);
-        const nameError = validateInput2(tagName, "name");
-        const descriptionError = validateInput2(tagDescription, "description");
-        if (nameError || descriptionError) {
-          throw new Error(nameError || descriptionError || "Validation error");
-        }
+        tagState.update((s) => Object.assign(Object.assign({}, s), { isAddingTag: true }));
+        const form = $tagState.formData;
         const newTag = {
-          name: tagName.trim(),
-          description: tagDescription.trim(),
-          type: "string",
-          required: false,
-          multipleValues: false
+          name: form.name.trim(),
+          description: form.description.trim(),
+          type: form.type,
+          required: form.required,
+          multipleValues: form.multipleValues
         };
-        const settings = settingsService.getSettings();
-        const customTags = [...settings.tags.customTags, newTag];
-        yield settingsService.updateSettings(Object.assign(Object.assign({}, settings), {
-          tags: Object.assign(Object.assign({}, settings.tags), { customTags })
-        }));
+        yield tagManagementService.updateTags([newTag]);
+        tagState.update((s) => Object.assign(Object.assign({}, s), { currentTags: [...s.currentTags, newTag] }));
+        new import_obsidian18.Notice(`Tag "${newTag.name}" added successfully!`);
         resetForm();
-        new import_obsidian17.Notice(`Tag "${newTag.name}" has been added successfully.`);
       } catch (error) {
-        console.error("Error adding tag:", error);
-        new import_obsidian17.Notice(`Failed to add tag: ${error instanceof Error ? error.message : "Unknown error"}`);
+        console.error("\u{1F987} Failed to add tag:", error);
+        new import_obsidian18.Notice(`Error adding tag: ${error instanceof Error ? error.message : "Unknown error"}`);
       } finally {
-        $$invalidate(5, isAddingTag = false);
+        tagState.update((s) => Object.assign(Object.assign({}, s), { isAddingTag: false }));
+      }
+    });
+  }
+  function openEditModal() {
+    return __awaiter(this, void 0, void 0, function* () {
+      try {
+        if (!$tagState.isServiceReady || !tagManagementService) {
+          throw new Error("Tag service not ready");
+        }
+        let modalInstance = new EditTagsModal_default({
+          target: document.body,
+          props: {
+            tags: $tagState.currentTags,
+            onSubmit: handleTagsUpdate,
+            onClose: () => modalInstance.$destroy()
+          }
+        });
+      } catch (error) {
+        console.error("\u{1F987} Error opening edit modal:", error);
+        new import_obsidian18.Notice(`Failed to open edit modal: ${error instanceof Error ? error.message : "Unknown error"}`);
+      }
+    });
+  }
+  function handleTagsUpdate(updatedTags) {
+    return __awaiter(this, void 0, void 0, function* () {
+      if (!tagManagementService)
+        return;
+      try {
+        yield tagManagementService.updateTags(updatedTags);
+        tagState.update((s) => Object.assign(Object.assign({}, s), { currentTags: updatedTags }));
+        new import_obsidian18.Notice("Tags updated successfully");
+      } catch (error) {
+        console.error("\u{1F987} Error updating tags:", error);
+        new import_obsidian18.Notice(`Failed to update tags: ${error instanceof Error ? error.message : "Unknown error"}`);
       }
     });
   }
   function resetForm() {
-    $$invalidate(3, tagName = "");
-    $$invalidate(4, tagDescription = "");
+    tagState.update((s) => Object.assign(Object.assign({}, s), {
+      formData: {
+        name: "",
+        description: "",
+        type: "string",
+        required: false,
+        multipleValues: false
+      },
+      validationErrors: {}
+    }));
   }
-  function openEditModal() {
-    try {
-      const currentTags = settingsService.getSettings().tags.customTags;
-      const modal = new EditTagsModal_default({
-        target: document.body,
-        props: {
-          app,
-          tags: currentTags,
-          onSubmit: handleTagsUpdate,
-          onClose: () => modal.close()
-        }
-      });
-    } catch (error) {
-      console.error("Error opening edit modal:", error);
-      new import_obsidian17.Notice(`Failed to open edit modal: ${error instanceof Error ? error.message : "Unknown error"}`);
-    }
-  }
-  function handleTagsUpdate(updatedTags) {
-    return __awaiter(this, void 0, void 0, function* () {
-      try {
-        const settings = settingsService.getSettings();
-        yield settingsService.updateSettings(Object.assign(Object.assign({}, settings), {
-          tags: Object.assign(Object.assign({}, settings.tags), { customTags: updatedTags })
-        }));
-        new import_obsidian17.Notice("Tags updated successfully");
-      } catch (error) {
-        console.error("Error updating tags:", error);
-        new import_obsidian17.Notice(`Failed to update tags: ${error instanceof Error ? error.message : "Unknown error"}`);
-      }
+  function div_binding($$value) {
+    binding_callbacks[$$value ? "unshift" : "push"](() => {
+      contentEl = $$value;
+      $$invalidate(3, contentEl);
     });
   }
-  function input_input_handler() {
-    tagName = this.value;
-    $$invalidate(3, tagName);
-  }
-  function textarea_input_handler() {
-    tagDescription = this.value;
-    $$invalidate(4, tagDescription);
-  }
   $$self.$$set = ($$props2) => {
+    if ("title" in $$props2)
+      $$invalidate(0, title = $$props2.title);
+    if ("description" in $$props2)
+      $$invalidate(1, description = $$props2.description);
     if ("app" in $$props2)
-      $$invalidate(0, app = $$props2.app);
+      $$invalidate(6, app = $$props2.app);
     if ("settingsService" in $$props2)
-      $$invalidate(1, settingsService = $$props2.settingsService);
-    if ("aiService" in $$props2)
-      $$invalidate(2, aiService = $$props2.aiService);
+      $$invalidate(7, settingsService = $$props2.settingsService);
+    if ("isOpen" in $$props2)
+      $$invalidate(2, isOpen = $$props2.isOpen);
+    if ("tagManagementService" in $$props2)
+      $$invalidate(5, tagManagementService = $$props2.tagManagementService);
+  };
+  $$self.$$.update = () => {
+    if ($$self.$$.dirty & /*contentEl, $tagState*/
+    264) {
+      $:
+        if (contentEl && $tagState) {
+          contentEl.empty();
+          new import_obsidian18.Setting(contentEl).setHeading().setName("Add New Tag");
+          new import_obsidian18.Setting(contentEl).setName("Tag Name").setDesc("Enter a name for the tag").addText((text2) => {
+            var _a;
+            text2.setPlaceholder("Enter tag name").setValue($tagState.formData.name).onChange((value) => handleFieldChange("name", value));
+            if ($tagState.validationErrors.name) {
+              text2.inputEl.addClass("has-error");
+              const errorEl = contentEl.createEl("div", {
+                cls: "setting-item-error",
+                text: $tagState.validationErrors.name
+              });
+              (_a = text2.inputEl.parentElement) === null || _a === void 0 ? void 0 : _a.appendChild(errorEl);
+            }
+            return text2;
+          });
+          new import_obsidian18.Setting(contentEl).setName("Description").setDesc("Describe what this tag is used for").addTextArea((text2) => {
+            var _a;
+            text2.setPlaceholder("Enter tag description").setValue($tagState.formData.description).onChange((value) => handleFieldChange("description", value));
+            text2.inputEl.rows = 4;
+            if ($tagState.validationErrors.description) {
+              text2.inputEl.addClass("has-error");
+              const errorEl = contentEl.createEl("div", {
+                cls: "setting-item-error",
+                text: $tagState.validationErrors.description
+              });
+              (_a = text2.inputEl.parentElement) === null || _a === void 0 ? void 0 : _a.appendChild(errorEl);
+            }
+            return text2;
+          });
+          new import_obsidian18.Setting(contentEl).setName("Type").setDesc("Select the type of data this tag will store").addDropdown((dropdown) => {
+            Object.entries(propertyTypes).forEach(([value, { label }]) => {
+              dropdown.addOption(value, label);
+            });
+            dropdown.setValue($tagState.formData.type);
+            dropdown.onChange((value) => handleFieldChange("type", value));
+            return dropdown;
+          });
+          new import_obsidian18.Setting(contentEl).setName("Required").setDesc("Should this tag be required?").addToggle((toggle) => {
+            toggle.setValue($tagState.formData.required).onChange((value) => {
+              tagState.update((s) => Object.assign(Object.assign({}, s), {
+                formData: Object.assign(Object.assign({}, s.formData), { required: value })
+              }));
+            });
+            return toggle;
+          });
+          new import_obsidian18.Setting(contentEl).setName("Multiple Values").setDesc("Can this tag have multiple values?").addToggle((toggle) => {
+            toggle.setValue($tagState.formData.multipleValues).onChange((value) => {
+              tagState.update((s) => Object.assign(Object.assign({}, s), {
+                formData: Object.assign(Object.assign({}, s.formData), { multipleValues: value })
+              }));
+            });
+            return toggle;
+          });
+          new import_obsidian18.Setting(contentEl).addButton((button) => {
+            button.setButtonText($tagState.isAddingTag ? "Adding..." : "Add Tag").setCta().setDisabled($tagState.isAddingTag || !$tagState.isServiceReady || Object.keys($tagState.validationErrors).length > 0).onClick(addTag);
+            return button;
+          }).addButton((button) => {
+            button.setButtonText("Edit Tags").setDisabled(!$tagState.isServiceReady).onClick(openEditModal);
+            return button;
+          });
+        }
+    }
   };
   return [
+    title,
+    description,
+    isOpen,
+    contentEl,
+    tagState,
+    tagManagementService,
     app,
     settingsService,
-    aiService,
-    tagName,
-    tagDescription,
-    isAddingTag,
-    addTag,
-    openEditModal,
-    input_input_handler,
-    textarea_input_handler
+    $tagState,
+    div_binding
   ];
 }
 var TagManagerAccordion = class extends SvelteComponent {
   constructor(options) {
     super();
-    init(this, options, instance13, create_fragment13, safe_not_equal, { app: 0, settingsService: 1, aiService: 2 }, add_css6);
+    init(
+      this,
+      options,
+      instance6,
+      create_fragment6,
+      safe_not_equal,
+      {
+        title: 0,
+        description: 1,
+        app: 6,
+        settingsService: 7,
+        isOpen: 2,
+        tagManagementService: 5
+      },
+      add_css6
+    );
   }
 };
 var TagManagerAccordion_default = TagManagerAccordion;
 
 // src/components/accordions/OntologyGenerationAccordion.svelte
-var import_obsidian19 = require("obsidian");
+var import_obsidian21 = require("obsidian");
 
 // src/components/modals/OntologyGeneratorModal.svelte
-var import_obsidian18 = require("obsidian");
+var import_obsidian19 = require("obsidian");
+var import_obsidian20 = require("obsidian");
 function add_css7(target) {
-  append_styles(target, "svelte-qwsugj", ".ontology-generator-modal.svelte-qwsugj.svelte-qwsugj{display:flex;flex-direction:column;gap:var(--size-4);padding:var(--size-4);max-width:600px;width:100%}.modal-header.svelte-qwsugj.svelte-qwsugj{border-bottom:1px solid var(--background-modifier-border);padding-bottom:var(--size-4)}.modal-header.svelte-qwsugj h2.svelte-qwsugj{margin:0;margin-bottom:var(--size-2);color:var(--text-normal);font-size:var(--font-ui-large)}.modal-header.svelte-qwsugj p.svelte-qwsugj{margin:0;color:var(--text-muted)}.stats-container.svelte-qwsugj.svelte-qwsugj{display:grid;grid-template-columns:repeat(3, 1fr);gap:var(--size-4);margin-bottom:var(--size-4)}.stat-card.svelte-qwsugj.svelte-qwsugj{background-color:var(--background-secondary);border-radius:var(--radius-m);padding:var(--size-4);display:flex;align-items:center;gap:var(--size-4);box-shadow:0 2px 4px rgba(0, 0, 0, 0.1)}.stat-icon.svelte-qwsugj.svelte-qwsugj{color:var(--text-muted);display:flex;align-items:center;justify-content:center;width:24px;height:24px}.stat-info.svelte-qwsugj.svelte-qwsugj{display:flex;flex-direction:column}.stat-label.svelte-qwsugj.svelte-qwsugj{font-weight:var(--font-bold);color:var(--text-muted);font-size:var(--font-ui-small)}.stat-count.svelte-qwsugj.svelte-qwsugj{font-size:1.2em;color:var(--text-normal);font-weight:var(--font-bold)}.model-selection.svelte-qwsugj.svelte-qwsugj,.context-input.svelte-qwsugj.svelte-qwsugj{display:flex;flex-direction:column;gap:var(--size-2);margin-bottom:var(--size-4)}label.svelte-qwsugj.svelte-qwsugj{font-weight:var(--font-bold);color:var(--text-normal)}select.svelte-qwsugj.svelte-qwsugj,textarea.svelte-qwsugj.svelte-qwsugj{background:var(--background-primary);border:1px solid var(--background-modifier-border);border-radius:var(--radius-s);padding:var(--size-2);color:var(--text-normal);width:100%}textarea.svelte-qwsugj.svelte-qwsugj{resize:vertical;min-height:100px}.description.svelte-qwsugj.svelte-qwsugj{color:var(--text-muted);font-size:var(--font-ui-small)}.guided-questions.svelte-qwsugj.svelte-qwsugj{background-color:var(--background-secondary);border-radius:var(--radius-m);padding:var(--size-4);margin-bottom:var(--size-4)}.guided-questions.svelte-qwsugj h4.svelte-qwsugj{margin:0;margin-bottom:var(--size-2);color:var(--text-normal)}.guided-questions.svelte-qwsugj ul.svelte-qwsugj{margin:0;padding-left:var(--size-4);color:var(--text-muted)}.guided-questions.svelte-qwsugj li.svelte-qwsugj{margin-bottom:var(--size-2)}.modal-footer.svelte-qwsugj.svelte-qwsugj{display:flex;justify-content:flex-end;gap:var(--size-4);margin-top:var(--size-4);padding-top:var(--size-4);border-top:1px solid var(--background-modifier-border)}button.svelte-qwsugj.svelte-qwsugj{padding:var(--size-2) var(--size-4);border-radius:var(--radius-s);border:none;cursor:pointer;font-weight:var(--font-bold)}button.mod-cta.svelte-qwsugj.svelte-qwsugj{background-color:var(--interactive-accent);color:var(--text-on-accent)}button.mod-cta.svelte-qwsugj.svelte-qwsugj:hover:not(:disabled){background-color:var(--interactive-accent-hover)}button.mod-cancel.svelte-qwsugj.svelte-qwsugj{background-color:var(--background-modifier-border);color:var(--text-normal)}button.mod-cancel.svelte-qwsugj.svelte-qwsugj:hover:not(:disabled){background-color:var(--background-modifier-border-hover)}button.svelte-qwsugj.svelte-qwsugj:disabled{opacity:0.5;cursor:not-allowed}");
+  append_styles(target, "svelte-7cb176", ".ontology-generator-container.svelte-7cb176{display:flex;flex-direction:column;gap:var(--size-4);padding:var(--size-4)}.stats-container{display:grid;grid-template-columns:repeat(3, 1fr);gap:var(--size-4);margin-bottom:var(--size-4)}.stat-card{background-color:var(--background-secondary);border-radius:var(--radius-m);padding:var(--size-4);box-shadow:0 2px 4px rgba(0, 0, 0, 0.1)}.stat-card .setting-item-info{display:flex;flex-direction:column;align-items:center;text-align:center}.stat-card .setting-item-name{font-size:var(--font-ui-small);color:var(--text-muted)}.stat-card .setting-item-description{font-size:1.2em;font-weight:var(--font-bold);color:var(--text-normal)}.guided-questions{background-color:var(--background-secondary);border-radius:var(--radius-m);padding:var(--size-4);margin:var(--size-4) 0}.guided-questions h4{margin:0;margin-bottom:var(--size-2);color:var(--text-normal)}.guided-questions ul{margin:0;padding-left:var(--size-4);color:var(--text-muted)}.guided-questions li{margin-bottom:var(--size-2)}.setting-item textarea{min-height:100px;resize:vertical}");
 }
-function get_each_context6(ctx, list, i) {
-  const child_ctx = ctx.slice();
-  child_ctx[25] = list[i];
-  return child_ctx;
-}
-function get_each_context_13(ctx, list, i) {
-  const child_ctx = ctx.slice();
-  child_ctx[28] = list[i];
-  return child_ctx;
-}
-function create_each_block_13(ctx) {
-  let option;
-  let t_value = (
-    /*model*/
-    ctx[28].model + ""
-  );
-  let t;
-  let option_value_value;
+function create_fragment7(ctx) {
+  let div;
   return {
     c() {
-      option = element("option");
-      t = text(t_value);
-      option.__value = option_value_value = /*model*/
-      ctx[28].model;
-      set_input_value(option, option.__value);
+      div = element("div");
+      attr(div, "class", "ontology-generator-container svelte-7cb176");
     },
     m(target, anchor) {
-      insert(target, option, anchor);
-      append(option, t);
+      insert(target, div, anchor);
+      ctx[8](div);
     },
     p: noop,
-    d(detaching) {
-      if (detaching) {
-        detach(option);
-      }
-    }
-  };
-}
-function create_each_block6(ctx) {
-  let li;
-  return {
-    c() {
-      li = element("li");
-      li.textContent = `${/*question*/
-      ctx[25]}`;
-      attr(li, "class", "svelte-qwsugj");
-    },
-    m(target, anchor) {
-      insert(target, li, anchor);
-    },
-    p: noop,
-    d(detaching) {
-      if (detaching) {
-        detach(li);
-      }
-    }
-  };
-}
-function create_fragment14(ctx) {
-  let div15;
-  let header;
-  let t3;
-  let div14;
-  let div9;
-  let div2;
-  let div0;
-  let t4;
-  let div1;
-  let span0;
-  let t6;
-  let span1;
-  let t7_value = (
-    /*vaultStats*/
-    ctx[7].files.length + ""
-  );
-  let t7;
-  let t8;
-  let div5;
-  let div3;
-  let t9;
-  let div4;
-  let span2;
-  let t11;
-  let span3;
-  let t12_value = (
-    /*vaultStats*/
-    ctx[7].folders.length + ""
-  );
-  let t12;
-  let t13;
-  let div8;
-  let div6;
-  let t14;
-  let div7;
-  let span4;
-  let t16;
-  let span5;
-  let t17_value = (
-    /*vaultStats*/
-    ctx[7].tags.length + ""
-  );
-  let t17;
-  let t18;
-  let div10;
-  let label0;
-  let t20;
-  let select;
-  let option;
-  let t22;
-  let span6;
-  let t24;
-  let div11;
-  let label1;
-  let t26;
-  let textarea;
-  let t27;
-  let span7;
-  let t29;
-  let div12;
-  let h4;
-  let t31;
-  let ul;
-  let t32;
-  let div13;
-  let button0;
-  let t33_value = (
-    /*isGenerating*/
-    ctx[6] ? "Generating..." : "Generate Ontology"
-  );
-  let t33;
-  let button0_disabled_value;
-  let t34;
-  let button1;
-  let t35;
-  let mounted;
-  let dispose;
-  let each_value_1 = ensure_array_like(
-    /*availableModels*/
-    ctx[8]
-  );
-  let each_blocks_1 = [];
-  for (let i = 0; i < each_value_1.length; i += 1) {
-    each_blocks_1[i] = create_each_block_13(get_each_context_13(ctx, each_value_1, i));
-  }
-  let each_value = ensure_array_like(
-    /*guidedQuestions*/
-    ctx[9]
-  );
-  let each_blocks = [];
-  for (let i = 0; i < each_value.length; i += 1) {
-    each_blocks[i] = create_each_block6(get_each_context6(ctx, each_value, i));
-  }
-  return {
-    c() {
-      div15 = element("div");
-      header = element("header");
-      header.innerHTML = `<h2 class="svelte-qwsugj">Generate Ontology</h2> <p class="svelte-qwsugj">Generate and manage ontologies for your vault</p>`;
-      t3 = space();
-      div14 = element("div");
-      div9 = element("div");
-      div2 = element("div");
-      div0 = element("div");
-      t4 = space();
-      div1 = element("div");
-      span0 = element("span");
-      span0.textContent = "Files";
-      t6 = space();
-      span1 = element("span");
-      t7 = text(t7_value);
-      t8 = space();
-      div5 = element("div");
-      div3 = element("div");
-      t9 = space();
-      div4 = element("div");
-      span2 = element("span");
-      span2.textContent = "Folders";
-      t11 = space();
-      span3 = element("span");
-      t12 = text(t12_value);
-      t13 = space();
-      div8 = element("div");
-      div6 = element("div");
-      t14 = space();
-      div7 = element("div");
-      span4 = element("span");
-      span4.textContent = "Tags";
-      t16 = space();
-      span5 = element("span");
-      t17 = text(t17_value);
-      t18 = space();
-      div10 = element("div");
-      label0 = element("label");
-      label0.textContent = "AI Model";
-      t20 = space();
-      select = element("select");
-      option = element("option");
-      option.textContent = "Select a model...";
-      for (let i = 0; i < each_blocks_1.length; i += 1) {
-        each_blocks_1[i].c();
-      }
-      t22 = space();
-      span6 = element("span");
-      span6.textContent = "Select the AI model to use for ontology generation";
-      t24 = space();
-      div11 = element("div");
-      label1 = element("label");
-      label1.textContent = "Additional Context";
-      t26 = space();
-      textarea = element("textarea");
-      t27 = space();
-      span7 = element("span");
-      span7.textContent = "Provide any additional context or information about your knowledge base.";
-      t29 = space();
-      div12 = element("div");
-      h4 = element("h4");
-      h4.textContent = "Consider These Questions";
-      t31 = space();
-      ul = element("ul");
-      for (let i = 0; i < each_blocks.length; i += 1) {
-        each_blocks[i].c();
-      }
-      t32 = space();
-      div13 = element("div");
-      button0 = element("button");
-      t33 = text(t33_value);
-      t34 = space();
-      button1 = element("button");
-      t35 = text("Cancel");
-      attr(header, "class", "modal-header svelte-qwsugj");
-      attr(div0, "class", "stat-icon svelte-qwsugj");
-      attr(span0, "class", "stat-label svelte-qwsugj");
-      attr(span1, "class", "stat-count svelte-qwsugj");
-      attr(div1, "class", "stat-info svelte-qwsugj");
-      attr(div2, "class", "stat-card svelte-qwsugj");
-      attr(div3, "class", "stat-icon svelte-qwsugj");
-      attr(span2, "class", "stat-label svelte-qwsugj");
-      attr(span3, "class", "stat-count svelte-qwsugj");
-      attr(div4, "class", "stat-info svelte-qwsugj");
-      attr(div5, "class", "stat-card svelte-qwsugj");
-      attr(div6, "class", "stat-icon svelte-qwsugj");
-      attr(span4, "class", "stat-label svelte-qwsugj");
-      attr(span5, "class", "stat-count svelte-qwsugj");
-      attr(div7, "class", "stat-info svelte-qwsugj");
-      attr(div8, "class", "stat-card svelte-qwsugj");
-      attr(div9, "class", "stats-container svelte-qwsugj");
-      attr(label0, "for", "model-select");
-      attr(label0, "class", "svelte-qwsugj");
-      option.__value = "";
-      set_input_value(option, option.__value);
-      attr(select, "id", "model-select");
-      attr(select, "class", "svelte-qwsugj");
-      if (
-        /*selectedModel*/
-        ctx[4] === void 0
-      )
-        add_render_callback(() => (
-          /*select_change_handler*/
-          ctx[20].call(select)
-        ));
-      attr(span6, "class", "description svelte-qwsugj");
-      attr(div10, "class", "model-selection svelte-qwsugj");
-      attr(label1, "for", "context");
-      attr(label1, "class", "svelte-qwsugj");
-      attr(textarea, "id", "context");
-      attr(textarea, "placeholder", "Enter additional context here...");
-      attr(textarea, "rows", "4");
-      attr(textarea, "class", "svelte-qwsugj");
-      attr(span7, "class", "description svelte-qwsugj");
-      attr(div11, "class", "context-input svelte-qwsugj");
-      attr(h4, "class", "svelte-qwsugj");
-      attr(ul, "class", "svelte-qwsugj");
-      attr(div12, "class", "guided-questions svelte-qwsugj");
-      attr(button0, "class", "mod-cta svelte-qwsugj");
-      button0.disabled = button0_disabled_value = /*isGenerating*/
-      ctx[6] || !/*selectedModel*/
-      ctx[4];
-      attr(button1, "class", "mod-cancel svelte-qwsugj");
-      button1.disabled = /*isGenerating*/
-      ctx[6];
-      attr(div13, "class", "modal-footer svelte-qwsugj");
-      attr(div14, "class", "modal-content");
-      attr(div15, "class", "ontology-generator-modal svelte-qwsugj");
-    },
-    m(target, anchor) {
-      insert(target, div15, anchor);
-      append(div15, header);
-      append(div15, t3);
-      append(div15, div14);
-      append(div14, div9);
-      append(div9, div2);
-      append(div2, div0);
-      ctx[17](div0);
-      append(div2, t4);
-      append(div2, div1);
-      append(div1, span0);
-      append(div1, t6);
-      append(div1, span1);
-      append(span1, t7);
-      append(div9, t8);
-      append(div9, div5);
-      append(div5, div3);
-      ctx[18](div3);
-      append(div5, t9);
-      append(div5, div4);
-      append(div4, span2);
-      append(div4, t11);
-      append(div4, span3);
-      append(span3, t12);
-      append(div9, t13);
-      append(div9, div8);
-      append(div8, div6);
-      ctx[19](div6);
-      append(div8, t14);
-      append(div8, div7);
-      append(div7, span4);
-      append(div7, t16);
-      append(div7, span5);
-      append(span5, t17);
-      append(div14, t18);
-      append(div14, div10);
-      append(div10, label0);
-      append(div10, t20);
-      append(div10, select);
-      append(select, option);
-      for (let i = 0; i < each_blocks_1.length; i += 1) {
-        if (each_blocks_1[i]) {
-          each_blocks_1[i].m(select, null);
-        }
-      }
-      select_option(
-        select,
-        /*selectedModel*/
-        ctx[4],
-        true
-      );
-      append(div10, t22);
-      append(div10, span6);
-      append(div14, t24);
-      append(div14, div11);
-      append(div11, label1);
-      append(div11, t26);
-      append(div11, textarea);
-      set_input_value(
-        textarea,
-        /*userContext*/
-        ctx[5]
-      );
-      append(div11, t27);
-      append(div11, span7);
-      append(div14, t29);
-      append(div14, div12);
-      append(div12, h4);
-      append(div12, t31);
-      append(div12, ul);
-      for (let i = 0; i < each_blocks.length; i += 1) {
-        if (each_blocks[i]) {
-          each_blocks[i].m(ul, null);
-        }
-      }
-      append(div14, t32);
-      append(div14, div13);
-      append(div13, button0);
-      append(button0, t33);
-      append(div13, t34);
-      append(div13, button1);
-      append(button1, t35);
-      if (!mounted) {
-        dispose = [
-          listen(
-            select,
-            "change",
-            /*select_change_handler*/
-            ctx[20]
-          ),
-          listen(
-            textarea,
-            "input",
-            /*textarea_input_handler*/
-            ctx[21]
-          ),
-          listen(
-            button0,
-            "click",
-            /*handleGenerate*/
-            ctx[10]
-          ),
-          listen(button1, "click", function() {
-            if (is_function(
-              /*onClose*/
-              ctx[0]
-            ))
-              ctx[0].apply(this, arguments);
-          })
-        ];
-        mounted = true;
-      }
-    },
-    p(new_ctx, [dirty]) {
-      ctx = new_ctx;
-      if (dirty & /*vaultStats*/
-      128 && t7_value !== (t7_value = /*vaultStats*/
-      ctx[7].files.length + ""))
-        set_data(t7, t7_value);
-      if (dirty & /*vaultStats*/
-      128 && t12_value !== (t12_value = /*vaultStats*/
-      ctx[7].folders.length + ""))
-        set_data(t12, t12_value);
-      if (dirty & /*vaultStats*/
-      128 && t17_value !== (t17_value = /*vaultStats*/
-      ctx[7].tags.length + ""))
-        set_data(t17, t17_value);
-      if (dirty & /*availableModels*/
-      256) {
-        each_value_1 = ensure_array_like(
-          /*availableModels*/
-          ctx[8]
-        );
-        let i;
-        for (i = 0; i < each_value_1.length; i += 1) {
-          const child_ctx = get_each_context_13(ctx, each_value_1, i);
-          if (each_blocks_1[i]) {
-            each_blocks_1[i].p(child_ctx, dirty);
-          } else {
-            each_blocks_1[i] = create_each_block_13(child_ctx);
-            each_blocks_1[i].c();
-            each_blocks_1[i].m(select, null);
-          }
-        }
-        for (; i < each_blocks_1.length; i += 1) {
-          each_blocks_1[i].d(1);
-        }
-        each_blocks_1.length = each_value_1.length;
-      }
-      if (dirty & /*selectedModel, availableModels*/
-      272) {
-        select_option(
-          select,
-          /*selectedModel*/
-          ctx[4]
-        );
-      }
-      if (dirty & /*userContext*/
-      32) {
-        set_input_value(
-          textarea,
-          /*userContext*/
-          ctx[5]
-        );
-      }
-      if (dirty & /*guidedQuestions*/
-      512) {
-        each_value = ensure_array_like(
-          /*guidedQuestions*/
-          ctx[9]
-        );
-        let i;
-        for (i = 0; i < each_value.length; i += 1) {
-          const child_ctx = get_each_context6(ctx, each_value, i);
-          if (each_blocks[i]) {
-            each_blocks[i].p(child_ctx, dirty);
-          } else {
-            each_blocks[i] = create_each_block6(child_ctx);
-            each_blocks[i].c();
-            each_blocks[i].m(ul, null);
-          }
-        }
-        for (; i < each_blocks.length; i += 1) {
-          each_blocks[i].d(1);
-        }
-        each_blocks.length = each_value.length;
-      }
-      if (dirty & /*isGenerating*/
-      64 && t33_value !== (t33_value = /*isGenerating*/
-      ctx[6] ? "Generating..." : "Generate Ontology"))
-        set_data(t33, t33_value);
-      if (dirty & /*isGenerating, selectedModel, availableModels*/
-      336 && button0_disabled_value !== (button0_disabled_value = /*isGenerating*/
-      ctx[6] || !/*selectedModel*/
-      ctx[4])) {
-        button0.disabled = button0_disabled_value;
-      }
-      if (dirty & /*isGenerating*/
-      64) {
-        button1.disabled = /*isGenerating*/
-        ctx[6];
-      }
-    },
     i: noop,
     o: noop,
     d(detaching) {
       if (detaching) {
-        detach(div15);
+        detach(div);
       }
-      ctx[17](null);
-      ctx[18](null);
-      ctx[19](null);
-      destroy_each(each_blocks_1, detaching);
-      destroy_each(each_blocks, detaching);
-      mounted = false;
-      run_all(dispose);
+      ctx[8](null);
     }
   };
 }
@@ -24189,7 +15930,7 @@ function extractTags(content) {
   }
   return tags;
 }
-function instance14($$self, $$props, $$invalidate) {
+function instance7($$self, $$props, $$invalidate) {
   var __awaiter = this && this.__awaiter || function(thisArg, _arguments, P, generator) {
     function adopt(value) {
       return value instanceof P ? value : new P(function(resolve) {
@@ -24224,14 +15965,12 @@ function instance14($$self, $$props, $$invalidate) {
   let { adapterRegistry } = $$props;
   let { onGenerate } = $$props;
   let { onClose } = $$props;
-  let fileIconEl;
-  let folderIconEl;
-  let tagIconEl;
+  let containerEl;
+  let isGenerating = false;
   let selectedModel = "";
   let userContext = "";
-  let isGenerating2 = false;
   let vaultStats = { files: [], folders: [], tags: [] };
-  let availableModels = AIModelUtils.getModelsForProvider(aiAdapter.getProviderType()).map((model) => ({
+  const availableModels = AIModelUtils.getModelsForProvider(aiAdapter.getProviderType()).map((model) => ({
     provider: aiAdapter.getProviderType(),
     model: model.name
   }));
@@ -24242,18 +15981,13 @@ function instance14($$self, $$props, $$invalidate) {
   ];
   onMount(() => __awaiter(void 0, void 0, void 0, function* () {
     yield loadVaultStats();
-    if (fileIconEl)
-      (0, import_obsidian18.setIcon)(fileIconEl, "file");
-    if (folderIconEl)
-      (0, import_obsidian18.setIcon)(folderIconEl, "folder");
-    if (tagIconEl)
-      (0, import_obsidian18.setIcon)(tagIconEl, "tag");
+    renderContent();
   }));
   function loadVaultStats() {
     return __awaiter(this, void 0, void 0, function* () {
-      $$invalidate(7, vaultStats.files = app.vault.getMarkdownFiles(), vaultStats);
-      $$invalidate(7, vaultStats.folders = app.vault.getAllLoadedFiles().filter((file) => file instanceof import_obsidian18.TFolder), vaultStats);
-      $$invalidate(7, vaultStats.tags = yield getAllTags(vaultStats.files), vaultStats);
+      vaultStats.files = app.vault.getMarkdownFiles();
+      vaultStats.folders = app.vault.getAllLoadedFiles().filter((file) => file instanceof import_obsidian19.TFolder);
+      vaultStats.tags = yield getAllTags(vaultStats.files);
     });
   }
   function getAllTags(files) {
@@ -24266,13 +16000,32 @@ function instance14($$self, $$props, $$invalidate) {
       return Array.from(tagSet);
     });
   }
+  function renderContent() {
+    if (!containerEl)
+      return;
+    containerEl.empty();
+    const statsEl = containerEl.createDiv("stats-container");
+    new import_obsidian19.Setting(statsEl).setClass("stat-card").setHeading().setName("Files").setDesc(vaultStats.files.length.toString()).addExtraButton((button) => button.setIcon("file").setDisabled(true));
+    new import_obsidian19.Setting(statsEl).setClass("stat-card").setHeading().setName("Folders").setDesc(vaultStats.folders.length.toString()).addExtraButton((button) => button.setIcon("folder").setDisabled(true));
+    new import_obsidian19.Setting(statsEl).setClass("stat-card").setHeading().setName("Tags").setDesc(vaultStats.tags.length.toString()).addExtraButton((button) => button.setIcon("tag").setDisabled(true));
+    new import_obsidian19.Setting(containerEl).setName("AI Model").setDesc("Select the AI model to use for ontology generation").addDropdown((dropdown) => dropdown.addOptions(Object.fromEntries(availableModels.map((m) => [m.model, m.model]))).setValue(selectedModel).onChange((value) => selectedModel = value));
+    new import_obsidian19.Setting(containerEl).setName("Additional Context").setDesc("Provide any additional context or information about your knowledge base.").addTextArea((text2) => text2.setValue(userContext).setPlaceholder("Enter additional context here...").onChange((value) => userContext = value));
+    const questionsEl = containerEl.createDiv("guided-questions");
+    questionsEl.createEl("h4", { text: "Consider These Questions" });
+    const ul = questionsEl.createEl("ul");
+    guidedQuestions.forEach((question) => {
+      ul.createEl("li", { text: question });
+    });
+    new import_obsidian19.Setting(containerEl).addButton((button) => button.setButtonText(isGenerating ? "Generating..." : "Generate Ontology").setCta().setDisabled(isGenerating || !selectedModel).onClick(() => handleGenerate())).addButton((button) => button.setButtonText("Cancel").onClick(onClose));
+  }
   function handleGenerate() {
     return __awaiter(this, void 0, void 0, function* () {
       if (!selectedModel) {
-        new import_obsidian18.Notice("Please select an AI model.");
+        new import_obsidian19.Notice("Please select an AI model.");
         return;
       }
-      $$invalidate(6, isGenerating2 = true);
+      isGenerating = true;
+      renderContent();
       try {
         const input = {
           files: vaultStats.files,
@@ -24284,172 +16037,419 @@ function instance14($$self, $$props, $$invalidate) {
         };
         const ontology = yield aiGenerationService.generateOntology(input);
         onGenerate(ontology);
-        new import_obsidian18.Notice("Ontology generated successfully.");
+        new import_obsidian19.Notice("Ontology generated successfully.");
         onClose();
       } catch (error) {
         console.error("Error generating ontology:", error);
-        new import_obsidian18.Notice(`Error generating ontology: ${error instanceof Error ? error.message : "Unknown error"}`);
+        new import_obsidian19.Notice(`Error generating ontology: ${error instanceof Error ? error.message : "Unknown error"}`);
       } finally {
-        $$invalidate(6, isGenerating2 = false);
+        isGenerating = false;
+        renderContent();
       }
     });
   }
-  function div0_binding($$value) {
+  function div_binding($$value) {
     binding_callbacks[$$value ? "unshift" : "push"](() => {
-      fileIconEl = $$value;
-      $$invalidate(1, fileIconEl);
+      containerEl = $$value;
+      $$invalidate(0, containerEl);
     });
-  }
-  function div3_binding($$value) {
-    binding_callbacks[$$value ? "unshift" : "push"](() => {
-      folderIconEl = $$value;
-      $$invalidate(2, folderIconEl);
-    });
-  }
-  function div6_binding($$value) {
-    binding_callbacks[$$value ? "unshift" : "push"](() => {
-      tagIconEl = $$value;
-      $$invalidate(3, tagIconEl);
-    });
-  }
-  function select_change_handler() {
-    selectedModel = select_value(this);
-    $$invalidate(4, selectedModel);
-    $$invalidate(8, availableModels);
-  }
-  function textarea_input_handler() {
-    userContext = this.value;
-    $$invalidate(5, userContext);
   }
   $$self.$$set = ($$props2) => {
     if ("app" in $$props2)
-      $$invalidate(11, app = $$props2.app);
+      $$invalidate(1, app = $$props2.app);
     if ("aiAdapter" in $$props2)
-      $$invalidate(12, aiAdapter = $$props2.aiAdapter);
+      $$invalidate(2, aiAdapter = $$props2.aiAdapter);
     if ("aiGenerationService" in $$props2)
-      $$invalidate(13, aiGenerationService = $$props2.aiGenerationService);
+      $$invalidate(3, aiGenerationService = $$props2.aiGenerationService);
     if ("tagManagementService" in $$props2)
-      $$invalidate(14, tagManagementService = $$props2.tagManagementService);
+      $$invalidate(4, tagManagementService = $$props2.tagManagementService);
     if ("adapterRegistry" in $$props2)
-      $$invalidate(15, adapterRegistry = $$props2.adapterRegistry);
+      $$invalidate(5, adapterRegistry = $$props2.adapterRegistry);
     if ("onGenerate" in $$props2)
-      $$invalidate(16, onGenerate = $$props2.onGenerate);
+      $$invalidate(6, onGenerate = $$props2.onGenerate);
     if ("onClose" in $$props2)
-      $$invalidate(0, onClose = $$props2.onClose);
+      $$invalidate(7, onClose = $$props2.onClose);
   };
   return [
-    onClose,
-    fileIconEl,
-    folderIconEl,
-    tagIconEl,
-    selectedModel,
-    userContext,
-    isGenerating2,
-    vaultStats,
-    availableModels,
-    guidedQuestions,
-    handleGenerate,
+    containerEl,
     app,
     aiAdapter,
     aiGenerationService,
     tagManagementService,
     adapterRegistry,
     onGenerate,
-    div0_binding,
-    div3_binding,
-    div6_binding,
-    select_change_handler,
-    textarea_input_handler
+    onClose,
+    div_binding
   ];
 }
-var OntologyGeneratorModal = class extends SvelteComponent {
+var OntologyGeneratorModal_1 = class extends SvelteComponent {
   constructor(options) {
     super();
     init(
       this,
       options,
-      instance14,
-      create_fragment14,
+      instance7,
+      create_fragment7,
       safe_not_equal,
       {
-        app: 11,
-        aiAdapter: 12,
-        aiGenerationService: 13,
-        tagManagementService: 14,
-        adapterRegistry: 15,
-        onGenerate: 16,
-        onClose: 0
+        app: 1,
+        aiAdapter: 2,
+        aiGenerationService: 3,
+        tagManagementService: 4,
+        adapterRegistry: 5,
+        onGenerate: 6,
+        onClose: 7
       },
       add_css7
     );
   }
 };
-var OntologyGeneratorModal_default = OntologyGeneratorModal;
+var OntologyGeneratorModal_default = OntologyGeneratorModal_1;
 
 // src/components/accordions/OntologyGenerationAccordion.svelte
 function add_css8(target) {
-  append_styles(target, "svelte-1nm11xr", ".ontology-generation-container.svelte-1nm11xr{display:flex;flex-direction:column;gap:var(--size-4)}.generate-button.svelte-1nm11xr{background-color:var(--interactive-accent);color:var(--text-on-accent);padding:var(--size-2) var(--size-4);border-radius:var(--radius-s);border:none;cursor:pointer;font-weight:var(--font-bold);transition:background-color 0.2s ease}.generate-button.svelte-1nm11xr:hover:not(:disabled){background-color:var(--interactive-accent-hover)}.generate-button.svelte-1nm11xr:disabled{opacity:0.5;cursor:not-allowed}");
+  append_styles(target, "svelte-1m31p3l", ".ontology-generation-container.svelte-1m31p3l{display:flex;flex-direction:column;gap:var(--size-4);padding:var(--size-4)}.error-message.svelte-1m31p3l{color:var(--color-red);font-size:var(--font-ui-small);padding:var(--size-2);background-color:var(--background-modifier-error);border-radius:var(--radius-s);margin-bottom:var(--size-2)}.description-content.svelte-1m31p3l{margin-bottom:var(--size-4)}.description-text.svelte-1m31p3l{color:var(--text-muted);font-size:var(--font-ui-small);margin:0;margin-bottom:var(--size-2)}.status-message.svelte-1m31p3l{font-size:var(--font-ui-small);color:var(--text-muted);margin-top:var(--size-2)}.tag-count.svelte-1m31p3l{font-weight:var(--font-medium);padding:var(--size-1) var(--size-2);border-radius:var(--radius-s);margin:0 var(--size-1)}.tag-count.new.svelte-1m31p3l{background-color:var(--color-green-rgb);color:var(--text-on-accent)}.tag-count.modified.svelte-1m31p3l{background-color:var(--color-yellow-rgb);color:var(--text-normal)}.button-container.svelte-1m31p3l{display:flex;justify-content:flex-start}button.mod-cta.svelte-1m31p3l{background-color:var(--interactive-accent);color:var(--text-on-accent);padding:var(--size-2) var(--size-4);border-radius:var(--radius-s);font-weight:var(--font-medium);border:none;cursor:pointer;transition:background-color 0.2s ease}button.mod-cta.svelte-1m31p3l:hover:not(:disabled){background-color:var(--interactive-accent-hover)}button.mod-cta.svelte-1m31p3l:disabled{opacity:0.5;cursor:not-allowed}.theme-dark .ontology-generation-container.svelte-1m31p3l{background-color:var(--background-primary-alt)}");
 }
-function create_default_slot8(ctx) {
+function create_if_block_3(ctx) {
   let div;
-  let button;
-  let t_value = isGenerating ? "Generating..." : "Generate Ontology";
+  let t_value = (
+    /*$state*/
+    ctx[3].error.message + ""
+  );
   let t;
-  let mounted;
-  let dispose;
   return {
     c() {
       div = element("div");
-      button = element("button");
       t = text(t_value);
-      attr(button, "class", "generate-button svelte-1nm11xr");
-      button.disabled = isGenerating;
-      attr(div, "class", "ontology-generation-container svelte-1nm11xr");
+      attr(div, "class", "error-message svelte-1m31p3l");
+      attr(div, "role", "alert");
     },
     m(target, anchor) {
       insert(target, div, anchor);
-      append(div, button);
-      append(button, t);
+      append(div, t);
+    },
+    p(ctx2, dirty) {
+      if (dirty & /*$state*/
+      8 && t_value !== (t_value = /*$state*/
+      ctx2[3].error.message + ""))
+        set_data(t, t_value);
+    },
+    d(detaching) {
+      if (detaching) {
+        detach(div);
+      }
+    }
+  };
+}
+function create_if_block2(ctx) {
+  let div;
+  let t0;
+  let t1;
+  let t2;
+  let if_block0 = (
+    /*$state*/
+    ctx[3].processedTags.new > 0 && create_if_block_2(ctx)
+  );
+  let if_block1 = (
+    /*$state*/
+    ctx[3].processedTags.modified > 0 && create_if_block_12(ctx)
+  );
+  return {
+    c() {
+      div = element("div");
+      t0 = text("Last generation found:\r\n                  ");
+      if (if_block0)
+        if_block0.c();
+      t1 = space();
+      if (if_block1)
+        if_block1.c();
+      t2 = text("\r\n                  tags");
+      attr(div, "class", "status-message svelte-1m31p3l");
+    },
+    m(target, anchor) {
+      insert(target, div, anchor);
+      append(div, t0);
+      if (if_block0)
+        if_block0.m(div, null);
+      append(div, t1);
+      if (if_block1)
+        if_block1.m(div, null);
+      append(div, t2);
+    },
+    p(ctx2, dirty) {
+      if (
+        /*$state*/
+        ctx2[3].processedTags.new > 0
+      ) {
+        if (if_block0) {
+          if_block0.p(ctx2, dirty);
+        } else {
+          if_block0 = create_if_block_2(ctx2);
+          if_block0.c();
+          if_block0.m(div, t1);
+        }
+      } else if (if_block0) {
+        if_block0.d(1);
+        if_block0 = null;
+      }
+      if (
+        /*$state*/
+        ctx2[3].processedTags.modified > 0
+      ) {
+        if (if_block1) {
+          if_block1.p(ctx2, dirty);
+        } else {
+          if_block1 = create_if_block_12(ctx2);
+          if_block1.c();
+          if_block1.m(div, t2);
+        }
+      } else if (if_block1) {
+        if_block1.d(1);
+        if_block1 = null;
+      }
+    },
+    d(detaching) {
+      if (detaching) {
+        detach(div);
+      }
+      if (if_block0)
+        if_block0.d();
+      if (if_block1)
+        if_block1.d();
+    }
+  };
+}
+function create_if_block_2(ctx) {
+  let span;
+  let t0_value = (
+    /*$state*/
+    ctx[3].processedTags.new + ""
+  );
+  let t0;
+  let t1;
+  return {
+    c() {
+      span = element("span");
+      t0 = text(t0_value);
+      t1 = text(" new");
+      attr(span, "class", "tag-count new svelte-1m31p3l");
+    },
+    m(target, anchor) {
+      insert(target, span, anchor);
+      append(span, t0);
+      append(span, t1);
+    },
+    p(ctx2, dirty) {
+      if (dirty & /*$state*/
+      8 && t0_value !== (t0_value = /*$state*/
+      ctx2[3].processedTags.new + ""))
+        set_data(t0, t0_value);
+    },
+    d(detaching) {
+      if (detaching) {
+        detach(span);
+      }
+    }
+  };
+}
+function create_if_block_12(ctx) {
+  let span;
+  let t0_value = (
+    /*$state*/
+    ctx[3].processedTags.modified + ""
+  );
+  let t0;
+  let t1;
+  return {
+    c() {
+      span = element("span");
+      t0 = text(t0_value);
+      t1 = text(" modified");
+      attr(span, "class", "tag-count modified svelte-1m31p3l");
+    },
+    m(target, anchor) {
+      insert(target, span, anchor);
+      append(span, t0);
+      append(span, t1);
+    },
+    p(ctx2, dirty) {
+      if (dirty & /*$state*/
+      8 && t0_value !== (t0_value = /*$state*/
+      ctx2[3].processedTags.modified + ""))
+        set_data(t0, t0_value);
+    },
+    d(detaching) {
+      if (detaching) {
+        detach(span);
+      }
+    }
+  };
+}
+function create_default_slot4(ctx) {
+  let div2;
+  let t0;
+  let div0;
+  let p;
+  let t2;
+  let t3;
+  let div1;
+  let button;
+  let t4_value = (
+    /*$state*/
+    ctx[3].isGenerating ? "Generating..." : "Generate Ontology"
+  );
+  let t4;
+  let button_disabled_value;
+  let button_aria_disabled_value;
+  let mounted;
+  let dispose;
+  let if_block0 = (
+    /*$state*/
+    ctx[3].error && create_if_block_3(ctx)
+  );
+  let if_block1 = (
+    /*$state*/
+    (ctx[3].processedTags.new > 0 || /*$state*/
+    ctx[3].processedTags.modified > 0) && create_if_block2(ctx)
+  );
+  return {
+    c() {
+      div2 = element("div");
+      if (if_block0)
+        if_block0.c();
+      t0 = space();
+      div0 = element("div");
+      p = element("p");
+      p.textContent = "Generate and manage ontologies for your vault. This will analyze your notes \r\n              and suggest appropriate tags and relationships.";
+      t2 = space();
+      if (if_block1)
+        if_block1.c();
+      t3 = space();
+      div1 = element("div");
+      button = element("button");
+      t4 = text(t4_value);
+      attr(p, "class", "description-text svelte-1m31p3l");
+      attr(div0, "class", "description-content svelte-1m31p3l");
+      attr(button, "class", "mod-cta svelte-1m31p3l");
+      button.disabled = button_disabled_value = /*$state*/
+      ctx[3].isGenerating || !/*$state*/
+      ctx[3].isInitialized || /*$state*/
+      ctx[3].lifecycle !== "ready" /* Ready */;
+      attr(button, "aria-disabled", button_aria_disabled_value = /*$state*/
+      ctx[3].isGenerating || !/*$state*/
+      ctx[3].isInitialized || /*$state*/
+      ctx[3].lifecycle !== "ready" /* Ready */);
+      attr(div1, "class", "button-container svelte-1m31p3l");
+      attr(div2, "class", "ontology-generation-container svelte-1m31p3l");
+      attr(div2, "role", "region");
+      attr(div2, "aria-label", "Ontology Generation");
+    },
+    m(target, anchor) {
+      insert(target, div2, anchor);
+      if (if_block0)
+        if_block0.m(div2, null);
+      append(div2, t0);
+      append(div2, div0);
+      append(div0, p);
+      append(div0, t2);
+      if (if_block1)
+        if_block1.m(div0, null);
+      append(div2, t3);
+      append(div2, div1);
+      append(div1, button);
+      append(button, t4);
       if (!mounted) {
         dispose = listen(
           button,
           "click",
           /*openOntologyGeneratorModal*/
-          ctx[3]
+          ctx[5]
         );
         mounted = true;
       }
     },
-    p: noop,
+    p(ctx2, dirty) {
+      if (
+        /*$state*/
+        ctx2[3].error
+      ) {
+        if (if_block0) {
+          if_block0.p(ctx2, dirty);
+        } else {
+          if_block0 = create_if_block_3(ctx2);
+          if_block0.c();
+          if_block0.m(div2, t0);
+        }
+      } else if (if_block0) {
+        if_block0.d(1);
+        if_block0 = null;
+      }
+      if (
+        /*$state*/
+        ctx2[3].processedTags.new > 0 || /*$state*/
+        ctx2[3].processedTags.modified > 0
+      ) {
+        if (if_block1) {
+          if_block1.p(ctx2, dirty);
+        } else {
+          if_block1 = create_if_block2(ctx2);
+          if_block1.c();
+          if_block1.m(div0, null);
+        }
+      } else if (if_block1) {
+        if_block1.d(1);
+        if_block1 = null;
+      }
+      if (dirty & /*$state*/
+      8 && t4_value !== (t4_value = /*$state*/
+      ctx2[3].isGenerating ? "Generating..." : "Generate Ontology"))
+        set_data(t4, t4_value);
+      if (dirty & /*$state*/
+      8 && button_disabled_value !== (button_disabled_value = /*$state*/
+      ctx2[3].isGenerating || !/*$state*/
+      ctx2[3].isInitialized || /*$state*/
+      ctx2[3].lifecycle !== "ready" /* Ready */)) {
+        button.disabled = button_disabled_value;
+      }
+      if (dirty & /*$state*/
+      8 && button_aria_disabled_value !== (button_aria_disabled_value = /*$state*/
+      ctx2[3].isGenerating || !/*$state*/
+      ctx2[3].isInitialized || /*$state*/
+      ctx2[3].lifecycle !== "ready" /* Ready */)) {
+        attr(button, "aria-disabled", button_aria_disabled_value);
+      }
+    },
     d(detaching) {
       if (detaching) {
-        detach(div);
+        detach(div2);
       }
+      if (if_block0)
+        if_block0.d();
+      if (if_block1)
+        if_block1.d();
       mounted = false;
       dispose();
     }
   };
 }
-function create_fragment15(ctx) {
+function create_fragment8(ctx) {
   let baseaccordion;
   let current;
   baseaccordion = new BaseAccordion_default({
     props: {
-      title: "\u{1F9E0} Ontology Generation",
-      description: "Generate and manage ontologies for your application.",
-      app: (
-        /*app*/
+      title: (
+        /*title*/
         ctx[0]
       ),
-      settingsService: (
-        /*settingsService*/
+      description: (
+        /*description*/
         ctx[1]
       ),
-      aiService: (
-        /*aiService*/
+      isOpen: (
+        /*isOpen*/
         ctx[2]
       ),
-      $$slots: { default: [create_default_slot8] },
+      $$slots: { default: [create_default_slot4] },
       $$scope: { ctx }
     }
   });
@@ -24463,20 +16463,20 @@ function create_fragment15(ctx) {
     },
     p(ctx2, [dirty]) {
       const baseaccordion_changes = {};
-      if (dirty & /*app*/
+      if (dirty & /*title*/
       1)
-        baseaccordion_changes.app = /*app*/
+        baseaccordion_changes.title = /*title*/
         ctx2[0];
-      if (dirty & /*settingsService*/
+      if (dirty & /*description*/
       2)
-        baseaccordion_changes.settingsService = /*settingsService*/
+        baseaccordion_changes.description = /*description*/
         ctx2[1];
-      if (dirty & /*aiService*/
+      if (dirty & /*isOpen*/
       4)
-        baseaccordion_changes.aiService = /*aiService*/
+        baseaccordion_changes.isOpen = /*isOpen*/
         ctx2[2];
-      if (dirty & /*$$scope*/
-      2048) {
+      if (dirty & /*$$scope, $state*/
+      134217736) {
         baseaccordion_changes.$$scope = { dirty, ctx: ctx2 };
       }
       baseaccordion.$set(baseaccordion_changes);
@@ -24496,34 +16496,51 @@ function create_fragment15(ctx) {
     }
   };
 }
-var isGenerating = false;
-function convertOntologyToTags(suggestedTags, existingTags) {
+function processOntologyTags(suggestedTags, existingTags) {
   const existingTagMap = new Map(existingTags.map((tag) => [tag.name.toLowerCase(), tag]));
-  const processedTags = suggestedTags.map((suggestedTag) => {
+  const newTags = [];
+  const modifiedTags = [];
+  const unchangedTags = [];
+  suggestedTags.forEach((suggestedTag) => {
     const existingTag = existingTagMap.get(suggestedTag.name.toLowerCase());
-    if (existingTag) {
-      return Object.assign(Object.assign({}, existingTag), {
-        description: existingTag.description || suggestedTag.description
-      });
-    }
-    return {
-      name: suggestedTag.name,
-      description: suggestedTag.description,
-      type: "string",
-      required: false,
-      multipleValues: false,
-      defaultValue: void 0,
-      options: void 0
-    };
-  });
-  existingTags.forEach((existingTag) => {
-    if (!processedTags.some((tag) => tag.name.toLowerCase() === existingTag.name.toLowerCase())) {
-      processedTags.push(Object.assign({}, existingTag));
+    if (!existingTag) {
+      newTags.push(createNewTag(suggestedTag));
+    } else if (hasTagChanges(existingTag, suggestedTag)) {
+      modifiedTags.push(mergeTagChanges(existingTag, suggestedTag));
+    } else {
+      unchangedTags.push(existingTag);
     }
   });
-  return processedTags;
+  return { newTags, modifiedTags, unchangedTags };
 }
-function instance15($$self, $$props, $$invalidate) {
+function createNewTag(suggestedTag) {
+  return {
+    name: suggestedTag.name,
+    description: suggestedTag.description,
+    type: "string",
+    required: false,
+    multipleValues: false,
+    defaultValue: void 0,
+    options: void 0
+  };
+}
+function hasTagChanges(existingTag, suggestedTag) {
+  return existingTag.description !== suggestedTag.description || existingTag.type !== suggestedTag.type || existingTag.multipleValues !== suggestedTag.multipleValues;
+}
+function mergeTagChanges(existingTag, suggestedTag) {
+  var _a;
+  return Object.assign(Object.assign({}, existingTag), {
+    description: suggestedTag.description || existingTag.description,
+    type: suggestedTag.type || existingTag.type,
+    multipleValues: (_a = suggestedTag.multipleValues) !== null && _a !== void 0 ? _a : existingTag.multipleValues
+  });
+}
+function mergeTags(currentTags, updatedTags) {
+  const updatedTagMap = new Map(updatedTags.map((tag) => [tag.name.toLowerCase(), tag]));
+  return currentTags.map((tag) => updatedTagMap.get(tag.name.toLowerCase()) || tag);
+}
+function instance8($$self, $$props, $$invalidate) {
+  let $state;
   var __awaiter = this && this.__awaiter || function(thisArg, _arguments, P, generator) {
     function adopt(value) {
       return value instanceof P ? value : new P(function(resolve) {
@@ -24551,17 +16568,69 @@ function instance15($$self, $$props, $$invalidate) {
       step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
   };
+  let { title } = $$props;
+  let { description } = $$props;
   let { app } = $$props;
   let { settingsService } = $$props;
+  let { aiService } = $$props;
   let { aiAdapter } = $$props;
   let { generationService } = $$props;
   let { adapterRegistry } = $$props;
   let { tagManagementService } = $$props;
-  let { aiService } = $$props;
+  let { isOpen = false } = $$props;
+  let { onChange } = $$props;
+  let { onBlur } = $$props;
+  let { onFocus } = $$props;
+  let { onClick } = $$props;
+  let { onKeyDown } = $$props;
+  const state = writable({
+    isInitialized: false,
+    isGenerating: false,
+    processedTags: { new: 0, modified: 0, unchanged: 0 },
+    currentModal: null,
+    lifecycle: "uninitialized" /* Uninitialized */,
+    error: null,
+    validationResult: null,
+    lastUpdated: Date.now()
+  });
+  component_subscribe($$self, state, (value) => $$invalidate(3, $state = value));
   let modal = null;
-  function openOntologyGeneratorModal() {
+  onMount(() => __awaiter(void 0, void 0, void 0, function* () {
     try {
-      if (!modal) {
+      yield initializeComponent();
+      state.update((s) => Object.assign(Object.assign({}, s), {
+        lifecycle: "ready" /* Ready */,
+        isInitialized: true
+      }));
+    } catch (error) {
+      console.error("\u{1F987} Failed to initialize Ontology Generation:", error);
+      handleError(error);
+    }
+  }));
+  onDestroy(() => {
+    modal === null || modal === void 0 ? void 0 : modal.$destroy();
+    modal = null;
+  });
+  function initializeComponent() {
+    return __awaiter(this, void 0, void 0, function* () {
+      if (!settingsService.isReady()) {
+        throw new Error("Settings service not ready");
+      }
+      if (!tagManagementService) {
+        throw new Error("Tag management service not provided");
+      }
+    });
+  }
+  function openOntologyGeneratorModal() {
+    return __awaiter(this, void 0, void 0, function* () {
+      if ($state.isGenerating || $state.currentModal)
+        return;
+      try {
+        ensureServices();
+        state.update((s) => Object.assign(Object.assign({}, s), {
+          isGenerating: true,
+          currentModal: "generator"
+        }));
         modal = new OntologyGeneratorModal_default({
           target: document.body,
           props: {
@@ -24571,83 +16640,154 @@ function instance15($$self, $$props, $$invalidate) {
             tagManagementService,
             adapterRegistry,
             onGenerate: handleOntologyGenerated,
-            onClose: () => {
-              modal === null || modal === void 0 ? void 0 : modal.$destroy();
-              modal = null;
-            }
+            onClose: handleModalClose
           }
         });
+      } catch (error) {
+        console.error("\u{1F987} Failed to open ontology generator:", error);
+        handleError(error);
       }
-    } catch (error) {
-      console.error("Failed to open ontology generator:", error);
-      new import_obsidian19.Notice(`Failed to open ontology generator: ${error instanceof Error ? error.message : "Unknown error"}`);
+    });
+  }
+  function ensureServices() {
+    if (!settingsService.isReady()) {
+      throw new Error("Settings service not ready");
+    }
+    if (!aiAdapter) {
+      throw new Error("AI adapter not provided");
+    }
+    if (!generationService) {
+      throw new Error("Generation service not provided");
+    }
+    if (!tagManagementService) {
+      throw new Error("Tag management service not provided");
     }
   }
   function handleOntologyGenerated(ontology) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
       try {
-        if (!((_a = ontology === null || ontology === void 0 ? void 0 : ontology.suggestedTags) === null || _a === void 0 ? void 0 : _a.length)) {
+        if (!((_a = ontology === null || ontology === void 0 ? void 0 : ontology.tags) === null || _a === void 0 ? void 0 : _a.length)) {
           throw new Error("No tags suggested in ontology result");
         }
         const existingTags = settingsService.getSettings().tags.customTags;
-        const newTags = convertOntologyToTags(ontology.suggestedTags, existingTags);
-        const editTagsModal = new EditTagsModal_default({
-          target: document.body,
-          props: {
-            app,
-            tags: newTags,
-            onSubmit: (updatedTags) => __awaiter(this, void 0, void 0, function* () {
-              try {
-                yield settingsService.updateNestedSetting("tags", "customTags", updatedTags);
-                new import_obsidian19.Notice("Tags updated successfully");
-                editTagsModal.$destroy();
-              } catch (error) {
-                console.error("Failed to save tags:", error);
-                new import_obsidian19.Notice(`Failed to save tags: ${error instanceof Error ? error.message : "Unknown error"}`);
-              }
-            }),
-            onClose: () => editTagsModal.$destroy()
+        const result = processOntologyTags(ontology.tags, existingTags);
+        state.update((s) => Object.assign(Object.assign({}, s), {
+          processedTags: {
+            new: result.newTags.length,
+            modified: result.modifiedTags.length,
+            unchanged: result.unchangedTags.length
           }
-        });
-        new import_obsidian19.Notice("Ontology generated successfully. Please review the suggested tags.");
+        }));
+        if (result.newTags.length === 0 && result.modifiedTags.length === 0) {
+          new import_obsidian21.Notice("No new or modified tags found in the ontology.");
+          return;
+        }
+        yield openEditTagsModal([...result.newTags, ...result.modifiedTags]);
+        new import_obsidian21.Notice(`Found ${result.newTags.length} new and ${result.modifiedTags.length} modified tags. Please review.`);
       } catch (error) {
-        console.error("Failed to handle generated ontology:", error);
-        new import_obsidian19.Notice(`Failed to process ontology: ${error instanceof Error ? error.message : "Unknown error"}`);
+        console.error("\u{1F987} Failed to handle generated ontology:", error);
+        handleError(error);
       }
     });
   }
-  onDestroy(() => {
-    if (modal) {
-      modal.$destroy();
-      modal = null;
-    }
-  });
+  function openEditTagsModal(tags) {
+    return __awaiter(this, void 0, void 0, function* () {
+      state.update((s) => Object.assign(Object.assign({}, s), { currentModal: "editor" }));
+      new EditTagsModal_default({
+        target: document.body,
+        props: {
+          tags,
+          onSubmit: handleTagsUpdate,
+          onClose: handleModalClose
+        }
+      });
+    });
+  }
+  function handleTagsUpdate(updatedTags) {
+    return __awaiter(this, void 0, void 0, function* () {
+      try {
+        const currentTags = settingsService.getSettings().tags.customTags;
+        const mergedTags = mergeTags(currentTags, updatedTags);
+        yield settingsService.updateNestedSetting("tags", "customTags", mergedTags);
+        new import_obsidian21.Notice("Tags updated successfully");
+        onChange === null || onChange === void 0 ? void 0 : onChange(mergedTags);
+      } catch (error) {
+        console.error("\u{1F987} Failed to save tags:", error);
+        handleError(error);
+      }
+    });
+  }
+  function handleModalClose() {
+    modal === null || modal === void 0 ? void 0 : modal.$destroy();
+    modal = null;
+    state.update((s) => Object.assign(Object.assign({}, s), { isGenerating: false, currentModal: null }));
+  }
+  function handleError(error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    state.update((s) => Object.assign(Object.assign({}, s), {
+      error: {
+        message,
+        timestamp: Date.now(),
+        source: "OntologyGenerationAccordion",
+        retryCount: 0
+      },
+      lifecycle: "error" /* Error */,
+      lastUpdated: Date.now()
+    }));
+    new import_obsidian21.Notice(`Ontology Generation Error: ${message}`);
+  }
   $$self.$$set = ($$props2) => {
+    if ("title" in $$props2)
+      $$invalidate(0, title = $$props2.title);
+    if ("description" in $$props2)
+      $$invalidate(1, description = $$props2.description);
     if ("app" in $$props2)
-      $$invalidate(0, app = $$props2.app);
+      $$invalidate(6, app = $$props2.app);
     if ("settingsService" in $$props2)
-      $$invalidate(1, settingsService = $$props2.settingsService);
-    if ("aiAdapter" in $$props2)
-      $$invalidate(4, aiAdapter = $$props2.aiAdapter);
-    if ("generationService" in $$props2)
-      $$invalidate(5, generationService = $$props2.generationService);
-    if ("adapterRegistry" in $$props2)
-      $$invalidate(6, adapterRegistry = $$props2.adapterRegistry);
-    if ("tagManagementService" in $$props2)
-      $$invalidate(7, tagManagementService = $$props2.tagManagementService);
+      $$invalidate(7, settingsService = $$props2.settingsService);
     if ("aiService" in $$props2)
-      $$invalidate(2, aiService = $$props2.aiService);
+      $$invalidate(8, aiService = $$props2.aiService);
+    if ("aiAdapter" in $$props2)
+      $$invalidate(9, aiAdapter = $$props2.aiAdapter);
+    if ("generationService" in $$props2)
+      $$invalidate(10, generationService = $$props2.generationService);
+    if ("adapterRegistry" in $$props2)
+      $$invalidate(11, adapterRegistry = $$props2.adapterRegistry);
+    if ("tagManagementService" in $$props2)
+      $$invalidate(12, tagManagementService = $$props2.tagManagementService);
+    if ("isOpen" in $$props2)
+      $$invalidate(2, isOpen = $$props2.isOpen);
+    if ("onChange" in $$props2)
+      $$invalidate(13, onChange = $$props2.onChange);
+    if ("onBlur" in $$props2)
+      $$invalidate(14, onBlur = $$props2.onBlur);
+    if ("onFocus" in $$props2)
+      $$invalidate(15, onFocus = $$props2.onFocus);
+    if ("onClick" in $$props2)
+      $$invalidate(16, onClick = $$props2.onClick);
+    if ("onKeyDown" in $$props2)
+      $$invalidate(17, onKeyDown = $$props2.onKeyDown);
   };
   return [
+    title,
+    description,
+    isOpen,
+    $state,
+    state,
+    openOntologyGeneratorModal,
     app,
     settingsService,
     aiService,
-    openOntologyGeneratorModal,
     aiAdapter,
     generationService,
     adapterRegistry,
-    tagManagementService
+    tagManagementService,
+    onChange,
+    onBlur,
+    onFocus,
+    onClick,
+    onKeyDown
   ];
 }
 var OntologyGenerationAccordion = class extends SvelteComponent {
@@ -24656,17 +16796,25 @@ var OntologyGenerationAccordion = class extends SvelteComponent {
     init(
       this,
       options,
-      instance15,
-      create_fragment15,
+      instance8,
+      create_fragment8,
       safe_not_equal,
       {
-        app: 0,
-        settingsService: 1,
-        aiAdapter: 4,
-        generationService: 5,
-        adapterRegistry: 6,
-        tagManagementService: 7,
-        aiService: 2
+        title: 0,
+        description: 1,
+        app: 6,
+        settingsService: 7,
+        aiService: 8,
+        aiAdapter: 9,
+        generationService: 10,
+        adapterRegistry: 11,
+        tagManagementService: 12,
+        isOpen: 2,
+        onChange: 13,
+        onBlur: 14,
+        onFocus: 15,
+        onClick: 16,
+        onKeyDown: 17
       },
       add_css8
     );
@@ -24674,660 +16822,52 @@ var OntologyGenerationAccordion = class extends SvelteComponent {
 };
 var OntologyGenerationAccordion_default = OntologyGenerationAccordion;
 
-// src/components/accordions/BatchProcessorAccordion.svelte
-var import_obsidian20 = require("obsidian");
-function add_css9(target) {
-  append_styles(target, "svelte-pxfeaa", '.batch-processor-container.svelte-pxfeaa.svelte-pxfeaa{display:flex;flex-direction:column;gap:var(--size-4)}.setting-item.svelte-pxfeaa.svelte-pxfeaa{display:flex;justify-content:space-between;align-items:flex-start;padding:var(--size-2) 0}.setting-item-info.svelte-pxfeaa.svelte-pxfeaa{flex:1;margin-right:var(--size-4)}.setting-item-name.svelte-pxfeaa.svelte-pxfeaa{font-weight:var(--font-bold);color:var(--text-normal);margin-bottom:var(--size-1)}.setting-item-description.svelte-pxfeaa.svelte-pxfeaa{color:var(--text-muted);font-size:var(--font-ui-small)}.toggle.svelte-pxfeaa.svelte-pxfeaa{position:relative;display:inline-block;width:40px;height:20px}.toggle.svelte-pxfeaa input.svelte-pxfeaa{opacity:0;width:0;height:0}.toggle-slider.svelte-pxfeaa.svelte-pxfeaa{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:var(--background-modifier-border);transition:.2s;border-radius:20px}.toggle-slider.svelte-pxfeaa.svelte-pxfeaa:before{position:absolute;content:"";height:16px;width:16px;left:2px;bottom:2px;background-color:var(--background-primary);transition:.2s;border-radius:50%}input.svelte-pxfeaa:checked+.toggle-slider.svelte-pxfeaa{background-color:var(--interactive-accent)}input.svelte-pxfeaa:checked+.toggle-slider.svelte-pxfeaa:before{transform:translateX(20px)}.batch-processor-button.svelte-pxfeaa.svelte-pxfeaa{background-color:var(--interactive-accent);color:var(--text-on-accent);padding:var(--size-2) var(--size-4);border-radius:var(--radius-s);border:none;cursor:pointer;font-weight:var(--font-bold);transition:background-color 0.2s ease}.batch-processor-button.svelte-pxfeaa.svelte-pxfeaa:hover{background-color:var(--interactive-accent-hover)}');
-}
-function create_default_slot9(ctx) {
-  let div5;
-  let div4;
-  let div2;
-  let t3;
-  let div3;
-  let label;
-  let input;
-  let t4;
-  let span;
-  let t5;
-  let button;
-  let mounted;
-  let dispose;
-  return {
-    c() {
-      div5 = element("div");
-      div4 = element("div");
-      div2 = element("div");
-      div2.innerHTML = `<div class="setting-item-name svelte-pxfeaa">Auto-generate Front Matter</div> <div class="setting-item-description svelte-pxfeaa">Automatically generate front matter for new or unprocessed notes when you open your vault.</div>`;
-      t3 = space();
-      div3 = element("div");
-      label = element("label");
-      input = element("input");
-      t4 = space();
-      span = element("span");
-      t5 = space();
-      button = element("button");
-      button.textContent = "Run Batch Processor";
-      attr(div2, "class", "setting-item-info svelte-pxfeaa");
-      attr(input, "type", "checkbox");
-      attr(input, "class", "svelte-pxfeaa");
-      attr(span, "class", "toggle-slider svelte-pxfeaa");
-      attr(label, "class", "toggle svelte-pxfeaa");
-      attr(div3, "class", "setting-item-control");
-      attr(div4, "class", "setting-item svelte-pxfeaa");
-      attr(button, "class", "batch-processor-button svelte-pxfeaa");
-      attr(div5, "class", "batch-processor-container svelte-pxfeaa");
-    },
-    m(target, anchor) {
-      insert(target, div5, anchor);
-      append(div5, div4);
-      append(div4, div2);
-      append(div4, t3);
-      append(div4, div3);
-      append(div3, label);
-      append(label, input);
-      input.checked = /*autoGenerate*/
-      ctx[3];
-      append(label, t4);
-      append(label, span);
-      append(div5, t5);
-      append(div5, button);
-      if (!mounted) {
-        dispose = [
-          listen(
-            input,
-            "change",
-            /*input_change_handler*/
-            ctx[6]
-          ),
-          listen(
-            input,
-            "change",
-            /*change_handler*/
-            ctx[7]
-          ),
-          listen(
-            button,
-            "click",
-            /*openBatchProcessor*/
-            ctx[5]
-          )
-        ];
-        mounted = true;
-      }
-    },
-    p(ctx2, dirty) {
-      if (dirty & /*autoGenerate*/
-      8) {
-        input.checked = /*autoGenerate*/
-        ctx2[3];
-      }
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(div5);
-      }
-      mounted = false;
-      run_all(dispose);
-    }
-  };
-}
-function create_fragment16(ctx) {
-  let baseaccordion;
-  let current;
-  baseaccordion = new BaseAccordion_default({
-    props: {
-      title: "\u{1F504} Batch Processor",
-      description: "Process multiple files to generate front matter and wikilinks.",
-      app: (
-        /*app*/
-        ctx[0]
-      ),
-      settingsService: (
-        /*settingsService*/
-        ctx[1]
-      ),
-      aiService: (
-        /*aiService*/
-        ctx[2]
-      ),
-      $$slots: { default: [create_default_slot9] },
-      $$scope: { ctx }
-    }
-  });
-  return {
-    c() {
-      create_component(baseaccordion.$$.fragment);
-    },
-    m(target, anchor) {
-      mount_component(baseaccordion, target, anchor);
-      current = true;
-    },
-    p(ctx2, [dirty]) {
-      const baseaccordion_changes = {};
-      if (dirty & /*app*/
-      1)
-        baseaccordion_changes.app = /*app*/
-        ctx2[0];
-      if (dirty & /*settingsService*/
-      2)
-        baseaccordion_changes.settingsService = /*settingsService*/
-        ctx2[1];
-      if (dirty & /*aiService*/
-      4)
-        baseaccordion_changes.aiService = /*aiService*/
-        ctx2[2];
-      if (dirty & /*$$scope, autoGenerate*/
-      520) {
-        baseaccordion_changes.$$scope = { dirty, ctx: ctx2 };
-      }
-      baseaccordion.$set(baseaccordion_changes);
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(baseaccordion.$$.fragment, local);
-      current = true;
-    },
-    o(local) {
-      transition_out(baseaccordion.$$.fragment, local);
-      current = false;
-    },
-    d(detaching) {
-      destroy_component(baseaccordion, detaching);
-    }
-  };
-}
-function instance16($$self, $$props, $$invalidate) {
-  var __awaiter = this && this.__awaiter || function(thisArg, _arguments, P, generator) {
-    function adopt(value) {
-      return value instanceof P ? value : new P(function(resolve) {
-        resolve(value);
-      });
-    }
-    return new (P || (P = Promise))(function(resolve, reject) {
-      function fulfilled(value) {
-        try {
-          step(generator.next(value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function rejected(value) {
-        try {
-          step(generator["throw"](value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function step(result) {
-        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
-      }
-      step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-  };
-  let { app } = $$props;
-  let { settingsService } = $$props;
-  let { aiService } = $$props;
-  let autoGenerate = settingsService.getSettings().frontMatter.autoGenerate;
-  function handleAutoGenerateToggle(value) {
-    return __awaiter(this, void 0, void 0, function* () {
-      try {
-        yield settingsService.updateNestedSetting("frontMatter", "autoGenerate", value);
-        $$invalidate(3, autoGenerate = value);
-        new import_obsidian20.Notice("Auto-generate Front Matter updated.");
-      } catch (error) {
-        console.error("Error updating auto-generate setting:", error);
-        new import_obsidian20.Notice(`Failed to update setting: ${error instanceof Error ? error.message : "Unknown error"}`);
-        $$invalidate(3, autoGenerate = !value);
-      }
-    });
-  }
-  function openBatchProcessor() {
-    try {
-      const modal = new BatchProcessorModal_default({
-        target: document.body,
-        props: {
-          app,
-          aiService,
-          settingsService,
-          onClose: () => modal.$destroy()
-        }
-      });
-    } catch (error) {
-      console.error("Error opening batch processor:", error);
-      new import_obsidian20.Notice(`Failed to open batch processor: ${error instanceof Error ? error.message : "Unknown error"}`);
-    }
-  }
-  function input_change_handler() {
-    autoGenerate = this.checked;
-    $$invalidate(3, autoGenerate);
-  }
-  const change_handler = (e) => handleAutoGenerateToggle(e.currentTarget.checked);
-  $$self.$$set = ($$props2) => {
-    if ("app" in $$props2)
-      $$invalidate(0, app = $$props2.app);
-    if ("settingsService" in $$props2)
-      $$invalidate(1, settingsService = $$props2.settingsService);
-    if ("aiService" in $$props2)
-      $$invalidate(2, aiService = $$props2.aiService);
-  };
-  return [
-    app,
-    settingsService,
-    aiService,
-    autoGenerate,
-    handleAutoGenerateToggle,
-    openBatchProcessor,
-    input_change_handler,
-    change_handler
-  ];
-}
-var BatchProcessorAccordion = class extends SvelteComponent {
-  constructor(options) {
-    super();
-    init(this, options, instance16, create_fragment16, safe_not_equal, { app: 0, settingsService: 1, aiService: 2 }, add_css9);
-  }
-};
-var BatchProcessorAccordion_default = BatchProcessorAccordion;
-
-// src/components/accordions/AdvancedAccordion.svelte
-var import_obsidian21 = require("obsidian");
-function add_css10(target) {
-  append_styles(target, "svelte-208dib", '.advanced-settings-container.svelte-208dib.svelte-208dib{display:flex;flex-direction:column;gap:var(--size-4)}.setting-item.svelte-208dib.svelte-208dib{display:flex;justify-content:space-between;align-items:flex-start;padding:var(--size-2) 0}.setting-item-info.svelte-208dib.svelte-208dib{flex:1;margin-right:var(--size-4)}.setting-item-name.svelte-208dib.svelte-208dib{font-weight:var(--font-bold);color:var(--text-normal);margin-bottom:var(--size-1)}.setting-item-description.svelte-208dib.svelte-208dib{color:var(--text-muted);font-size:var(--font-ui-small)}input[type="number"].svelte-208dib.svelte-208dib{background:var(--background-primary);border:1px solid var(--background-modifier-border);border-radius:var(--radius-s);padding:var(--size-2);color:var(--text-normal);width:100px}.toggle.svelte-208dib.svelte-208dib{position:relative;display:inline-block;width:40px;height:20px}.toggle.svelte-208dib input.svelte-208dib{opacity:0;width:0;height:0}.toggle-slider.svelte-208dib.svelte-208dib{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:var(--background-modifier-border);transition:.2s;border-radius:20px}.toggle-slider.svelte-208dib.svelte-208dib:before{position:absolute;content:"";height:16px;width:16px;left:2px;bottom:2px;background-color:var(--background-primary);transition:.2s;border-radius:50%}input.svelte-208dib:checked+.toggle-slider.svelte-208dib{background-color:var(--interactive-accent)}input.svelte-208dib:checked+.toggle-slider.svelte-208dib:before{transform:translateX(20px)}');
-}
-function create_default_slot10(ctx) {
-  let div15;
-  let div4;
-  let div2;
-  let t3;
-  let div3;
-  let label;
-  let input0;
-  let t4;
-  let span;
-  let t5;
-  let div9;
-  let div7;
-  let t9;
-  let div8;
-  let input1;
-  let t10;
-  let div14;
-  let div12;
-  let t14;
-  let div13;
-  let input2;
-  let mounted;
-  let dispose;
-  return {
-    c() {
-      div15 = element("div");
-      div4 = element("div");
-      div2 = element("div");
-      div2.innerHTML = `<div class="setting-item-name svelte-208dib">Generate Wikilinks</div> <div class="setting-item-description svelte-208dib">Automatically generate wikilinks for your notes.</div>`;
-      t3 = space();
-      div3 = element("div");
-      label = element("label");
-      input0 = element("input");
-      t4 = space();
-      span = element("span");
-      t5 = space();
-      div9 = element("div");
-      div7 = element("div");
-      div7.innerHTML = `<div class="setting-item-name svelte-208dib">Temperature</div> <div class="setting-item-description svelte-208dib">Set the temperature for AI responses (0.0 - 1.0).</div>`;
-      t9 = space();
-      div8 = element("div");
-      input1 = element("input");
-      t10 = space();
-      div14 = element("div");
-      div12 = element("div");
-      div12.innerHTML = `<div class="setting-item-name svelte-208dib">Max Tokens</div> <div class="setting-item-description svelte-208dib">Set the maximum number of tokens for AI responses.</div>`;
-      t14 = space();
-      div13 = element("div");
-      input2 = element("input");
-      attr(div2, "class", "setting-item-info svelte-208dib");
-      attr(input0, "type", "checkbox");
-      attr(input0, "class", "svelte-208dib");
-      attr(span, "class", "toggle-slider svelte-208dib");
-      attr(label, "class", "toggle svelte-208dib");
-      attr(div3, "class", "setting-item-control");
-      attr(div4, "class", "setting-item svelte-208dib");
-      attr(div7, "class", "setting-item-info svelte-208dib");
-      attr(input1, "type", "number");
-      attr(input1, "min", "0");
-      attr(input1, "max", "1");
-      attr(input1, "step", "0.1");
-      attr(input1, "class", "svelte-208dib");
-      attr(div8, "class", "setting-item-control");
-      attr(div9, "class", "setting-item svelte-208dib");
-      attr(div12, "class", "setting-item-info svelte-208dib");
-      attr(input2, "type", "number");
-      attr(input2, "min", "1");
-      attr(input2, "step", "1");
-      attr(input2, "class", "svelte-208dib");
-      attr(div13, "class", "setting-item-control");
-      attr(div14, "class", "setting-item svelte-208dib");
-      attr(div15, "class", "advanced-settings-container svelte-208dib");
-    },
-    m(target, anchor) {
-      insert(target, div15, anchor);
-      append(div15, div4);
-      append(div4, div2);
-      append(div4, t3);
-      append(div4, div3);
-      append(div3, label);
-      append(label, input0);
-      input0.checked = /*generateWikilinks*/
-      ctx[3];
-      append(label, t4);
-      append(label, span);
-      append(div15, t5);
-      append(div15, div9);
-      append(div9, div7);
-      append(div9, t9);
-      append(div9, div8);
-      append(div8, input1);
-      set_input_value(
-        input1,
-        /*temperature*/
-        ctx[4]
-      );
-      append(div15, t10);
-      append(div15, div14);
-      append(div14, div12);
-      append(div14, t14);
-      append(div14, div13);
-      append(div13, input2);
-      set_input_value(
-        input2,
-        /*maxTokens*/
-        ctx[5]
-      );
-      if (!mounted) {
-        dispose = [
-          listen(
-            input0,
-            "change",
-            /*input0_change_handler*/
-            ctx[9]
-          ),
-          listen(
-            input0,
-            "change",
-            /*change_handler*/
-            ctx[10]
-          ),
-          listen(
-            input1,
-            "input",
-            /*input1_input_handler*/
-            ctx[11]
-          ),
-          listen(
-            input1,
-            "change",
-            /*change_handler_1*/
-            ctx[12]
-          ),
-          listen(
-            input2,
-            "input",
-            /*input2_input_handler*/
-            ctx[13]
-          ),
-          listen(
-            input2,
-            "change",
-            /*change_handler_2*/
-            ctx[14]
-          )
-        ];
-        mounted = true;
-      }
-    },
-    p(ctx2, dirty) {
-      if (dirty & /*generateWikilinks*/
-      8) {
-        input0.checked = /*generateWikilinks*/
-        ctx2[3];
-      }
-      if (dirty & /*temperature*/
-      16 && to_number(input1.value) !== /*temperature*/
-      ctx2[4]) {
-        set_input_value(
-          input1,
-          /*temperature*/
-          ctx2[4]
-        );
-      }
-      if (dirty & /*maxTokens*/
-      32 && to_number(input2.value) !== /*maxTokens*/
-      ctx2[5]) {
-        set_input_value(
-          input2,
-          /*maxTokens*/
-          ctx2[5]
-        );
-      }
-    },
-    d(detaching) {
-      if (detaching) {
-        detach(div15);
-      }
-      mounted = false;
-      run_all(dispose);
-    }
-  };
-}
-function create_fragment17(ctx) {
-  let baseaccordion;
-  let current;
-  baseaccordion = new BaseAccordion_default({
-    props: {
-      title: "\u2699\uFE0F Advanced",
-      description: "Configuration options for the plugin.",
-      app: (
-        /*app*/
-        ctx[0]
-      ),
-      settingsService: (
-        /*settingsService*/
-        ctx[1]
-      ),
-      aiService: (
-        /*aiService*/
-        ctx[2]
-      ),
-      $$slots: { default: [create_default_slot10] },
-      $$scope: { ctx }
-    }
-  });
-  return {
-    c() {
-      create_component(baseaccordion.$$.fragment);
-    },
-    m(target, anchor) {
-      mount_component(baseaccordion, target, anchor);
-      current = true;
-    },
-    p(ctx2, [dirty]) {
-      const baseaccordion_changes = {};
-      if (dirty & /*app*/
-      1)
-        baseaccordion_changes.app = /*app*/
-        ctx2[0];
-      if (dirty & /*settingsService*/
-      2)
-        baseaccordion_changes.settingsService = /*settingsService*/
-        ctx2[1];
-      if (dirty & /*aiService*/
-      4)
-        baseaccordion_changes.aiService = /*aiService*/
-        ctx2[2];
-      if (dirty & /*$$scope, maxTokens, temperature, generateWikilinks*/
-      65592) {
-        baseaccordion_changes.$$scope = { dirty, ctx: ctx2 };
-      }
-      baseaccordion.$set(baseaccordion_changes);
-    },
-    i(local) {
-      if (current)
-        return;
-      transition_in(baseaccordion.$$.fragment, local);
-      current = true;
-    },
-    o(local) {
-      transition_out(baseaccordion.$$.fragment, local);
-      current = false;
-    },
-    d(detaching) {
-      destroy_component(baseaccordion, detaching);
-    }
-  };
-}
-function instance17($$self, $$props, $$invalidate) {
-  var __awaiter = this && this.__awaiter || function(thisArg, _arguments, P, generator) {
-    function adopt(value) {
-      return value instanceof P ? value : new P(function(resolve) {
-        resolve(value);
-      });
-    }
-    return new (P || (P = Promise))(function(resolve, reject) {
-      function fulfilled(value) {
-        try {
-          step(generator.next(value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function rejected(value) {
-        try {
-          step(generator["throw"](value));
-        } catch (e) {
-          reject(e);
-        }
-      }
-      function step(result) {
-        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
-      }
-      step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-  };
-  let { app } = $$props;
-  let { settingsService } = $$props;
-  let { aiService } = $$props;
-  let generateWikilinks = settingsService.getSettings().advanced.generateWikilinks;
-  let temperature = settingsService.getSettings().advanced.temperature.toString();
-  let maxTokens = settingsService.getSettings().advanced.maxTokens.toString();
-  function handleWikilinksToggle(value) {
-    return __awaiter(this, void 0, void 0, function* () {
-      try {
-        yield settingsService.updateNestedSetting("advanced", "generateWikilinks", value);
-        $$invalidate(3, generateWikilinks = value);
-      } catch (error) {
-        console.error("Error updating wikilinks setting:", error);
-        new import_obsidian21.Notice(`Failed to update setting: ${error instanceof Error ? error.message : "Unknown error"}`);
-        $$invalidate(3, generateWikilinks = !value);
-      }
-    });
-  }
-  function handleTemperatureChange(value) {
-    return __awaiter(this, void 0, void 0, function* () {
-      try {
-        const temp = parseFloat(value);
-        if (isNaN(temp) || temp < 0 || temp > 1) {
-          throw new Error("Temperature must be between 0 and 1");
-        }
-        yield settingsService.updateNestedSetting("advanced", "temperature", temp);
-        $$invalidate(4, temperature = temp.toString());
-      } catch (error) {
-        console.error("Error updating temperature:", error);
-        new import_obsidian21.Notice(`Failed to update temperature: ${error instanceof Error ? error.message : "Unknown error"}`);
-        $$invalidate(4, temperature = settingsService.getSettings().advanced.temperature.toString());
-      }
-    });
-  }
-  function handleMaxTokensChange(value) {
-    return __awaiter(this, void 0, void 0, function* () {
-      try {
-        const tokens = parseInt(value);
-        if (isNaN(tokens) || tokens <= 0) {
-          throw new Error("Max tokens must be a positive number");
-        }
-        yield settingsService.updateNestedSetting("advanced", "maxTokens", tokens);
-        $$invalidate(5, maxTokens = tokens.toString());
-      } catch (error) {
-        console.error("Error updating max tokens:", error);
-        new import_obsidian21.Notice(`Failed to update max tokens: ${error instanceof Error ? error.message : "Unknown error"}`);
-        $$invalidate(5, maxTokens = settingsService.getSettings().advanced.maxTokens.toString());
-      }
-    });
-  }
-  function input0_change_handler() {
-    generateWikilinks = this.checked;
-    $$invalidate(3, generateWikilinks);
-  }
-  const change_handler = (e) => handleWikilinksToggle(e.currentTarget.checked);
-  function input1_input_handler() {
-    temperature = to_number(this.value);
-    $$invalidate(4, temperature);
-  }
-  const change_handler_1 = (e) => handleTemperatureChange(e.currentTarget.value);
-  function input2_input_handler() {
-    maxTokens = to_number(this.value);
-    $$invalidate(5, maxTokens);
-  }
-  const change_handler_2 = (e) => handleMaxTokensChange(e.currentTarget.value);
-  $$self.$$set = ($$props2) => {
-    if ("app" in $$props2)
-      $$invalidate(0, app = $$props2.app);
-    if ("settingsService" in $$props2)
-      $$invalidate(1, settingsService = $$props2.settingsService);
-    if ("aiService" in $$props2)
-      $$invalidate(2, aiService = $$props2.aiService);
-  };
-  return [
-    app,
-    settingsService,
-    aiService,
-    generateWikilinks,
-    temperature,
-    maxTokens,
-    handleWikilinksToggle,
-    handleTemperatureChange,
-    handleMaxTokensChange,
-    input0_change_handler,
-    change_handler,
-    input1_input_handler,
-    change_handler_1,
-    input2_input_handler,
-    change_handler_2
-  ];
-}
-var AdvancedAccordion = class extends SvelteComponent {
-  constructor(options) {
-    super();
-    init(this, options, instance17, create_fragment17, safe_not_equal, { app: 0, settingsService: 1, aiService: 2 }, add_css10);
-  }
-};
-var AdvancedAccordion_default = AdvancedAccordion;
-
 // src/components/accordions/KnowledgeBloomAccordion.svelte
 var import_obsidian22 = require("obsidian");
-function add_css11(target) {
-  append_styles(target, "svelte-1pu0o5y", ".knowledge-bloom-container.svelte-1pu0o5y{display:flex;flex-direction:column;gap:var(--size-4)}.knowledge-bloom-description.svelte-1pu0o5y{color:var(--text-muted);font-size:var(--font-ui-small)}.model-selector.svelte-1pu0o5y,.prompt-input.svelte-1pu0o5y{display:flex;flex-direction:column;gap:var(--size-2)}label.svelte-1pu0o5y{font-weight:var(--font-bold);color:var(--text-normal)}select.svelte-1pu0o5y,textarea.svelte-1pu0o5y{background:var(--background-primary);border:1px solid var(--background-modifier-border);border-radius:var(--radius-s);padding:var(--size-2);color:var(--text-normal);width:100%}textarea.svelte-1pu0o5y{resize:vertical;min-height:100px}.description.svelte-1pu0o5y{color:var(--text-muted);font-size:var(--font-ui-smaller)}.generate-button.svelte-1pu0o5y{background-color:var(--interactive-accent);color:var(--text-on-accent);padding:var(--size-2) var(--size-4);border-radius:var(--radius-s);border:none;cursor:pointer;font-weight:var(--font-bold);transition:background-color 0.2s ease}.generate-button.svelte-1pu0o5y:hover:not(:disabled){background-color:var(--interactive-accent-hover)}.generate-button.svelte-1pu0o5y:disabled{opacity:0.5;cursor:not-allowed}");
+function add_css9(target) {
+  append_styles(target, "svelte-1jh8vo0", ".knowledge-bloom-settings.svelte-1jh8vo0{padding:var(--size-4);display:flex;flex-direction:column;gap:var(--size-4)}");
 }
-function get_each_context7(ctx, list, i) {
+function get_each_context(ctx, list, i) {
   const child_ctx = ctx.slice();
-  child_ctx[15] = list[i];
+  child_ctx[26] = list[i];
   return child_ctx;
 }
-function create_each_block7(ctx) {
+function create_if_block3(ctx) {
+  let div;
+  let t_value = (
+    /*$state*/
+    ctx[3].error.message + ""
+  );
+  let t;
+  return {
+    c() {
+      div = element("div");
+      t = text(t_value);
+      attr(div, "class", "error-message");
+      attr(div, "role", "alert");
+    },
+    m(target, anchor) {
+      insert(target, div, anchor);
+      append(div, t);
+    },
+    p(ctx2, dirty) {
+      if (dirty & /*$state*/
+      8 && t_value !== (t_value = /*$state*/
+      ctx2[3].error.message + ""))
+        set_data(t, t_value);
+    },
+    d(detaching) {
+      if (detaching) {
+        detach(div);
+      }
+    }
+  };
+}
+function create_each_block(ctx) {
   let option;
   let t0_value = (
     /*modelInfo*/
-    ctx[15].model.name + ""
+    ctx[26].model.name + ""
   );
   let t0;
   let t1;
@@ -25338,7 +16878,7 @@ function create_each_block7(ctx) {
       t0 = text(t0_value);
       t1 = space();
       option.__value = option_value_value = /*modelInfo*/
-      ctx[15].model.apiName;
+      ctx[26].model.apiName;
       set_input_value(option, option.__value);
     },
     m(target, anchor) {
@@ -25347,13 +16887,13 @@ function create_each_block7(ctx) {
       append(option, t1);
     },
     p(ctx2, dirty) {
-      if (dirty & /*models*/
-      16 && t0_value !== (t0_value = /*modelInfo*/
-      ctx2[15].model.name + ""))
+      if (dirty & /*$state*/
+      8 && t0_value !== (t0_value = /*modelInfo*/
+      ctx2[26].model.name + ""))
         set_data(t0, t0_value);
-      if (dirty & /*models*/
-      16 && option_value_value !== (option_value_value = /*modelInfo*/
-      ctx2[15].model.apiName)) {
+      if (dirty & /*$state*/
+      8 && option_value_value !== (option_value_value = /*modelInfo*/
+      ctx2[26].model.apiName)) {
         option.__value = option_value_value;
         set_input_value(option, option.__value);
       }
@@ -25365,108 +16905,137 @@ function create_each_block7(ctx) {
     }
   };
 }
-function create_default_slot11(ctx) {
-  let div3;
-  let div0;
-  let t3;
+function create_default_slot5(ctx) {
+  let form;
+  let t0;
   let div1;
-  let label0;
-  let t5;
-  let select;
+  let t2;
+  let div5;
+  let div3;
   let t6;
-  let span0;
-  let t8;
-  let div2;
-  let label1;
-  let t10;
-  let textarea;
+  let div4;
+  let select;
+  let select_disabled_value;
+  let select_aria_disabled_value;
+  let t7;
+  let div9;
+  let div7;
   let t11;
-  let span1;
-  let t13;
+  let div8;
+  let textarea;
+  let textarea_disabled_value;
+  let textarea_aria_disabled_value;
+  let t12;
+  let div11;
+  let div10;
   let button;
-  let t14_value = (
-    /*isGenerating*/
-    ctx[6] ? "Generating..." : "Generate Knowledge Bloom"
+  let t13_value = (
+    /*$state*/
+    ctx[3].isGenerating ? "Generating..." : "Generate Knowledge Bloom"
   );
-  let t14;
+  let t13;
+  let button_disabled_value;
+  let button_aria_disabled_value;
   let mounted;
   let dispose;
+  let if_block = (
+    /*$state*/
+    ctx[3].error && create_if_block3(ctx)
+  );
   let each_value = ensure_array_like(
-    /*models*/
-    ctx[4]
+    /*$state*/
+    ctx[3].models
   );
   let each_blocks = [];
   for (let i = 0; i < each_value.length; i += 1) {
-    each_blocks[i] = create_each_block7(get_each_context7(ctx, each_value, i));
+    each_blocks[i] = create_each_block(get_each_context(ctx, each_value, i));
   }
   return {
     c() {
-      div3 = element("div");
-      div0 = element("div");
-      div0.innerHTML = `<p>Knowledge Bloom analyzes the current note, extracts wikilinks, and 
-          generates new notes for each link in the current note. This helps expand 
-          your knowledge base and create connections between ideas.</p> <p>For best results, we recommend using Perplexity models as they can 
-          search online for up-to-date information.</p>`;
-      t3 = space();
+      form = element("form");
+      if (if_block)
+        if_block.c();
+      t0 = space();
       div1 = element("div");
-      label0 = element("label");
-      label0.textContent = "AI Model";
-      t5 = space();
+      div1.innerHTML = `<div class="setting-item-description">Knowledge Bloom analyzes the current note, extracts wikilinks, and generates new notes for each link. 
+              For best results, use Perplexity models for up-to-date information.</div>`;
+      t2 = space();
+      div5 = element("div");
+      div3 = element("div");
+      div3.innerHTML = `<label for="model-select" class="setting-item-name">AI Model</label> <div class="setting-item-description">Select the AI model to use for Knowledge Bloom</div>`;
+      t6 = space();
+      div4 = element("div");
       select = element("select");
       for (let i = 0; i < each_blocks.length; i += 1) {
         each_blocks[i].c();
       }
-      t6 = space();
-      span0 = element("span");
-      span0.textContent = "Select the AI model to use for Knowledge Bloom";
-      t8 = space();
-      div2 = element("div");
-      label1 = element("label");
-      label1.textContent = "Additional Context";
-      t10 = space();
-      textarea = element("textarea");
+      t7 = space();
+      div9 = element("div");
+      div7 = element("div");
+      div7.innerHTML = `<label for="context-input" class="setting-item-name">Additional Context</label> <div class="setting-item-description">Provide any additional context or instructions for note generation (optional)</div>`;
       t11 = space();
-      span1 = element("span");
-      span1.textContent = "Provide any additional context or instructions for note generation (optional)";
-      t13 = space();
+      div8 = element("div");
+      textarea = element("textarea");
+      t12 = space();
+      div11 = element("div");
+      div10 = element("div");
       button = element("button");
-      t14 = text(t14_value);
-      attr(div0, "class", "knowledge-bloom-description svelte-1pu0o5y");
-      attr(label0, "for", "model-select");
-      attr(label0, "class", "svelte-1pu0o5y");
+      t13 = text(t13_value);
+      attr(div1, "class", "setting-item description-item");
+      attr(div3, "class", "setting-item-info");
       attr(select, "id", "model-select");
-      attr(select, "class", "svelte-1pu0o5y");
+      select.disabled = select_disabled_value = !/*$state*/
+      ctx[3].isInitialized || /*$state*/
+      ctx[3].isGenerating;
+      attr(select, "aria-disabled", select_aria_disabled_value = !/*$state*/
+      ctx[3].isInitialized || /*$state*/
+      ctx[3].isGenerating);
       if (
-        /*selectedModel*/
-        ctx[3] === void 0
+        /*$state*/
+        ctx[3].selectedModel === void 0
       )
         add_render_callback(() => (
           /*select_change_handler*/
-          ctx[9].call(select)
+          ctx[17].call(select)
         ));
-      attr(span0, "class", "description svelte-1pu0o5y");
-      attr(div1, "class", "model-selector svelte-1pu0o5y");
-      attr(label1, "for", "prompt-textarea");
-      attr(label1, "class", "svelte-1pu0o5y");
-      attr(textarea, "id", "prompt-textarea");
-      attr(textarea, "rows", "4");
+      attr(div4, "class", "setting-item-control");
+      attr(div5, "class", "setting-item");
+      attr(div7, "class", "setting-item-info");
+      attr(textarea, "id", "context-input");
       attr(textarea, "placeholder", "Enter your prompts here...");
-      attr(textarea, "class", "svelte-1pu0o5y");
-      attr(span1, "class", "description svelte-1pu0o5y");
-      attr(div2, "class", "prompt-input svelte-1pu0o5y");
-      attr(button, "class", "generate-button svelte-1pu0o5y");
-      button.disabled = /*isGenerating*/
-      ctx[6];
-      attr(div3, "class", "knowledge-bloom-container svelte-1pu0o5y");
+      textarea.disabled = textarea_disabled_value = /*$state*/
+      ctx[3].isGenerating;
+      attr(textarea, "aria-disabled", textarea_aria_disabled_value = /*$state*/
+      ctx[3].isGenerating);
+      attr(div8, "class", "setting-item-control");
+      attr(div9, "class", "setting-item");
+      attr(button, "type", "submit");
+      attr(button, "class", "mod-cta");
+      button.disabled = button_disabled_value = /*$state*/
+      ctx[3].isGenerating || !/*$state*/
+      ctx[3].isInitialized || /*$state*/
+      ctx[3].lifecycle !== "ready" /* Ready */;
+      attr(button, "aria-disabled", button_aria_disabled_value = /*$state*/
+      ctx[3].isGenerating || !/*$state*/
+      ctx[3].isInitialized || /*$state*/
+      ctx[3].lifecycle !== "ready" /* Ready */);
+      attr(div10, "class", "setting-item-control");
+      attr(div11, "class", "setting-item");
+      attr(form, "class", "knowledge-bloom-settings svelte-1jh8vo0");
+      attr(form, "aria-label", "Knowledge Bloom Settings");
     },
     m(target, anchor) {
-      insert(target, div3, anchor);
-      append(div3, div0);
-      append(div3, t3);
-      append(div3, div1);
-      append(div1, label0);
-      append(div1, t5);
-      append(div1, select);
+      insert(target, form, anchor);
+      if (if_block)
+        if_block.m(form, null);
+      append(form, t0);
+      append(form, div1);
+      append(form, t2);
+      append(form, div5);
+      append(div5, div3);
+      append(div5, t6);
+      append(div5, div4);
+      append(div4, select);
       for (let i = 0; i < each_blocks.length; i += 1) {
         if (each_blocks[i]) {
           each_blocks[i].m(select, null);
@@ -25474,71 +17043,89 @@ function create_default_slot11(ctx) {
       }
       select_option(
         select,
-        /*selectedModel*/
-        ctx[3],
+        /*$state*/
+        ctx[3].selectedModel,
         true
       );
-      append(div1, t6);
-      append(div1, span0);
-      append(div3, t8);
-      append(div3, div2);
-      append(div2, label1);
-      append(div2, t10);
-      append(div2, textarea);
+      append(form, t7);
+      append(form, div9);
+      append(div9, div7);
+      append(div9, t11);
+      append(div9, div8);
+      append(div8, textarea);
       set_input_value(
         textarea,
-        /*userPromptInput*/
-        ctx[5]
+        /*$state*/
+        ctx[3].userPromptInput
       );
-      append(div2, t11);
-      append(div2, span1);
-      append(div3, t13);
-      append(div3, button);
-      append(button, t14);
+      append(form, t12);
+      append(form, div11);
+      append(div11, div10);
+      append(div10, button);
+      append(button, t13);
       if (!mounted) {
         dispose = [
           listen(
             select,
             "change",
             /*select_change_handler*/
-            ctx[9]
+            ctx[17]
           ),
           listen(
             select,
             "change",
             /*change_handler*/
-            ctx[10]
+            ctx[18]
           ),
           listen(
             textarea,
             "input",
             /*textarea_input_handler*/
-            ctx[11]
+            ctx[19]
           ),
           listen(
-            button,
-            "click",
+            textarea,
+            "input",
+            /*input_handler*/
+            ctx[20]
+          ),
+          listen(form, "submit", prevent_default(
             /*handleGenerateKnowledgeBloom*/
-            ctx[8]
-          )
+            ctx[7]
+          ))
         ];
         mounted = true;
       }
     },
     p(ctx2, dirty) {
-      if (dirty & /*models*/
-      16) {
+      if (
+        /*$state*/
+        ctx2[3].error
+      ) {
+        if (if_block) {
+          if_block.p(ctx2, dirty);
+        } else {
+          if_block = create_if_block3(ctx2);
+          if_block.c();
+          if_block.m(form, t0);
+        }
+      } else if (if_block) {
+        if_block.d(1);
+        if_block = null;
+      }
+      if (dirty & /*$state*/
+      8) {
         each_value = ensure_array_like(
-          /*models*/
-          ctx2[4]
+          /*$state*/
+          ctx2[3].models
         );
         let i;
         for (i = 0; i < each_value.length; i += 1) {
-          const child_ctx = get_each_context7(ctx2, each_value, i);
+          const child_ctx = get_each_context(ctx2, each_value, i);
           if (each_blocks[i]) {
             each_blocks[i].p(child_ctx, dirty);
           } else {
-            each_blocks[i] = create_each_block7(child_ctx);
+            each_blocks[i] = create_each_block(child_ctx);
             each_blocks[i].c();
             each_blocks[i].m(select, null);
           }
@@ -25548,62 +17135,93 @@ function create_default_slot11(ctx) {
         }
         each_blocks.length = each_value.length;
       }
-      if (dirty & /*selectedModel, models*/
-      24) {
+      if (dirty & /*$state*/
+      8 && select_disabled_value !== (select_disabled_value = !/*$state*/
+      ctx2[3].isInitialized || /*$state*/
+      ctx2[3].isGenerating)) {
+        select.disabled = select_disabled_value;
+      }
+      if (dirty & /*$state*/
+      8 && select_aria_disabled_value !== (select_aria_disabled_value = !/*$state*/
+      ctx2[3].isInitialized || /*$state*/
+      ctx2[3].isGenerating)) {
+        attr(select, "aria-disabled", select_aria_disabled_value);
+      }
+      if (dirty & /*$state*/
+      8) {
         select_option(
           select,
-          /*selectedModel*/
-          ctx2[3]
+          /*$state*/
+          ctx2[3].selectedModel
         );
       }
-      if (dirty & /*userPromptInput*/
-      32) {
+      if (dirty & /*$state*/
+      8 && textarea_disabled_value !== (textarea_disabled_value = /*$state*/
+      ctx2[3].isGenerating)) {
+        textarea.disabled = textarea_disabled_value;
+      }
+      if (dirty & /*$state*/
+      8 && textarea_aria_disabled_value !== (textarea_aria_disabled_value = /*$state*/
+      ctx2[3].isGenerating)) {
+        attr(textarea, "aria-disabled", textarea_aria_disabled_value);
+      }
+      if (dirty & /*$state*/
+      8) {
         set_input_value(
           textarea,
-          /*userPromptInput*/
-          ctx2[5]
+          /*$state*/
+          ctx2[3].userPromptInput
         );
       }
-      if (dirty & /*isGenerating*/
-      64 && t14_value !== (t14_value = /*isGenerating*/
-      ctx2[6] ? "Generating..." : "Generate Knowledge Bloom"))
-        set_data(t14, t14_value);
-      if (dirty & /*isGenerating*/
-      64) {
-        button.disabled = /*isGenerating*/
-        ctx2[6];
+      if (dirty & /*$state*/
+      8 && t13_value !== (t13_value = /*$state*/
+      ctx2[3].isGenerating ? "Generating..." : "Generate Knowledge Bloom"))
+        set_data(t13, t13_value);
+      if (dirty & /*$state*/
+      8 && button_disabled_value !== (button_disabled_value = /*$state*/
+      ctx2[3].isGenerating || !/*$state*/
+      ctx2[3].isInitialized || /*$state*/
+      ctx2[3].lifecycle !== "ready" /* Ready */)) {
+        button.disabled = button_disabled_value;
+      }
+      if (dirty & /*$state*/
+      8 && button_aria_disabled_value !== (button_aria_disabled_value = /*$state*/
+      ctx2[3].isGenerating || !/*$state*/
+      ctx2[3].isInitialized || /*$state*/
+      ctx2[3].lifecycle !== "ready" /* Ready */)) {
+        attr(button, "aria-disabled", button_aria_disabled_value);
       }
     },
     d(detaching) {
       if (detaching) {
-        detach(div3);
+        detach(form);
       }
+      if (if_block)
+        if_block.d();
       destroy_each(each_blocks, detaching);
       mounted = false;
       run_all(dispose);
     }
   };
 }
-function create_fragment18(ctx) {
+function create_fragment9(ctx) {
   let baseaccordion;
   let current;
   baseaccordion = new BaseAccordion_default({
     props: {
-      title: "\u{1F33A} Knowledge Bloom",
-      description: "Generate notes from wikilinks in your current note.",
-      app: (
-        /*app*/
+      title: (
+        /*title*/
         ctx[0]
       ),
-      settingsService: (
-        /*settingsService*/
+      description: (
+        /*description*/
         ctx[1]
       ),
-      aiService: (
-        /*aiService*/
+      isOpen: (
+        /*isOpen*/
         ctx[2]
       ),
-      $$slots: { default: [create_default_slot11] },
+      $$slots: { default: [create_default_slot5] },
       $$scope: { ctx }
     }
   });
@@ -25617,20 +17235,20 @@ function create_fragment18(ctx) {
     },
     p(ctx2, [dirty]) {
       const baseaccordion_changes = {};
-      if (dirty & /*app*/
+      if (dirty & /*title*/
       1)
-        baseaccordion_changes.app = /*app*/
+        baseaccordion_changes.title = /*title*/
         ctx2[0];
-      if (dirty & /*settingsService*/
+      if (dirty & /*description*/
       2)
-        baseaccordion_changes.settingsService = /*settingsService*/
+        baseaccordion_changes.description = /*description*/
         ctx2[1];
-      if (dirty & /*aiService*/
+      if (dirty & /*isOpen*/
       4)
-        baseaccordion_changes.aiService = /*aiService*/
+        baseaccordion_changes.isOpen = /*isOpen*/
         ctx2[2];
-      if (dirty & /*$$scope, isGenerating, userPromptInput, selectedModel, models*/
-      262264) {
+      if (dirty & /*$$scope, $state*/
+      536870920) {
         baseaccordion_changes.$$scope = { dirty, ctx: ctx2 };
       }
       baseaccordion.$set(baseaccordion_changes);
@@ -25650,7 +17268,8 @@ function create_fragment18(ctx) {
     }
   };
 }
-function instance18($$self, $$props, $$invalidate) {
+function instance9($$self, $$props, $$invalidate) {
+  let $state;
   var __awaiter = this && this.__awaiter || function(thisArg, _arguments, P, generator) {
     function adopt(value) {
       return value instanceof P ? value : new P(function(resolve) {
@@ -25678,48 +17297,113 @@ function instance18($$self, $$props, $$invalidate) {
       step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
   };
-  var _a;
+  let { title } = $$props;
+  let { description } = $$props;
   let { app } = $$props;
   let { settingsService } = $$props;
   let { aiService } = $$props;
-  let userPromptInput = "";
-  let selectedModel = ((_a = settingsService.getSettings().knowledgeBloom) === null || _a === void 0 ? void 0 : _a.selectedModel) || "";
-  let models = [];
-  let isGenerating2 = false;
+  let { isOpen = false } = $$props;
+  let { initialModel = "" } = $$props;
+  let { onChange } = $$props;
+  let { onBlur } = $$props;
+  let { onFocus } = $$props;
+  let { onClick } = $$props;
+  let { onKeyDown } = $$props;
+  const state = writable({
+    isInitialized: false,
+    models: [],
+    selectedModel: initialModel,
+    userPromptInput: "",
+    isGenerating: false,
+    lifecycle: "uninitialized" /* Uninitialized */,
+    error: void 0,
+    validationResult: void 0,
+    lastUpdated: Date.now()
+  });
+  component_subscribe($$self, state, (value) => $$invalidate(3, $state = value));
+  onMount(() => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+      yield initializeComponent();
+      state.update((s) => Object.assign(Object.assign({}, s), {
+        isInitialized: true,
+        lifecycle: "ready" /* Ready */
+      }));
+    } catch (error) {
+      console.error("\u{1F987} Failed to initialize Knowledge Bloom:", error);
+      handleError(error);
+    }
+  }));
+  function initializeModels() {
+    var _a;
+    return __awaiter(this, void 0, void 0, function* () {
+      if (!settingsService.isReady()) {
+        throw new Error("Settings service not ready");
+      }
+      const modelList = Object.entries(AIModelMap).flatMap(([provider, models]) => models.map((model) => ({ provider, model })));
+      const settings = settingsService.getSettings();
+      const currentModel = ((_a = settings.knowledgeBloom) === null || _a === void 0 ? void 0 : _a.selectedModel) || (modelList.length > 0 ? modelList[0].model.apiName : "");
+      state.update((s) => Object.assign(Object.assign({}, s), {
+        models: modelList,
+        selectedModel: currentModel,
+        lastUpdated: Date.now()
+      }));
+      if (currentModel) {
+        yield updateKnowledgeBloomSettings(currentModel);
+      }
+    });
+  }
   function updateKnowledgeBloomSettings(model) {
     return __awaiter(this, void 0, void 0, function* () {
       try {
         yield settingsService.updateKnowledgeBloomSettings({ selectedModel: model });
         yield aiService.reinitialize();
+        state.update((s) => Object.assign(Object.assign({}, s), {
+          selectedModel: model,
+          lastUpdated: Date.now()
+        }));
         new import_obsidian22.Notice("AI Service reinitialized with the new model.");
+        onChange === null || onChange === void 0 ? void 0 : onChange(model);
       } catch (error) {
-        console.error("Error updating settings:", error);
-        new import_obsidian22.Notice(`Error updating settings: ${error instanceof Error ? error.message : "Unknown error"}`);
+        console.error("\u{1F987} Error updating settings:", error);
+        handleError(error);
       }
     });
   }
+  function updatePromptInput(value) {
+    state.update((s) => Object.assign(Object.assign({}, s), {
+      userPromptInput: value,
+      lastUpdated: Date.now()
+    }));
+    onChange === null || onChange === void 0 ? void 0 : onChange(value);
+  }
   function handleGenerateKnowledgeBloom() {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
+      if ($state.isGenerating)
+        return;
+      const activeFile = app.workspace.getActiveFile();
+      if (!(activeFile instanceof import_obsidian22.TFile)) {
+        new import_obsidian22.Notice("No active file found.");
+        return;
+      }
       try {
-        $$invalidate(6, isGenerating2 = true);
-        const activeFile = app.workspace.getActiveFile();
-        if (!(activeFile instanceof import_obsidian22.TFile)) {
-          new import_obsidian22.Notice("No active file found.");
-          return;
-        }
+        state.update((s) => Object.assign(Object.assign({}, s), { isGenerating: true }));
         const generationService = aiService.getGenerationService();
-        const result = yield generationService.generateKnowledgeBloom(activeFile, userPromptInput);
-        if (result === null || result === void 0 ? void 0 : result.generatedNotes) {
+        const result = yield generationService.generateKnowledgeBloom(activeFile, $state.userPromptInput);
+        if ((_a = result === null || result === void 0 ? void 0 : result.generatedNotes) === null || _a === void 0 ? void 0 : _a.length) {
           yield createGeneratedNotes(result.generatedNotes);
           new import_obsidian22.Notice(`Generated ${result.generatedNotes.length} new notes!`);
         } else {
           new import_obsidian22.Notice("No notes were generated.");
         }
       } catch (error) {
-        console.error("Error generating knowledge bloom:", error);
-        new import_obsidian22.Notice(`Error generating knowledge bloom: ${error instanceof Error ? error.message : "Unknown error"}`);
+        console.error("\u{1F987} Error generating Knowledge Bloom:", error);
+        handleError(error);
       } finally {
-        $$invalidate(6, isGenerating2 = false);
+        state.update((s) => Object.assign(Object.assign({}, s), {
+          isGenerating: false,
+          lastUpdated: Date.now()
+        }));
       }
     });
   }
@@ -25728,96 +17412,758 @@ function instance18($$self, $$props, $$invalidate) {
       for (const note of notes) {
         const filePath = `${note.title}.md`;
         const existingFile = app.vault.getAbstractFileByPath(filePath);
-        if (existingFile instanceof import_obsidian22.TFile) {
-          yield app.vault.modify(existingFile, note.content);
-        } else {
-          yield app.vault.create(filePath, note.content);
+        try {
+          if (existingFile instanceof import_obsidian22.TFile) {
+            yield app.vault.modify(existingFile, note.content);
+          } else {
+            yield app.vault.create(filePath, note.content);
+          }
+        } catch (error) {
+          console.error(`\u{1F987} Error creating/updating note ${filePath}:`, error);
+          new import_obsidian22.Notice(`Failed to create/update note "${note.title}".`);
         }
       }
     });
   }
-  function select_change_handler() {
-    selectedModel = select_value(this);
-    $$invalidate(3, selectedModel), $$invalidate(4, models);
-    $$invalidate(4, models), $$invalidate(3, selectedModel);
+  function handleError(error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    state.update((s) => Object.assign(Object.assign({}, s), {
+      error: {
+        message,
+        timestamp: Date.now(),
+        source: "KnowledgeBloomAccordion"
+      },
+      lifecycle: "error" /* Error */
+    }));
+    new import_obsidian22.Notice(`Knowledge Bloom Error: ${message}`);
   }
-  const change_handler = () => updateKnowledgeBloomSettings(selectedModel);
-  function textarea_input_handler() {
-    userPromptInput = this.value;
-    $$invalidate(5, userPromptInput);
-  }
-  $$self.$$set = ($$props2) => {
-    if ("app" in $$props2)
-      $$invalidate(0, app = $$props2.app);
-    if ("settingsService" in $$props2)
-      $$invalidate(1, settingsService = $$props2.settingsService);
-    if ("aiService" in $$props2)
-      $$invalidate(2, aiService = $$props2.aiService);
-  };
-  $$self.$$.update = () => {
-    if ($$self.$$.dirty & /*selectedModel, models*/
-    24) {
-      $: {
-        const modelEntries = [];
-        Object.entries(AIModelMap).forEach(([provider, modelList]) => {
-          modelList.forEach((model) => {
-            modelEntries.push({ provider, model });
-          });
-        });
-        $$invalidate(4, models = modelEntries);
-        if (!selectedModel && models.length > 0) {
-          $$invalidate(3, selectedModel = models[0].model.apiName);
-          updateKnowledgeBloomSettings(selectedModel);
-        }
+  function initializeComponent() {
+    return __awaiter(this, void 0, void 0, function* () {
+      try {
+        yield initializeModels();
+      } catch (error) {
+        handleError(
+          error
+        );
       }
-    }
+    });
+  }
+  function select_change_handler() {
+    $state.selectedModel = select_value(this);
+    state.set($state);
+  }
+  const change_handler = (e) => updateKnowledgeBloomSettings(e.currentTarget.value);
+  function textarea_input_handler() {
+    $state.userPromptInput = this.value;
+    state.set($state);
+  }
+  const input_handler = (e) => updatePromptInput(e.currentTarget.value);
+  $$self.$$set = ($$props2) => {
+    if ("title" in $$props2)
+      $$invalidate(0, title = $$props2.title);
+    if ("description" in $$props2)
+      $$invalidate(1, description = $$props2.description);
+    if ("app" in $$props2)
+      $$invalidate(8, app = $$props2.app);
+    if ("settingsService" in $$props2)
+      $$invalidate(9, settingsService = $$props2.settingsService);
+    if ("aiService" in $$props2)
+      $$invalidate(10, aiService = $$props2.aiService);
+    if ("isOpen" in $$props2)
+      $$invalidate(2, isOpen = $$props2.isOpen);
+    if ("initialModel" in $$props2)
+      $$invalidate(11, initialModel = $$props2.initialModel);
+    if ("onChange" in $$props2)
+      $$invalidate(12, onChange = $$props2.onChange);
+    if ("onBlur" in $$props2)
+      $$invalidate(13, onBlur = $$props2.onBlur);
+    if ("onFocus" in $$props2)
+      $$invalidate(14, onFocus = $$props2.onFocus);
+    if ("onClick" in $$props2)
+      $$invalidate(15, onClick = $$props2.onClick);
+    if ("onKeyDown" in $$props2)
+      $$invalidate(16, onKeyDown = $$props2.onKeyDown);
   };
   return [
+    title,
+    description,
+    isOpen,
+    $state,
+    state,
+    updateKnowledgeBloomSettings,
+    updatePromptInput,
+    handleGenerateKnowledgeBloom,
     app,
     settingsService,
     aiService,
-    selectedModel,
-    models,
-    userPromptInput,
-    isGenerating2,
-    updateKnowledgeBloomSettings,
-    handleGenerateKnowledgeBloom,
+    initialModel,
+    onChange,
+    onBlur,
+    onFocus,
+    onClick,
+    onKeyDown,
     select_change_handler,
     change_handler,
-    textarea_input_handler
+    textarea_input_handler,
+    input_handler
   ];
 }
 var KnowledgeBloomAccordion = class extends SvelteComponent {
   constructor(options) {
     super();
-    init(this, options, instance18, create_fragment18, safe_not_equal, { app: 0, settingsService: 1, aiService: 2 }, add_css11);
+    init(
+      this,
+      options,
+      instance9,
+      create_fragment9,
+      safe_not_equal,
+      {
+        title: 0,
+        description: 1,
+        app: 8,
+        settingsService: 9,
+        aiService: 10,
+        isOpen: 2,
+        initialModel: 11,
+        onChange: 12,
+        onBlur: 13,
+        onFocus: 14,
+        onClick: 15,
+        onKeyDown: 16
+      },
+      add_css9
+    );
   }
 };
 var KnowledgeBloomAccordion_default = KnowledgeBloomAccordion;
 
-// src/settings/SettingsTab.svelte
-function add_css12(target) {
-  append_styles(target, "svelte-lrwn3h", ".graphweaver-plugin-settings.svelte-lrwn3h.svelte-lrwn3h{padding:var(--size-4)}.settings-header.svelte-lrwn3h.svelte-lrwn3h{margin-bottom:var(--size-8)}.settings-header.svelte-lrwn3h h2.svelte-lrwn3h{margin:0;margin-bottom:var(--size-2);color:var(--text-normal);font-size:var(--font-ui-large)}.settings-header.svelte-lrwn3h p.svelte-lrwn3h{margin:0;color:var(--text-muted)}.settings-accordions.svelte-lrwn3h.svelte-lrwn3h{display:flex;flex-direction:column;gap:var(--size-4)}.settings-section.svelte-lrwn3h.svelte-lrwn3h{border:1px solid var(--background-modifier-border);border-radius:var(--radius-m);overflow:hidden}.settings-error.svelte-lrwn3h.svelte-lrwn3h{padding:var(--size-4);background-color:var(--background-modifier-error);border-radius:var(--radius-m);color:var(--text-error)}.settings-loading.svelte-lrwn3h.svelte-lrwn3h{display:flex;justify-content:center;align-items:center;padding:var(--size-8);color:var(--text-muted)}");
+// src/components/accordions/BatchProcessorAccordion.svelte
+var import_obsidian24 = require("obsidian");
+
+// src/components/modals/BatchProcessorModal.svelte
+var import_obsidian23 = require("obsidian");
+function add_css10(target) {
+  append_styles(target, "svelte-yunjq2", ".batch-processor-modal.svelte-yunjq2.svelte-yunjq2{display:flex;flex-direction:column;height:100%;padding:var(--size-4)}.modal-content.svelte-yunjq2.svelte-yunjq2{display:flex;flex-direction:column;height:100%;gap:var(--size-4)}.modal-header.svelte-yunjq2.svelte-yunjq2{border-bottom:1px solid var(--background-modifier-border);padding-bottom:var(--size-4)}.modal-header.svelte-yunjq2 h2.svelte-yunjq2{margin:0;color:var(--text-normal);font-size:var(--font-ui-large)}.modal-scrollable-content.svelte-yunjq2.svelte-yunjq2{flex:1;overflow-y:auto;padding:var(--size-2);min-height:200px}.processing-status.svelte-yunjq2.svelte-yunjq2{padding:var(--size-4);background-color:var(--background-secondary);border-radius:var(--radius-m)}.progress-bar.svelte-yunjq2.svelte-yunjq2{width:100%;height:4px;background-color:var(--background-modifier-border);border-radius:2px;margin-bottom:var(--size-2);overflow:hidden}.progress-fill.svelte-yunjq2.svelte-yunjq2{height:100%;background-color:var(--interactive-accent);transition:width 0.2s ease}.status-text.svelte-yunjq2.svelte-yunjq2{font-size:var(--font-ui-smaller);color:var(--text-muted);text-align:center}.file-tree-item{padding:var(--size-1) 0}.folder-item{font-weight:var(--font-medium)}.folder-children{border-left:1px solid var(--background-modifier-border)}.modal-footer.svelte-yunjq2.svelte-yunjq2{border-top:1px solid var(--background-modifier-border);padding-top:var(--size-4)}.footer-content.svelte-yunjq2.svelte-yunjq2{display:flex;justify-content:space-between;align-items:center}.selection-count.svelte-yunjq2.svelte-yunjq2{color:var(--text-muted);font-size:var(--font-ui-small)}.button-container.svelte-yunjq2.svelte-yunjq2{display:flex;gap:var(--size-4)}.setting-item{border-top:none !important;padding:var(--size-2) 0}");
 }
-function get_each_context8(ctx, list, i) {
-  const child_ctx = ctx.slice();
-  child_ctx[9] = list[i];
-  return child_ctx;
+function create_if_block4(ctx) {
+  let div3;
+  let div1;
+  let div0;
+  let t;
+  let div2;
+  function select_block_type(ctx2, dirty) {
+    if (
+      /*uiState*/
+      ctx2[3].file
+    )
+      return create_if_block_13;
+    return create_else_block;
+  }
+  let current_block_type = select_block_type(ctx, -1);
+  let if_block = current_block_type(ctx);
+  return {
+    c() {
+      div3 = element("div");
+      div1 = element("div");
+      div0 = element("div");
+      t = space();
+      div2 = element("div");
+      if_block.c();
+      attr(div0, "class", "progress-fill svelte-yunjq2");
+      set_style(
+        div0,
+        "width",
+        /*uiState*/
+        ctx[3].progress + "%"
+      );
+      attr(div1, "class", "progress-bar svelte-yunjq2");
+      attr(div2, "class", "status-text svelte-yunjq2");
+      attr(div3, "class", "processing-status svelte-yunjq2");
+    },
+    m(target, anchor) {
+      insert(target, div3, anchor);
+      append(div3, div1);
+      append(div1, div0);
+      append(div3, t);
+      append(div3, div2);
+      if_block.m(div2, null);
+    },
+    p(ctx2, dirty) {
+      if (dirty & /*uiState*/
+      8) {
+        set_style(
+          div0,
+          "width",
+          /*uiState*/
+          ctx2[3].progress + "%"
+        );
+      }
+      if (current_block_type === (current_block_type = select_block_type(ctx2, dirty)) && if_block) {
+        if_block.p(ctx2, dirty);
+      } else {
+        if_block.d(1);
+        if_block = current_block_type(ctx2);
+        if (if_block) {
+          if_block.c();
+          if_block.m(div2, null);
+        }
+      }
+    },
+    d(detaching) {
+      if (detaching) {
+        detach(div3);
+      }
+      if_block.d();
+    }
+  };
 }
-function create_else_block6(ctx) {
+function create_else_block(ctx) {
+  let t_value = (
+    /*processing*/
+    ctx[4].state.state + ""
+  );
+  let t;
+  return {
+    c() {
+      t = text(t_value);
+    },
+    m(target, anchor) {
+      insert(target, t, anchor);
+    },
+    p(ctx2, dirty) {
+      if (dirty & /*processing*/
+      16 && t_value !== (t_value = /*processing*/
+      ctx2[4].state.state + ""))
+        set_data(t, t_value);
+    },
+    d(detaching) {
+      if (detaching) {
+        detach(t);
+      }
+    }
+  };
+}
+function create_if_block_13(ctx) {
+  let t0;
+  let t1_value = (
+    /*uiState*/
+    ctx[3].file + ""
+  );
+  let t1;
+  return {
+    c() {
+      t0 = text("Processing: ");
+      t1 = text(t1_value);
+    },
+    m(target, anchor) {
+      insert(target, t0, anchor);
+      insert(target, t1, anchor);
+    },
+    p(ctx2, dirty) {
+      if (dirty & /*uiState*/
+      8 && t1_value !== (t1_value = /*uiState*/
+      ctx2[3].file + ""))
+        set_data(t1, t1_value);
+    },
+    d(detaching) {
+      if (detaching) {
+        detach(t0);
+        detach(t1);
+      }
+    }
+  };
+}
+function create_fragment10(ctx) {
+  let div4;
+  let div3;
+  let header;
+  let t1;
+  let div0;
+  let t2;
+  let t3;
+  let footer;
+  let div2;
+  let span;
+  let t4_value = (
+    /*selection*/
+    ctx[1].paths.size + ""
+  );
+  let t4;
+  let t5;
+  let t6;
+  let div1;
+  let button0;
+  let t7_value = (
+    /*uiState*/
+    ctx[3].isProcessing ? "Processing..." : "Process Selected"
+  );
+  let t7;
+  let button0_disabled_value;
+  let t8;
+  let button1;
+  let t9;
+  let button1_disabled_value;
+  let mounted;
+  let dispose;
+  let if_block = (
+    /*uiState*/
+    ctx[3].isProcessing && create_if_block4(ctx)
+  );
+  return {
+    c() {
+      div4 = element("div");
+      div3 = element("div");
+      header = element("header");
+      header.innerHTML = `<h2 class="svelte-yunjq2">Select Files to Process</h2>`;
+      t1 = space();
+      div0 = element("div");
+      t2 = space();
+      if (if_block)
+        if_block.c();
+      t3 = space();
+      footer = element("footer");
+      div2 = element("div");
+      span = element("span");
+      t4 = text(t4_value);
+      t5 = text(" items selected");
+      t6 = space();
+      div1 = element("div");
+      button0 = element("button");
+      t7 = text(t7_value);
+      t8 = space();
+      button1 = element("button");
+      t9 = text("Cancel");
+      attr(header, "class", "modal-header svelte-yunjq2");
+      attr(div0, "class", "modal-scrollable-content svelte-yunjq2");
+      attr(span, "class", "selection-count svelte-yunjq2");
+      attr(button0, "class", "mod-cta");
+      button0.disabled = button0_disabled_value = /*uiState*/
+      ctx[3].isProcessing || /*selection*/
+      ctx[1].paths.size === 0;
+      attr(button1, "class", "mod-cancel");
+      button1.disabled = button1_disabled_value = /*uiState*/
+      ctx[3].isProcessing;
+      attr(div1, "class", "button-container svelte-yunjq2");
+      attr(div2, "class", "footer-content svelte-yunjq2");
+      attr(footer, "class", "modal-footer svelte-yunjq2");
+      attr(div3, "class", "modal-content svelte-yunjq2");
+      attr(div4, "class", "batch-processor-modal svelte-yunjq2");
+    },
+    m(target, anchor) {
+      insert(target, div4, anchor);
+      append(div4, div3);
+      append(div3, header);
+      append(div3, t1);
+      append(div3, div0);
+      ctx[11](div0);
+      append(div3, t2);
+      if (if_block)
+        if_block.m(div3, null);
+      append(div3, t3);
+      append(div3, footer);
+      append(footer, div2);
+      append(div2, span);
+      append(span, t4);
+      append(span, t5);
+      append(div2, t6);
+      append(div2, div1);
+      append(div1, button0);
+      append(button0, t7);
+      append(div1, t8);
+      append(div1, button1);
+      append(button1, t9);
+      if (!mounted) {
+        dispose = [
+          listen(
+            button0,
+            "click",
+            /*handleProcess*/
+            ctx[5]
+          ),
+          listen(button1, "click", function() {
+            if (is_function(
+              /*onClose*/
+              ctx[0]
+            ))
+              ctx[0].apply(this, arguments);
+          })
+        ];
+        mounted = true;
+      }
+    },
+    p(new_ctx, [dirty]) {
+      ctx = new_ctx;
+      if (
+        /*uiState*/
+        ctx[3].isProcessing
+      ) {
+        if (if_block) {
+          if_block.p(ctx, dirty);
+        } else {
+          if_block = create_if_block4(ctx);
+          if_block.c();
+          if_block.m(div3, t3);
+        }
+      } else if (if_block) {
+        if_block.d(1);
+        if_block = null;
+      }
+      if (dirty & /*selection*/
+      2 && t4_value !== (t4_value = /*selection*/
+      ctx[1].paths.size + ""))
+        set_data(t4, t4_value);
+      if (dirty & /*uiState*/
+      8 && t7_value !== (t7_value = /*uiState*/
+      ctx[3].isProcessing ? "Processing..." : "Process Selected"))
+        set_data(t7, t7_value);
+      if (dirty & /*uiState, selection*/
+      10 && button0_disabled_value !== (button0_disabled_value = /*uiState*/
+      ctx[3].isProcessing || /*selection*/
+      ctx[1].paths.size === 0)) {
+        button0.disabled = button0_disabled_value;
+      }
+      if (dirty & /*uiState*/
+      8 && button1_disabled_value !== (button1_disabled_value = /*uiState*/
+      ctx[3].isProcessing)) {
+        button1.disabled = button1_disabled_value;
+      }
+    },
+    i: noop,
+    o: noop,
+    d(detaching) {
+      if (detaching) {
+        detach(div4);
+      }
+      ctx[11](null);
+      if (if_block)
+        if_block.d();
+      mounted = false;
+      run_all(dispose);
+    }
+  };
+}
+function instance10($$self, $$props, $$invalidate) {
+  var __awaiter = this && this.__awaiter || function(thisArg, _arguments, P, generator) {
+    function adopt(value) {
+      return value instanceof P ? value : new P(function(resolve) {
+        resolve(value);
+      });
+    }
+    return new (P || (P = Promise))(function(resolve, reject) {
+      function fulfilled(value) {
+        try {
+          step(generator.next(value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function rejected(value) {
+        try {
+          step(generator["throw"](value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function step(result) {
+        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+      }
+      step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+  };
+  let { app } = $$props;
+  let { settingsService } = $$props;
+  let { aiService } = $$props;
+  let { generationService } = $$props;
+  let { onClose } = $$props;
+  let { onProcessComplete } = $$props;
+  let fileTree = [];
+  let selection = { paths: /* @__PURE__ */ new Set(), expanded: /* @__PURE__ */ new Set() };
+  let containerEl;
+  let processor;
+  let uiState2 = {
+    isInitialized: true,
+    darkMode: false,
+    activeAccordion: null,
+    notifications: [],
+    lastInteraction: Date.now(),
+    modalStack: [],
+    lastUpdated: Date.now(),
+    file: "",
+    progress: 0,
+    isProcessing: false
+  };
+  let processing = {
+    state: {
+      isProcessing: false,
+      currentFile: null,
+      queue: [],
+      progress: 0,
+      state: "idle" /* IDLE */,
+      filesQueued: 0,
+      filesProcessed: 0,
+      filesRemaining: 0,
+      errors: [],
+      error: null,
+      startTime: null,
+      estimatedTimeRemaining: null
+    },
+    filesQueued: 0,
+    filesProcessed: 0,
+    filesRemaining: 0,
+    currentFile: void 0,
+    startTime: 0,
+    errors: []
+  };
+  const statusBar = {
+    updateFromState: (state) => {
+      if (state.currentFile !== null) {
+        $$invalidate(3, uiState2.file = state.currentFile, uiState2);
+      }
+      $$invalidate(3, uiState2.progress = state.progress, uiState2);
+      $$invalidate(3, uiState2.isProcessing = state.status.state.isProcessing, uiState2);
+      Object.assign(processing, state.status);
+      $$invalidate(3, uiState2 = Object.assign({}, uiState2));
+      $$invalidate(4, processing);
+    }
+  };
+  onMount(() => {
+    buildVaultStructure();
+    initializeProcessor();
+  });
+  onDestroy(() => {
+    processor === null || processor === void 0 ? void 0 : processor.removeAllListeners();
+  });
+  class ProcessorCoreService extends CoreService {
+    initializeInternal() {
+      return __awaiter(this, void 0, void 0, function* () {
+      });
+    }
+    destroyInternal() {
+      return __awaiter(this, void 0, void 0, function* () {
+      });
+    }
+  }
+  function initializeProcessor() {
+    processor = new BatchProcessor(app, new ProcessorCoreService("batchProcessor", "Batch Processor"), statusBar);
+    processor.on("stateChanged", ({ state, currentFile, progress }) => {
+      $$invalidate(4, processing.state.state = state, processing);
+      $$invalidate(
+        4,
+        processing.currentFile = currentFile !== null && currentFile !== void 0 ? currentFile : void 0,
+        processing
+      );
+      $$invalidate(4, processing.state.progress = progress, processing);
+      $$invalidate(3, uiState2.progress = progress, uiState2);
+      $$invalidate(
+        3,
+        uiState2.file = currentFile !== null && currentFile !== void 0 ? currentFile : "",
+        uiState2
+      );
+      $$invalidate(3, uiState2.lastUpdated = Date.now(), uiState2);
+      $$invalidate(3, uiState2 = Object.assign({}, uiState2));
+      $$invalidate(4, processing);
+    });
+    processor.on("error", ({ filePath, error }) => {
+      new import_obsidian23.Notice(`Error processing ${filePath}: ${error}`);
+    });
+  }
+  function buildVaultStructure() {
+    const rootFolder = app.vault.getRoot();
+    return rootFolder.children.filter((child) => child instanceof import_obsidian23.TFolder || child instanceof import_obsidian23.TFile).map((child) => createNode(child, 0));
+  }
+  function createNode(item, level) {
+    if (item instanceof import_obsidian23.TFile) {
+      return {
+        name: item.name,
+        path: item.path,
+        type: "file",
+        selected: false,
+        level
+      };
+    }
+    return {
+      name: item.name,
+      path: item.path,
+      type: "folder",
+      children: item.children.filter((child) => child instanceof import_obsidian23.TFolder || child instanceof import_obsidian23.TFile).map((child) => createNode(child, level + 1)),
+      selected: false,
+      expanded: selection.expanded.has(item.path),
+      level
+    };
+  }
+  function renderNodes(container, nodes) {
+    nodes.forEach((node) => {
+      const itemSetting = new import_obsidian23.Setting(container).setClass("file-tree-item").addToggle((toggle) => {
+        toggle.setValue(node.selected).onChange((value) => handleSelection(node, value));
+        return toggle;
+      }).setName(node.name);
+      if (node.type === "folder") {
+        itemSetting.setClass("folder-item").setHeading().addExtraButton((button) => {
+          button.setIcon(node.expanded ? "chevron-down" : "chevron-right").onClick(() => toggleFolder(node));
+          return button;
+        });
+        if (node.expanded && node.children) {
+          const childContainer = container.createDiv("folder-children");
+          childContainer.style.marginLeft = "20px";
+          renderNodes(childContainer, node.children);
+        }
+      }
+    });
+  }
+  function renderFileTree() {
+    if (!containerEl)
+      return;
+    containerEl.empty();
+    const tree = buildVaultStructure();
+    fileTree = tree;
+    renderNodes(containerEl, tree);
+  }
+  function handleSelection(node, selected) {
+    node.selected = selected;
+    if (selected) {
+      selection.paths.add(node.path);
+    } else {
+      selection.paths.delete(node.path);
+    }
+    $$invalidate(1, selection);
+    if (node.type === "folder" && node.children) {
+      node.children.forEach((child) => handleSelection(child, selected));
+    }
+    renderFileTree();
+  }
+  function toggleFolder(node) {
+    if (node.type !== "folder")
+      return;
+    node.expanded = !node.expanded;
+    if (node.expanded) {
+      selection.expanded.add(node.path);
+    } else {
+      selection.expanded.delete(node.path);
+    }
+    $$invalidate(1, selection);
+    renderFileTree();
+  }
+  function handleProcess() {
+    return __awaiter(this, void 0, void 0, function* () {
+      if (selection.paths.size === 0) {
+        new import_obsidian23.Notice("No files selected for processing");
+        return;
+      }
+      try {
+        $$invalidate(3, uiState2.isProcessing = true, uiState2);
+        $$invalidate(3, uiState2.lastUpdated = Date.now(), uiState2);
+        $$invalidate(3, uiState2 = Object.assign({}, uiState2));
+        const settings = settingsService.getSettings();
+        const result = yield processor.process({
+          files: Array.from(selection.paths),
+          generateFrontMatter: settings.frontMatter.autoGenerate,
+          generateWikilinks: settings.advanced.generateWikilinks
+        });
+        showProcessingResults(result);
+        onClose();
+      } catch (error) {
+        console.error("Error processing files:", error);
+        new import_obsidian23.Notice(`Error processing files: ${error instanceof Error ? error.message : "Unknown error"}`);
+      } finally {
+        $$invalidate(3, uiState2.isProcessing = false, uiState2);
+        $$invalidate(3, uiState2.lastUpdated = Date.now(), uiState2);
+        $$invalidate(3, uiState2 = Object.assign({}, uiState2));
+      }
+    });
+  }
+  function showProcessingResults(stats) {
+    var _a;
+    const duration = (((_a = stats.endTime) !== null && _a !== void 0 ? _a : Date.now() - stats.startTime) / 1e3).toFixed(1);
+    new import_obsidian23.Notice(`Processing complete!
+Processed: ${stats.processedFiles}
+Errors: ${stats.errorFiles}
+Duration: ${duration}s`);
+  }
+  function div0_binding($$value) {
+    binding_callbacks[$$value ? "unshift" : "push"](() => {
+      containerEl = $$value;
+      $$invalidate(2, containerEl);
+    });
+  }
+  $$self.$$set = ($$props2) => {
+    if ("app" in $$props2)
+      $$invalidate(6, app = $$props2.app);
+    if ("settingsService" in $$props2)
+      $$invalidate(7, settingsService = $$props2.settingsService);
+    if ("aiService" in $$props2)
+      $$invalidate(8, aiService = $$props2.aiService);
+    if ("generationService" in $$props2)
+      $$invalidate(9, generationService = $$props2.generationService);
+    if ("onClose" in $$props2)
+      $$invalidate(0, onClose = $$props2.onClose);
+    if ("onProcessComplete" in $$props2)
+      $$invalidate(10, onProcessComplete = $$props2.onProcessComplete);
+  };
+  return [
+    onClose,
+    selection,
+    containerEl,
+    uiState2,
+    processing,
+    handleProcess,
+    app,
+    settingsService,
+    aiService,
+    generationService,
+    onProcessComplete,
+    div0_binding
+  ];
+}
+var BatchProcessorModal = class extends SvelteComponent {
+  constructor(options) {
+    super();
+    init(
+      this,
+      options,
+      instance10,
+      create_fragment10,
+      safe_not_equal,
+      {
+        app: 6,
+        settingsService: 7,
+        aiService: 8,
+        generationService: 9,
+        onClose: 0,
+        onProcessComplete: 10
+      },
+      add_css10
+    );
+  }
+};
+var BatchProcessorModal_default = BatchProcessorModal;
+
+// src/components/accordions/BatchProcessorAccordion.svelte
+function add_css11(target) {
+  append_styles(target, "svelte-j5dgb1", ".batch-processor-settings.svelte-j5dgb1{padding:var(--size-4);display:flex;flex-direction:column;gap:var(--size-4)}.error-message.svelte-j5dgb1{color:var(--color-red);font-size:var(--font-ui-small);padding:var(--size-2);background-color:var(--background-modifier-error);border-radius:var(--radius-s);margin-bottom:var(--size-2)}.settings-form.svelte-j5dgb1{display:flex;flex-direction:column;gap:var(--size-4)}.setting-item.svelte-j5dgb1{display:flex;justify-content:space-between;align-items:flex-start;padding:var(--size-2) 0;border-top:none !important}.setting-item.svelte-j5dgb1:first-child{padding-top:0}.setting-item-info.svelte-j5dgb1{flex:1;margin-right:var(--size-4)}.setting-item-name.svelte-j5dgb1{font-weight:var(--font-medium);margin-bottom:var(--size-1)}.setting-item-description.svelte-j5dgb1{color:var(--text-muted);font-size:var(--font-ui-smaller)}.setting-item-control.svelte-j5dgb1{flex-shrink:0}button.mod-cta.svelte-j5dgb1{background-color:var(--interactive-accent);color:var(--text-on-accent);padding:var(--size-2) var(--size-4);border-radius:var (--radius-s);font-weight:var(--font-medium);border:none;cursor:pointer;transition:background-color 0.2s ease}button.mod-cta.svelte-j5dgb1:hover:not(:disabled){background-color:var(--interactive-accent-hover)}button.mod-cta.svelte-j5dgb1:disabled{opacity:0.5;cursor:not-allowed}");
+}
+function create_if_block5(ctx) {
   let div;
+  let t_value = (
+    /*$state*/
+    ctx[8].error.message + ""
+  );
+  let t;
   return {
     c() {
       div = element("div");
-      div.innerHTML = `<p>Initializing settings...</p>`;
-      attr(div, "class", "settings-loading svelte-lrwn3h");
+      t = text(t_value);
+      attr(div, "class", "error-message svelte-j5dgb1");
     },
     m(target, anchor) {
       insert(target, div, anchor);
+      append(div, t);
     },
-    p: noop,
-    i: noop,
-    o: noop,
+    p(ctx2, dirty) {
+      if (dirty & /*$state*/
+      256 && t_value !== (t_value = /*$state*/
+      ctx2[8].error.message + ""))
+        set_data(t, t_value);
+    },
     d(detaching) {
       if (detaching) {
         detach(div);
@@ -25825,51 +18171,1519 @@ function create_else_block6(ctx) {
     }
   };
 }
+function create_default_slot6(ctx) {
+  let div8;
+  let t0;
+  let div7;
+  let div5;
+  let div2;
+  let t4;
+  let div4;
+  let div3;
+  let input;
+  let input_checked_value;
+  let input_disabled_value;
+  let t5;
+  let div6;
+  let button;
+  let t6_value = (
+    /*$state*/
+    ctx[8].isProcessing ? "Running..." : "Run Batch Processor"
+  );
+  let t6;
+  let button_disabled_value;
+  let mounted;
+  let dispose;
+  let if_block = (
+    /*$state*/
+    ctx[8].error && create_if_block5(ctx)
+  );
+  return {
+    c() {
+      div8 = element("div");
+      if (if_block)
+        if_block.c();
+      t0 = space();
+      div7 = element("div");
+      div5 = element("div");
+      div2 = element("div");
+      div2.innerHTML = `<div class="setting-item-name svelte-j5dgb1">Auto-generate Front Matter</div> <div class="setting-item-description svelte-j5dgb1">Automatically generate front matter for new or unprocessed notes when you open your vault</div>`;
+      t4 = space();
+      div4 = element("div");
+      div3 = element("div");
+      input = element("input");
+      t5 = space();
+      div6 = element("div");
+      button = element("button");
+      t6 = text(t6_value);
+      attr(div2, "class", "setting-item-info svelte-j5dgb1");
+      attr(input, "type", "checkbox");
+      input.checked = input_checked_value = /*$state*/
+      ctx[8].autoGenerate;
+      input.disabled = input_disabled_value = !/*$state*/
+      ctx[8].isInitialized;
+      attr(div3, "class", "checkbox-container");
+      attr(div4, "class", "setting-item-control svelte-j5dgb1");
+      attr(div5, "class", "setting-item svelte-j5dgb1");
+      attr(button, "class", "mod-cta svelte-j5dgb1");
+      button.disabled = button_disabled_value = /*$state*/
+      ctx[8].isProcessing || !/*$state*/
+      ctx[8].isInitialized;
+      attr(div6, "class", "setting-item svelte-j5dgb1");
+      attr(div7, "class", "settings-form svelte-j5dgb1");
+      attr(div8, "class", "batch-processor-settings svelte-j5dgb1");
+      attr(div8, "role", "region");
+      attr(div8, "aria-label", "Batch Processor Settings");
+    },
+    m(target, anchor) {
+      insert(target, div8, anchor);
+      if (if_block)
+        if_block.m(div8, null);
+      append(div8, t0);
+      append(div8, div7);
+      append(div7, div5);
+      append(div5, div2);
+      append(div5, t4);
+      append(div5, div4);
+      append(div4, div3);
+      append(div3, input);
+      append(div7, t5);
+      append(div7, div6);
+      append(div6, button);
+      append(button, t6);
+      ctx[18](div8);
+      if (!mounted) {
+        dispose = [
+          listen(
+            input,
+            "change",
+            /*change_handler*/
+            ctx[17]
+          ),
+          listen(
+            button,
+            "click",
+            /*runBatchProcessor*/
+            ctx[11]
+          ),
+          listen(div8, "click", function() {
+            if (is_function(
+              /*onClick*/
+              ctx[5]
+            ))
+              ctx[5].apply(this, arguments);
+          }),
+          listen(div8, "keydown", function() {
+            if (is_function(
+              /*onKeyDown*/
+              ctx[6]
+            ))
+              ctx[6].apply(this, arguments);
+          }),
+          listen(div8, "focus", function() {
+            if (is_function(
+              /*onFocus*/
+              ctx[4]
+            ))
+              ctx[4].apply(this, arguments);
+          }),
+          listen(div8, "blur", function() {
+            if (is_function(
+              /*onBlur*/
+              ctx[3]
+            ))
+              ctx[3].apply(this, arguments);
+          })
+        ];
+        mounted = true;
+      }
+    },
+    p(new_ctx, dirty) {
+      ctx = new_ctx;
+      if (
+        /*$state*/
+        ctx[8].error
+      ) {
+        if (if_block) {
+          if_block.p(ctx, dirty);
+        } else {
+          if_block = create_if_block5(ctx);
+          if_block.c();
+          if_block.m(div8, t0);
+        }
+      } else if (if_block) {
+        if_block.d(1);
+        if_block = null;
+      }
+      if (dirty & /*$state*/
+      256 && input_checked_value !== (input_checked_value = /*$state*/
+      ctx[8].autoGenerate)) {
+        input.checked = input_checked_value;
+      }
+      if (dirty & /*$state*/
+      256 && input_disabled_value !== (input_disabled_value = !/*$state*/
+      ctx[8].isInitialized)) {
+        input.disabled = input_disabled_value;
+      }
+      if (dirty & /*$state*/
+      256 && t6_value !== (t6_value = /*$state*/
+      ctx[8].isProcessing ? "Running..." : "Run Batch Processor"))
+        set_data(t6, t6_value);
+      if (dirty & /*$state*/
+      256 && button_disabled_value !== (button_disabled_value = /*$state*/
+      ctx[8].isProcessing || !/*$state*/
+      ctx[8].isInitialized)) {
+        button.disabled = button_disabled_value;
+      }
+    },
+    d(detaching) {
+      if (detaching) {
+        detach(div8);
+      }
+      if (if_block)
+        if_block.d();
+      ctx[18](null);
+      mounted = false;
+      run_all(dispose);
+    }
+  };
+}
+function create_fragment11(ctx) {
+  let baseaccordion;
+  let current;
+  baseaccordion = new BaseAccordion_default({
+    props: {
+      title: (
+        /*title*/
+        ctx[0]
+      ),
+      description: (
+        /*description*/
+        ctx[1]
+      ),
+      isOpen: (
+        /*isOpen*/
+        ctx[2]
+      ),
+      $$slots: { default: [create_default_slot6] },
+      $$scope: { ctx }
+    }
+  });
+  return {
+    c() {
+      create_component(baseaccordion.$$.fragment);
+    },
+    m(target, anchor) {
+      mount_component(baseaccordion, target, anchor);
+      current = true;
+    },
+    p(ctx2, [dirty]) {
+      const baseaccordion_changes = {};
+      if (dirty & /*title*/
+      1)
+        baseaccordion_changes.title = /*title*/
+        ctx2[0];
+      if (dirty & /*description*/
+      2)
+        baseaccordion_changes.description = /*description*/
+        ctx2[1];
+      if (dirty & /*isOpen*/
+      4)
+        baseaccordion_changes.isOpen = /*isOpen*/
+        ctx2[2];
+      if (dirty & /*$$scope, settingsContainer, onClick, onKeyDown, onFocus, onBlur, $state*/
+      134218232) {
+        baseaccordion_changes.$$scope = { dirty, ctx: ctx2 };
+      }
+      baseaccordion.$set(baseaccordion_changes);
+    },
+    i(local) {
+      if (current)
+        return;
+      transition_in(baseaccordion.$$.fragment, local);
+      current = true;
+    },
+    o(local) {
+      transition_out(baseaccordion.$$.fragment, local);
+      current = false;
+    },
+    d(detaching) {
+      destroy_component(baseaccordion, detaching);
+    }
+  };
+}
+function instance11($$self, $$props, $$invalidate) {
+  let $state;
+  var __awaiter = this && this.__awaiter || function(thisArg, _arguments, P, generator) {
+    function adopt(value) {
+      return value instanceof P ? value : new P(function(resolve) {
+        resolve(value);
+      });
+    }
+    return new (P || (P = Promise))(function(resolve, reject) {
+      function fulfilled(value) {
+        try {
+          step(generator.next(value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function rejected(value) {
+        try {
+          step(generator["throw"](value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function step(result) {
+        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+      }
+      step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+  };
+  let { title } = $$props;
+  let { description } = $$props;
+  let { app } = $$props;
+  let { settingsService } = $$props;
+  let { aiService } = $$props;
+  let { isOpen = false } = $$props;
+  let { generationService = void 0 } = $$props;
+  let { onChange } = $$props;
+  let { onBlur } = $$props;
+  let { onFocus } = $$props;
+  let { onClick } = $$props;
+  let { onKeyDown } = $$props;
+  const state = writable({
+    isInitialized: false,
+    isProcessing: false,
+    autoGenerate: false,
+    lifecycle: "uninitialized" /* Uninitialized */,
+    error: void 0,
+    validationResult: void 0,
+    lastUpdated: Date.now()
+  });
+  component_subscribe($$self, state, (value) => $$invalidate(8, $state = value));
+  let modal = null;
+  let settingsContainer;
+  onMount(() => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+      yield initializeComponent();
+      state.update((s) => Object.assign(Object.assign({}, s), {
+        isInitialized: true,
+        lifecycle: "ready" /* Ready */
+      }));
+    } catch (error) {
+      console.error("Failed to initialize BatchProcessorAccordion:", error);
+      handleError(error);
+    }
+  }));
+  function initializeComponent() {
+    return __awaiter(this, void 0, void 0, function* () {
+      if (!settingsService.isReady()) {
+        throw new Error("Settings service not ready");
+      }
+      const settings = settingsService.getSettings();
+      if (!settings.frontMatter) {
+        throw new Error("Front Matter settings are missing");
+      }
+      state.update((s) => Object.assign(Object.assign({}, s), {
+        autoGenerate: settings.frontMatter.autoGenerate,
+        isInitialized: true,
+        lastUpdated: Date.now()
+      }));
+    });
+  }
+  function handleAutoGenerateToggle(value) {
+    return __awaiter(this, void 0, void 0, function* () {
+      if (!settingsService.isReady())
+        return;
+      try {
+        yield settingsService.updateNestedSetting("frontMatter", "autoGenerate", value);
+        state.update((s) => Object.assign(Object.assign({}, s), {
+          autoGenerate: value,
+          lastUpdated: Date.now()
+        }));
+        new import_obsidian24.Notice("Auto-generate Front Matter updated.");
+        onChange === null || onChange === void 0 ? void 0 : onChange(value);
+      } catch (error) {
+        console.error("\u{1F987} Error updating auto-generate setting:", error);
+        handleError(error);
+        state.update((s) => Object.assign(Object.assign({}, s), { autoGenerate: !value }));
+      }
+    });
+  }
+  function openBatchProcessorModal() {
+    if ($state.isProcessing)
+      return;
+    try {
+      ensureRequiredServices();
+      modal = new BatchProcessorModal_default({
+        target: document.body,
+        props: {
+          app,
+          settingsService,
+          aiService,
+          generationService,
+          onClose: handleModalClose,
+          onProcessComplete: handleProcessComplete
+        }
+      });
+      state.update((s) => Object.assign(Object.assign({}, s), { isProcessing: true }));
+    } catch (error) {
+      console.error("\u{1F987} Error opening Batch Processor modal:", error);
+      handleError(error);
+    }
+  }
+  function ensureRequiredServices() {
+    if (!settingsService.isReady()) {
+      throw new Error("Settings service not ready");
+    }
+    if (!aiService.isReady()) {
+      throw new Error("AI service not ready");
+    }
+    if (!generationService) {
+      throw new Error("Generation service not provided");
+    }
+  }
+  function handleModalClose() {
+    modal === null || modal === void 0 ? void 0 : modal.$destroy();
+    modal = null;
+    state.update((s) => Object.assign(Object.assign({}, s), { isProcessing: false }));
+  }
+  function handleProcessComplete() {
+    new import_obsidian24.Notice("Batch processing completed successfully.");
+    state.update((s) => Object.assign(Object.assign({}, s), { isProcessing: false }));
+  }
+  function handleError(error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    state.update((s) => Object.assign(Object.assign({}, s), {
+      error: {
+        message,
+        timestamp: Date.now(),
+        source: "BatchProcessorAccordion"
+      },
+      lifecycle: "error" /* Error */
+    }));
+    new import_obsidian24.Notice(`Batch Processor Error: ${message}`);
+  }
+  function runBatchProcessor() {
+    openBatchProcessorModal();
+  }
+  const change_handler = (e) => handleAutoGenerateToggle(e.currentTarget.checked);
+  function div8_binding($$value) {
+    binding_callbacks[$$value ? "unshift" : "push"](() => {
+      settingsContainer = $$value;
+      $$invalidate(7, settingsContainer);
+    });
+  }
+  $$self.$$set = ($$props2) => {
+    if ("title" in $$props2)
+      $$invalidate(0, title = $$props2.title);
+    if ("description" in $$props2)
+      $$invalidate(1, description = $$props2.description);
+    if ("app" in $$props2)
+      $$invalidate(12, app = $$props2.app);
+    if ("settingsService" in $$props2)
+      $$invalidate(13, settingsService = $$props2.settingsService);
+    if ("aiService" in $$props2)
+      $$invalidate(14, aiService = $$props2.aiService);
+    if ("isOpen" in $$props2)
+      $$invalidate(2, isOpen = $$props2.isOpen);
+    if ("generationService" in $$props2)
+      $$invalidate(15, generationService = $$props2.generationService);
+    if ("onChange" in $$props2)
+      $$invalidate(16, onChange = $$props2.onChange);
+    if ("onBlur" in $$props2)
+      $$invalidate(3, onBlur = $$props2.onBlur);
+    if ("onFocus" in $$props2)
+      $$invalidate(4, onFocus = $$props2.onFocus);
+    if ("onClick" in $$props2)
+      $$invalidate(5, onClick = $$props2.onClick);
+    if ("onKeyDown" in $$props2)
+      $$invalidate(6, onKeyDown = $$props2.onKeyDown);
+  };
+  return [
+    title,
+    description,
+    isOpen,
+    onBlur,
+    onFocus,
+    onClick,
+    onKeyDown,
+    settingsContainer,
+    $state,
+    state,
+    handleAutoGenerateToggle,
+    runBatchProcessor,
+    app,
+    settingsService,
+    aiService,
+    generationService,
+    onChange,
+    change_handler,
+    div8_binding
+  ];
+}
+var BatchProcessorAccordion = class extends SvelteComponent {
+  constructor(options) {
+    super();
+    init(
+      this,
+      options,
+      instance11,
+      create_fragment11,
+      safe_not_equal,
+      {
+        title: 0,
+        description: 1,
+        app: 12,
+        settingsService: 13,
+        aiService: 14,
+        isOpen: 2,
+        generationService: 15,
+        onChange: 16,
+        onBlur: 3,
+        onFocus: 4,
+        onClick: 5,
+        onKeyDown: 6
+      },
+      add_css11
+    );
+  }
+};
+var BatchProcessorAccordion_default = BatchProcessorAccordion;
+
+// src/components/accordions/AdvancedAccordion.svelte
+var import_obsidian25 = require("obsidian");
+function add_css12(target) {
+  append_styles(target, "svelte-1uk2yp8", '.advanced-settings.svelte-1uk2yp8{padding:var(--size-4);display:flex;flex-direction:column;gap:var(--size-4)}.error-message.svelte-1uk2yp8{color:var(--color-red);font-size:var(--font-ui-small);padding:var(--size-2);background-color:var(--background-modifier-error);border-radius:var(--radius-s);margin-bottom:var(--size-2)}.setting-item.svelte-1uk2yp8{display:flex;justify-content:space-between;align-items:flex-start;padding:var(--size-2) 0;border-top:none !important}.setting-item.svelte-1uk2yp8:first-child{padding-top:0}.setting-item-info.svelte-1uk2yp8{flex:1;margin-right:var(--size-4)}.setting-item-name.svelte-1uk2yp8{font-weight:var(--font-medium);margin-bottom:var(--size-1)}.setting-item-description.svelte-1uk2yp8{color:var(--text-muted);font-size:var(--font-ui-smaller)}.setting-item-control.svelte-1uk2yp8{flex-shrink:0;display:flex;align-items:center;gap:var(--size-2)}input[type="range"].svelte-1uk2yp8{width:150px}input[type="number"].svelte-1uk2yp8{width:100px;padding:var(--size-2);border:1px solid var(--background-modifier-border);border-radius:var(--radius-s);background:var(--background-primary);color:var(--text-normal)}.value-display.svelte-1uk2yp8{min-width:2.5em;text-align:right;color:var (--text-muted)}.status-message.svelte-1uk2yp8{color:var(--text-muted);font-size:var(--font-ui-small);text-align:center;padding:var(--size-2);background-color:var(--background-secondary);border-radius:var(--radius-s)}button.mod-cta.svelte-1uk2yp8{background-color:var(--interactive-accent);color:var(--text-on-accent);padding:var(--size-2) var(--size-4);border-radius:var(--radius-s);font-weight:var(--font-medium);border:none;cursor:pointer;transition:background-color 0.2s ease}button.mod-cta.svelte-1uk2yp8:hover:not(:disabled){background-color:var(--interactive-accent-hover)}button.mod-cta.svelte-1uk2yp8:disabled{opacity:0.5;cursor:not-allowed}input.svelte-1uk2yp8:disabled{opacity:0.5;cursor:not-allowed}');
+}
 function create_if_block_14(ctx) {
   let div;
-  let each_blocks = [];
-  let each_1_lookup = /* @__PURE__ */ new Map();
-  let current;
-  let each_value = ensure_array_like(
-    /*accordionConfigs*/
-    ctx[4]
+  let t_value = (
+    /*$state*/
+    ctx[3].error.message + ""
   );
-  const get_key = (ctx2) => (
-    /*config*/
-    ctx2[9].id
-  );
-  for (let i = 0; i < each_value.length; i += 1) {
-    let child_ctx = get_each_context8(ctx, each_value, i);
-    let key = get_key(child_ctx);
-    each_1_lookup.set(key, each_blocks[i] = create_each_block8(key, child_ctx));
-  }
+  let t;
   return {
     c() {
       div = element("div");
-      for (let i = 0; i < each_blocks.length; i += 1) {
-        each_blocks[i].c();
-      }
-      attr(div, "class", "settings-accordions svelte-lrwn3h");
+      t = text(t_value);
+      attr(div, "class", "error-message svelte-1uk2yp8");
+      attr(div, "role", "alert");
     },
     m(target, anchor) {
       insert(target, div, anchor);
-      for (let i = 0; i < each_blocks.length; i += 1) {
-        if (each_blocks[i]) {
-          each_blocks[i].m(div, null);
+      append(div, t);
+    },
+    p(ctx2, dirty) {
+      if (dirty & /*$state*/
+      8 && t_value !== (t_value = /*$state*/
+      ctx2[3].error.message + ""))
+        set_data(t, t_value);
+    },
+    d(detaching) {
+      if (detaching) {
+        detach(div);
+      }
+    }
+  };
+}
+function create_if_block6(ctx) {
+  let div;
+  let t0;
+  let t1_value = (
+    /*$state*/
+    ctx[3].generatedNotes + ""
+  );
+  let t1;
+  let t2;
+  return {
+    c() {
+      div = element("div");
+      t0 = text("Last generation created ");
+      t1 = text(t1_value);
+      t2 = text(" new notes.");
+      attr(div, "class", "status-message svelte-1uk2yp8");
+    },
+    m(target, anchor) {
+      insert(target, div, anchor);
+      append(div, t0);
+      append(div, t1);
+      append(div, t2);
+    },
+    p(ctx2, dirty) {
+      if (dirty & /*$state*/
+      8 && t1_value !== (t1_value = /*$state*/
+      ctx2[3].generatedNotes + ""))
+        set_data(t1, t1_value);
+    },
+    d(detaching) {
+      if (detaching) {
+        detach(div);
+      }
+    }
+  };
+}
+function create_default_slot7(ctx) {
+  let form;
+  let t0;
+  let div3;
+  let div1;
+  let t4;
+  let div2;
+  let input0;
+  let input0_disabled_value;
+  let t5;
+  let div7;
+  let div5;
+  let t9;
+  let div6;
+  let input1;
+  let input1_disabled_value;
+  let t10;
+  let span;
+  let t11_value = (
+    /*$state*/
+    ctx[3].settings.temperature.toFixed(1) + ""
+  );
+  let t11;
+  let t12;
+  let div11;
+  let div9;
+  let t16;
+  let div10;
+  let input2;
+  let input2_disabled_value;
+  let t17;
+  let div13;
+  let div12;
+  let button;
+  let t18_value = (
+    /*$state*/
+    ctx[3].isGenerating ? "Generating..." : "Generate Knowledge Bloom"
+  );
+  let t18;
+  let button_disabled_value;
+  let button_aria_disabled_value;
+  let t19;
+  let mounted;
+  let dispose;
+  let if_block0 = (
+    /*$state*/
+    ctx[3].error && create_if_block_14(ctx)
+  );
+  let if_block1 = (
+    /*$state*/
+    ctx[3].generatedNotes > 0 && create_if_block6(ctx)
+  );
+  return {
+    c() {
+      form = element("form");
+      if (if_block0)
+        if_block0.c();
+      t0 = space();
+      div3 = element("div");
+      div1 = element("div");
+      div1.innerHTML = `<label for="wikilinks-toggle" class="setting-item-name svelte-1uk2yp8">Generate Wikilinks</label> <div class="setting-item-description svelte-1uk2yp8">Automatically generate wikilinks for your notes</div>`;
+      t4 = space();
+      div2 = element("div");
+      input0 = element("input");
+      t5 = space();
+      div7 = element("div");
+      div5 = element("div");
+      div5.innerHTML = `<label for="temperature-slider" class="setting-item-name svelte-1uk2yp8">Temperature</label> <div class="setting-item-description svelte-1uk2yp8">Set the temperature for AI responses (0.0 - 1.0)</div>`;
+      t9 = space();
+      div6 = element("div");
+      input1 = element("input");
+      t10 = space();
+      span = element("span");
+      t11 = text(t11_value);
+      t12 = space();
+      div11 = element("div");
+      div9 = element("div");
+      div9.innerHTML = `<label for="max-tokens-input" class="setting-item-name svelte-1uk2yp8">Max Tokens</label> <div class="setting-item-description svelte-1uk2yp8">Set the maximum number of tokens for AI responses</div>`;
+      t16 = space();
+      div10 = element("div");
+      input2 = element("input");
+      t17 = space();
+      div13 = element("div");
+      div12 = element("div");
+      button = element("button");
+      t18 = text(t18_value);
+      t19 = space();
+      if (if_block1)
+        if_block1.c();
+      attr(div1, "class", "setting-item-info svelte-1uk2yp8");
+      attr(input0, "id", "wikilinks-toggle");
+      attr(input0, "type", "checkbox");
+      input0.disabled = input0_disabled_value = !/*$state*/
+      ctx[3].isInitialized;
+      attr(input0, "class", "svelte-1uk2yp8");
+      attr(div2, "class", "setting-item-control svelte-1uk2yp8");
+      attr(div3, "class", "setting-item svelte-1uk2yp8");
+      attr(div5, "class", "setting-item-info svelte-1uk2yp8");
+      attr(input1, "id", "temperature-slider");
+      attr(input1, "type", "range");
+      attr(input1, "min", "0");
+      attr(input1, "max", "1");
+      attr(input1, "step", "0.1");
+      input1.disabled = input1_disabled_value = !/*$state*/
+      ctx[3].isInitialized;
+      attr(input1, "class", "svelte-1uk2yp8");
+      attr(span, "class", "value-display svelte-1uk2yp8");
+      attr(div6, "class", "setting-item-control svelte-1uk2yp8");
+      attr(div7, "class", "setting-item svelte-1uk2yp8");
+      attr(div9, "class", "setting-item-info svelte-1uk2yp8");
+      attr(input2, "id", "max-tokens-input");
+      attr(input2, "type", "number");
+      attr(input2, "min", "1");
+      attr(input2, "placeholder", "2048");
+      input2.disabled = input2_disabled_value = !/*$state*/
+      ctx[3].isInitialized;
+      attr(input2, "class", "svelte-1uk2yp8");
+      attr(div10, "class", "setting-item-control svelte-1uk2yp8");
+      attr(div11, "class", "setting-item svelte-1uk2yp8");
+      attr(button, "type", "submit");
+      attr(button, "class", "mod-cta svelte-1uk2yp8");
+      button.disabled = button_disabled_value = /*$state*/
+      ctx[3].isGenerating || !/*$state*/
+      ctx[3].isInitialized || /*$state*/
+      ctx[3].lifecycle !== "ready" /* Ready */;
+      attr(button, "aria-disabled", button_aria_disabled_value = /*$state*/
+      ctx[3].isGenerating || !/*$state*/
+      ctx[3].isInitialized || /*$state*/
+      ctx[3].lifecycle !== "ready" /* Ready */);
+      attr(div12, "class", "setting-item-control svelte-1uk2yp8");
+      attr(div13, "class", "setting-item svelte-1uk2yp8");
+      attr(form, "class", "advanced-settings svelte-1uk2yp8");
+    },
+    m(target, anchor) {
+      insert(target, form, anchor);
+      if (if_block0)
+        if_block0.m(form, null);
+      append(form, t0);
+      append(form, div3);
+      append(div3, div1);
+      append(div3, t4);
+      append(div3, div2);
+      append(div2, input0);
+      input0.checked = /*$state*/
+      ctx[3].settings.generateWikilinks;
+      append(form, t5);
+      append(form, div7);
+      append(div7, div5);
+      append(div7, t9);
+      append(div7, div6);
+      append(div6, input1);
+      set_input_value(
+        input1,
+        /*$state*/
+        ctx[3].settings.temperature
+      );
+      append(div6, t10);
+      append(div6, span);
+      append(span, t11);
+      append(form, t12);
+      append(form, div11);
+      append(div11, div9);
+      append(div11, t16);
+      append(div11, div10);
+      append(div10, input2);
+      set_input_value(
+        input2,
+        /*$state*/
+        ctx[3].settings.maxTokens
+      );
+      append(form, t17);
+      append(form, div13);
+      append(div13, div12);
+      append(div12, button);
+      append(button, t18);
+      append(form, t19);
+      if (if_block1)
+        if_block1.m(form, null);
+      if (!mounted) {
+        dispose = [
+          listen(
+            input0,
+            "change",
+            /*input0_change_handler*/
+            ctx[15]
+          ),
+          listen(
+            input0,
+            "change",
+            /*change_handler*/
+            ctx[16]
+          ),
+          listen(
+            input1,
+            "change",
+            /*input1_change_input_handler*/
+            ctx[17]
+          ),
+          listen(
+            input1,
+            "input",
+            /*input1_change_input_handler*/
+            ctx[17]
+          ),
+          listen(
+            input1,
+            "change",
+            /*change_handler_1*/
+            ctx[18]
+          ),
+          listen(
+            input2,
+            "input",
+            /*input2_input_handler*/
+            ctx[19]
+          ),
+          listen(
+            input2,
+            "change",
+            /*change_handler_2*/
+            ctx[20]
+          ),
+          listen(form, "submit", prevent_default(
+            /*handleGenerateKnowledgeBloom*/
+            ctx[6]
+          ))
+        ];
+        mounted = true;
+      }
+    },
+    p(ctx2, dirty) {
+      if (
+        /*$state*/
+        ctx2[3].error
+      ) {
+        if (if_block0) {
+          if_block0.p(ctx2, dirty);
+        } else {
+          if_block0 = create_if_block_14(ctx2);
+          if_block0.c();
+          if_block0.m(form, t0);
+        }
+      } else if (if_block0) {
+        if_block0.d(1);
+        if_block0 = null;
+      }
+      if (dirty & /*$state*/
+      8 && input0_disabled_value !== (input0_disabled_value = !/*$state*/
+      ctx2[3].isInitialized)) {
+        input0.disabled = input0_disabled_value;
+      }
+      if (dirty & /*$state*/
+      8) {
+        input0.checked = /*$state*/
+        ctx2[3].settings.generateWikilinks;
+      }
+      if (dirty & /*$state*/
+      8 && input1_disabled_value !== (input1_disabled_value = !/*$state*/
+      ctx2[3].isInitialized)) {
+        input1.disabled = input1_disabled_value;
+      }
+      if (dirty & /*$state*/
+      8) {
+        set_input_value(
+          input1,
+          /*$state*/
+          ctx2[3].settings.temperature
+        );
+      }
+      if (dirty & /*$state*/
+      8 && t11_value !== (t11_value = /*$state*/
+      ctx2[3].settings.temperature.toFixed(1) + ""))
+        set_data(t11, t11_value);
+      if (dirty & /*$state*/
+      8 && input2_disabled_value !== (input2_disabled_value = !/*$state*/
+      ctx2[3].isInitialized)) {
+        input2.disabled = input2_disabled_value;
+      }
+      if (dirty & /*$state*/
+      8 && to_number(input2.value) !== /*$state*/
+      ctx2[3].settings.maxTokens) {
+        set_input_value(
+          input2,
+          /*$state*/
+          ctx2[3].settings.maxTokens
+        );
+      }
+      if (dirty & /*$state*/
+      8 && t18_value !== (t18_value = /*$state*/
+      ctx2[3].isGenerating ? "Generating..." : "Generate Knowledge Bloom"))
+        set_data(t18, t18_value);
+      if (dirty & /*$state*/
+      8 && button_disabled_value !== (button_disabled_value = /*$state*/
+      ctx2[3].isGenerating || !/*$state*/
+      ctx2[3].isInitialized || /*$state*/
+      ctx2[3].lifecycle !== "ready" /* Ready */)) {
+        button.disabled = button_disabled_value;
+      }
+      if (dirty & /*$state*/
+      8 && button_aria_disabled_value !== (button_aria_disabled_value = /*$state*/
+      ctx2[3].isGenerating || !/*$state*/
+      ctx2[3].isInitialized || /*$state*/
+      ctx2[3].lifecycle !== "ready" /* Ready */)) {
+        attr(button, "aria-disabled", button_aria_disabled_value);
+      }
+      if (
+        /*$state*/
+        ctx2[3].generatedNotes > 0
+      ) {
+        if (if_block1) {
+          if_block1.p(ctx2, dirty);
+        } else {
+          if_block1 = create_if_block6(ctx2);
+          if_block1.c();
+          if_block1.m(form, null);
+        }
+      } else if (if_block1) {
+        if_block1.d(1);
+        if_block1 = null;
+      }
+    },
+    d(detaching) {
+      if (detaching) {
+        detach(form);
+      }
+      if (if_block0)
+        if_block0.d();
+      if (if_block1)
+        if_block1.d();
+      mounted = false;
+      run_all(dispose);
+    }
+  };
+}
+function create_fragment12(ctx) {
+  let baseaccordion;
+  let current;
+  baseaccordion = new BaseAccordion_default({
+    props: {
+      title: (
+        /*title*/
+        ctx[0]
+      ),
+      description: (
+        /*description*/
+        ctx[1]
+      ),
+      isOpen: (
+        /*isOpen*/
+        ctx[2]
+      ),
+      $$slots: { default: [create_default_slot7] },
+      $$scope: { ctx }
+    }
+  });
+  return {
+    c() {
+      create_component(baseaccordion.$$.fragment);
+    },
+    m(target, anchor) {
+      mount_component(baseaccordion, target, anchor);
+      current = true;
+    },
+    p(ctx2, [dirty]) {
+      const baseaccordion_changes = {};
+      if (dirty & /*title*/
+      1)
+        baseaccordion_changes.title = /*title*/
+        ctx2[0];
+      if (dirty & /*description*/
+      2)
+        baseaccordion_changes.description = /*description*/
+        ctx2[1];
+      if (dirty & /*isOpen*/
+      4)
+        baseaccordion_changes.isOpen = /*isOpen*/
+        ctx2[2];
+      if (dirty & /*$$scope, $state*/
+      67108872) {
+        baseaccordion_changes.$$scope = { dirty, ctx: ctx2 };
+      }
+      baseaccordion.$set(baseaccordion_changes);
+    },
+    i(local) {
+      if (current)
+        return;
+      transition_in(baseaccordion.$$.fragment, local);
+      current = true;
+    },
+    o(local) {
+      transition_out(baseaccordion.$$.fragment, local);
+      current = false;
+    },
+    d(detaching) {
+      destroy_component(baseaccordion, detaching);
+    }
+  };
+}
+function validateSetting(key, value) {
+  switch (key) {
+    case "temperature":
+      if (value < 0 || value > 1) {
+        throw new Error("Temperature must be between 0 and 1");
+      }
+      break;
+    case "maxTokens":
+      if (typeof value === "number" && (isNaN(value) || value <= 0)) {
+        throw new Error("Max tokens must be a positive number");
+      }
+      break;
+  }
+}
+function instance12($$self, $$props, $$invalidate) {
+  let $state;
+  var __awaiter = this && this.__awaiter || function(thisArg, _arguments, P, generator) {
+    function adopt(value) {
+      return value instanceof P ? value : new P(function(resolve) {
+        resolve(value);
+      });
+    }
+    return new (P || (P = Promise))(function(resolve, reject) {
+      function fulfilled(value) {
+        try {
+          step(generator.next(value));
+        } catch (e) {
+          reject(e);
         }
       }
+      function rejected(value) {
+        try {
+          step(generator["throw"](value));
+        } catch (e) {
+          reject(e);
+        }
+      }
+      function step(result) {
+        result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+      }
+      step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+  };
+  let { title } = $$props;
+  let { description } = $$props;
+  let { app } = $$props;
+  let { settingsService } = $$props;
+  let { aiService } = $$props;
+  let { isOpen = false } = $$props;
+  let { onChange } = $$props;
+  let { onBlur } = $$props;
+  let { onFocus } = $$props;
+  let { onClick } = $$props;
+  let { onKeyDown } = $$props;
+  const DEFAULT_SETTINGS2 = {
+    generateWikilinks: false,
+    temperature: 0.7,
+    maxTokens: 2048
+  };
+  const state = writable({
+    isInitialized: false,
+    settings: Object.assign({}, DEFAULT_SETTINGS2),
+    isGenerating: false,
+    lifecycle: "uninitialized" /* Uninitialized */,
+    error: void 0,
+    validationResult: void 0,
+    generatedNotes: 0,
+    lastUpdated: Date.now()
+  });
+  component_subscribe($$self, state, (value) => $$invalidate(3, $state = value));
+  onMount(() => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+      yield initializeComponent();
+      state.update((s) => Object.assign(Object.assign({}, s), {
+        isInitialized: true,
+        lifecycle: "ready" /* Ready */
+      }));
+    } catch (error) {
+      console.error("Failed to initialize AdvancedAccordion:", error);
+      handleError(error);
+    }
+  }));
+  function initializeComponent() {
+    return __awaiter(this, void 0, void 0, function* () {
+      if (!settingsService.isReady()) {
+        throw new Error("Settings service not ready");
+      }
+      const currentSettings = settingsService.getSettings().advanced;
+      state.update((s) => Object.assign(Object.assign({}, s), {
+        settings: {
+          generateWikilinks: currentSettings.generateWikilinks,
+          temperature: currentSettings.temperature,
+          maxTokens: currentSettings.maxTokens
+        },
+        lastUpdated: Date.now()
+      }));
+    });
+  }
+  function handleSettingChange(key, value) {
+    return __awaiter(this, void 0, void 0, function* () {
+      try {
+        validateSetting(key, value);
+        yield settingsService.updateNestedSetting("advanced", key, value);
+        state.update((s) => Object.assign(Object.assign({}, s), {
+          settings: Object.assign(Object.assign({}, s.settings), { [key]: value }),
+          lastUpdated: Date.now()
+        }));
+        new import_obsidian25.Notice(`${key.charAt(0).toUpperCase() + key.slice(1)} setting updated.`);
+        onChange === null || onChange === void 0 ? void 0 : onChange(value);
+      } catch (error) {
+        console.error(`\u{1F987} Error updating ${key} setting:`, error);
+        handleError(error);
+        state.update((s) => Object.assign(Object.assign({}, s), {
+          settings: Object.assign(Object.assign({}, s.settings), {
+            [key]: settingsService.getSettings().advanced[key]
+          })
+        }));
+      }
+    });
+  }
+  function handleGenerateKnowledgeBloom() {
+    var _a;
+    return __awaiter(this, void 0, void 0, function* () {
+      if ($state.isGenerating)
+        return;
+      const activeFile = app.workspace.getActiveFile();
+      if (!(activeFile instanceof import_obsidian25.TFile)) {
+        new import_obsidian25.Notice("No active file found.");
+        return;
+      }
+      try {
+        state.update((s) => Object.assign(Object.assign({}, s), { isGenerating: true }));
+        const generationService = aiService.getGenerationService();
+        const result = yield generationService.generateKnowledgeBloom(activeFile, $state.settings.generateWikilinks.toString());
+        if ((_a = result === null || result === void 0 ? void 0 : result.generatedNotes) === null || _a === void 0 ? void 0 : _a.length) {
+          yield createGeneratedNotes(result.generatedNotes);
+          state.update((s) => Object.assign(Object.assign({}, s), {
+            generatedNotes: result.generatedNotes.length,
+            lastUpdated: Date.now()
+          }));
+          new import_obsidian25.Notice(`Generated ${result.generatedNotes.length} new notes!`);
+        } else {
+          new import_obsidian25.Notice("No notes were generated.");
+        }
+      } catch (error) {
+        console.error("\u{1F987} Error generating knowledge bloom:", error);
+        handleError(error);
+      } finally {
+        state.update((s) => Object.assign(Object.assign({}, s), { isGenerating: false }));
+      }
+    });
+  }
+  function createGeneratedNotes(notes) {
+    return __awaiter(this, void 0, void 0, function* () {
+      for (const note of notes) {
+        const filePath = `${note.title}.md`;
+        const existingFile = app.vault.getAbstractFileByPath(filePath);
+        try {
+          if (existingFile instanceof import_obsidian25.TFile) {
+            yield app.vault.modify(existingFile, note.content);
+          } else {
+            yield app.vault.create(filePath, note.content);
+          }
+        } catch (error) {
+          console.error(`\u{1F987} Error creating/updating note ${filePath}:`, error);
+          new import_obsidian25.Notice(`Failed to create/update note "${note.title}"`);
+        }
+      }
+    });
+  }
+  function handleError(error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    state.update((s) => Object.assign(Object.assign({}, s), {
+      error: {
+        message,
+        timestamp: Date.now(),
+        source: "AdvancedAccordion"
+      },
+      lifecycle: "error" /* Error */
+    }));
+    new import_obsidian25.Notice(`Advanced Settings Error: ${message}`);
+  }
+  function input0_change_handler() {
+    $state.settings.generateWikilinks = this.checked;
+    state.set($state);
+  }
+  const change_handler = (e) => handleSettingChange("generateWikilinks", e.currentTarget.checked);
+  function input1_change_input_handler() {
+    $state.settings.temperature = to_number(this.value);
+    state.set($state);
+  }
+  const change_handler_1 = (e) => handleSettingChange("temperature", parseFloat(e.currentTarget.value));
+  function input2_input_handler() {
+    $state.settings.maxTokens = to_number(this.value);
+    state.set($state);
+  }
+  const change_handler_2 = (e) => handleSettingChange("maxTokens", parseInt(e.currentTarget.value));
+  $$self.$$set = ($$props2) => {
+    if ("title" in $$props2)
+      $$invalidate(0, title = $$props2.title);
+    if ("description" in $$props2)
+      $$invalidate(1, description = $$props2.description);
+    if ("app" in $$props2)
+      $$invalidate(7, app = $$props2.app);
+    if ("settingsService" in $$props2)
+      $$invalidate(8, settingsService = $$props2.settingsService);
+    if ("aiService" in $$props2)
+      $$invalidate(9, aiService = $$props2.aiService);
+    if ("isOpen" in $$props2)
+      $$invalidate(2, isOpen = $$props2.isOpen);
+    if ("onChange" in $$props2)
+      $$invalidate(10, onChange = $$props2.onChange);
+    if ("onBlur" in $$props2)
+      $$invalidate(11, onBlur = $$props2.onBlur);
+    if ("onFocus" in $$props2)
+      $$invalidate(12, onFocus = $$props2.onFocus);
+    if ("onClick" in $$props2)
+      $$invalidate(13, onClick = $$props2.onClick);
+    if ("onKeyDown" in $$props2)
+      $$invalidate(14, onKeyDown = $$props2.onKeyDown);
+  };
+  return [
+    title,
+    description,
+    isOpen,
+    $state,
+    state,
+    handleSettingChange,
+    handleGenerateKnowledgeBloom,
+    app,
+    settingsService,
+    aiService,
+    onChange,
+    onBlur,
+    onFocus,
+    onClick,
+    onKeyDown,
+    input0_change_handler,
+    change_handler,
+    input1_change_input_handler,
+    change_handler_1,
+    input2_input_handler,
+    change_handler_2
+  ];
+}
+var AdvancedAccordion = class extends SvelteComponent {
+  constructor(options) {
+    super();
+    init(
+      this,
+      options,
+      instance12,
+      create_fragment12,
+      safe_not_equal,
+      {
+        title: 0,
+        description: 1,
+        app: 7,
+        settingsService: 8,
+        aiService: 9,
+        isOpen: 2,
+        onChange: 10,
+        onBlur: 11,
+        onFocus: 12,
+        onClick: 13,
+        onKeyDown: 14
+      },
+      add_css12
+    );
+  }
+};
+var AdvancedAccordion_default = AdvancedAccordion;
+
+// src/components/modals/ModalContainer.svelte
+function add_css13(target) {
+  append_styles(target, "svelte-1o8gsxo", ".modal-container.svelte-1o8gsxo{position:fixed;top:0;left:0;right:0;bottom:0;z-index:999;display:none;align-items:center;justify-content:center;pointer-events:none}.modal-container.active.svelte-1o8gsxo{display:flex;pointer-events:auto}.modal-backdrop.svelte-1o8gsxo{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0, 0, 0, 0.3);z-index:-1}.modal-content.svelte-1o8gsxo{position:relative;z-index:1000;background:var(--background-primary);border-radius:var(--radius-m);box-shadow:0 4px 12px rgba(0, 0, 0, 0.25);min-width:400px;max-width:80vw;max-height:80vh;overflow-y:auto;pointer-events:auto}");
+}
+function create_fragment13(ctx) {
+  let div2;
+  let div0;
+  let t;
+  let div1;
+  let current;
+  let mounted;
+  let dispose;
+  const default_slot_template = (
+    /*#slots*/
+    ctx[3].default
+  );
+  const default_slot = create_slot(
+    default_slot_template,
+    ctx,
+    /*$$scope*/
+    ctx[2],
+    null
+  );
+  return {
+    c() {
+      div2 = element("div");
+      div0 = element("div");
+      t = space();
+      div1 = element("div");
+      if (default_slot)
+        default_slot.c();
+      attr(div0, "class", "modal-backdrop svelte-1o8gsxo");
+      attr(div0, "aria-hidden", "true");
+      attr(div1, "class", "modal-content svelte-1o8gsxo");
+      attr(div2, "class", "modal-container svelte-1o8gsxo");
+      toggle_class(
+        div2,
+        "active",
+        /*modalActive*/
+        ctx[0]
+      );
+    },
+    m(target, anchor) {
+      insert(target, div2, anchor);
+      append(div2, div0);
+      append(div2, t);
+      append(div2, div1);
+      if (default_slot) {
+        default_slot.m(div1, null);
+      }
+      current = true;
+      if (!mounted) {
+        dispose = [
+          listen(div0, "click", handleBackdropClick),
+          listen(div2, "click", stop_propagation(
+            /*click_handler*/
+            ctx[4]
+          ))
+        ];
+        mounted = true;
+      }
+    },
+    p(ctx2, [dirty]) {
+      if (default_slot) {
+        if (default_slot.p && (!current || dirty & /*$$scope*/
+        4)) {
+          update_slot_base(
+            default_slot,
+            default_slot_template,
+            ctx2,
+            /*$$scope*/
+            ctx2[2],
+            !current ? get_all_dirty_from_scope(
+              /*$$scope*/
+              ctx2[2]
+            ) : get_slot_changes(
+              default_slot_template,
+              /*$$scope*/
+              ctx2[2],
+              dirty,
+              null
+            ),
+            null
+          );
+        }
+      }
+      if (!current || dirty & /*modalActive*/
+      1) {
+        toggle_class(
+          div2,
+          "active",
+          /*modalActive*/
+          ctx2[0]
+        );
+      }
+    },
+    i(local) {
+      if (current)
+        return;
+      transition_in(default_slot, local);
+      current = true;
+    },
+    o(local) {
+      transition_out(default_slot, local);
+      current = false;
+    },
+    d(detaching) {
+      if (detaching) {
+        detach(div2);
+      }
+      if (default_slot)
+        default_slot.d(detaching);
+      mounted = false;
+      run_all(dispose);
+    }
+  };
+}
+function handleBackdropClick(event) {
+  event.stopPropagation();
+}
+function instance13($$self, $$props, $$invalidate) {
+  let modalActive;
+  let $hasActiveModal;
+  component_subscribe($$self, hasActiveModal, ($$value) => $$invalidate(1, $hasActiveModal = $$value));
+  let { $$slots: slots = {}, $$scope } = $$props;
+  function click_handler(event) {
+    bubble.call(this, $$self, event);
+  }
+  $$self.$$set = ($$props2) => {
+    if ("$$scope" in $$props2)
+      $$invalidate(2, $$scope = $$props2.$$scope);
+  };
+  $$self.$$.update = () => {
+    if ($$self.$$.dirty & /*$hasActiveModal*/
+    2) {
+      $:
+        $$invalidate(0, modalActive = $hasActiveModal);
+    }
+  };
+  return [modalActive, $hasActiveModal, $$scope, slots, click_handler];
+}
+var ModalContainer = class extends SvelteComponent {
+  constructor(options) {
+    super();
+    init(this, options, instance13, create_fragment13, safe_not_equal, {}, add_css13);
+  }
+};
+var ModalContainer_default = ModalContainer;
+
+// src/settings/SettingsTab.svelte
+function add_css14(target) {
+  append_styles(target, "svelte-na1rkd", ".graphweaver-plugin-settings.svelte-na1rkd.svelte-na1rkd{padding:var(--size-4-6);max-width:800px;margin:0 auto;width:100%;animation:svelte-na1rkd-fadeIn 0.3s ease-out;position:relative}.graphweaver-plugin-settings.has-modal.svelte-na1rkd.svelte-na1rkd{position:relative}.graphweaver-plugin-settings.svelte-na1rkd.svelte-na1rkd{position:relative;z-index:1}.accordion-wrapper.svelte-na1rkd.svelte-na1rkd{position:relative;z-index:1}.settings-header.svelte-na1rkd.svelte-na1rkd{position:relative;margin-bottom:var(--size-12);padding:var(--size-8) var(--size-4);background:var(--background-primary)}.header-content.svelte-na1rkd.svelte-na1rkd{position:relative;z-index:1}.header-title.svelte-na1rkd.svelte-na1rkd{display:flex;align-items:center;gap:var(--size-4);margin-bottom:var(--size-4)}.header-title.svelte-na1rkd h2.svelte-na1rkd{margin:0;color:var(--text-normal);font-size:var(--font-ui-xxl);font-weight:var(--font-bold);line-height:1.2}.plugin-version.svelte-na1rkd.svelte-na1rkd{padding:var(--size-1) var(--size-2);background:var(--background-modifier-success);color:var(--text-on-accent);border-radius:var(--radius-s);font-size:var(--font-ui-smaller);font-weight:var(--font-medium)}.header-divider.svelte-na1rkd.svelte-na1rkd{position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(\r\n            to right,\r\n            var(--background-modifier-border),\r\n            var(--interactive-accent),\r\n            var(--background-modifier-border)\r\n        )}.settings-accordions.svelte-na1rkd.svelte-na1rkd{display:flex;flex-direction:column;gap:var(--size-4);padding:var(--size-4)}.accordion-wrapper.svelte-na1rkd.svelte-na1rkd{opacity:0;transform:translateY(10px);animation:svelte-na1rkd-slideIn 0.3s ease-out forwards;animation-delay:var(--animation-delay, 0)}.accordion-wrapper.active.svelte-na1rkd.svelte-na1rkd{z-index:1}@keyframes svelte-na1rkd-slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}@keyframes svelte-na1rkd-fadeIn{from{opacity:0}to{opacity:1}}.theme-dark .settings-header.svelte-na1rkd.svelte-na1rkd{background:linear-gradient(\r\n            180deg,\r\n            var(--background-primary) 0%,\r\n            var(--background-primary-alt) 100%\r\n        )}.theme-dark .accordion-wrapper.svelte-na1rkd.svelte-na1rkd{background-color:var(--background-primary-alt)}@media(max-width: 768px){.graphweaver-plugin-settings.svelte-na1rkd.svelte-na1rkd{padding:var(--size-2)}.settings-header.svelte-na1rkd.svelte-na1rkd{padding:var(--size-4);margin-bottom:var(--size-8)}.header-title.svelte-na1rkd h2.svelte-na1rkd{font-size:var(--font-ui-large)}}");
+}
+function get_each_context2(ctx, list, i) {
+  const child_ctx = ctx.slice();
+  child_ctx[19] = list[i];
+  return child_ctx;
+}
+function create_if_block7(ctx) {
+  let div5;
+  let header;
+  let div2;
+  let div1;
+  let h2;
+  let t1;
+  let div0;
+  let t2;
+  let t3_value = (
+    /*plugin*/
+    ctx[0].manifest.version + ""
+  );
+  let t3;
+  let t4;
+  let p;
+  let t6;
+  let div3;
+  let t7;
+  let div4;
+  let each_blocks = [];
+  let each_1_lookup = /* @__PURE__ */ new Map();
+  let t8;
+  let modalcontainer;
+  let current;
+  let each_value = ensure_array_like(
+    /*accordions*/
+    ctx[5]
+  );
+  const get_key = (ctx2) => (
+    /*accordion*/
+    ctx2[19].id
+  );
+  for (let i = 0; i < each_value.length; i += 1) {
+    let child_ctx = get_each_context2(ctx, each_value, i);
+    let key = get_key(child_ctx);
+    each_1_lookup.set(key, each_blocks[i] = create_each_block2(key, child_ctx));
+  }
+  modalcontainer = new ModalContainer_default({});
+  return {
+    c() {
+      div5 = element("div");
+      header = element("header");
+      div2 = element("div");
+      div1 = element("div");
+      h2 = element("h2");
+      h2.textContent = "GraphWeaver Settings";
+      t1 = space();
+      div0 = element("div");
+      t2 = text("v");
+      t3 = text(t3_value);
+      t4 = space();
+      p = element("p");
+      p.textContent = "Configure AI models, manage properties and tags, and customize your knowledge graph generation.";
+      t6 = space();
+      div3 = element("div");
+      t7 = space();
+      div4 = element("div");
+      for (let i = 0; i < each_blocks.length; i += 1) {
+        each_blocks[i].c();
+      }
+      t8 = space();
+      create_component(modalcontainer.$$.fragment);
+      attr(h2, "class", "svelte-na1rkd");
+      attr(div0, "class", "plugin-version svelte-na1rkd");
+      attr(div1, "class", "header-title svelte-na1rkd");
+      attr(div2, "class", "header-content svelte-na1rkd");
+      attr(div3, "class", "header-divider svelte-na1rkd");
+      attr(div3, "aria-hidden", "true");
+      attr(header, "class", "settings-header svelte-na1rkd");
+      attr(div4, "class", "settings-accordions svelte-na1rkd");
+      attr(div4, "role", "list");
+      attr(div5, "class", "graphweaver-plugin-settings svelte-na1rkd");
+      attr(div5, "role", "region");
+      attr(div5, "aria-label", "Plugin Settings");
+      toggle_class(
+        div5,
+        "has-modal",
+        /*modalActive*/
+        ctx[3]
+      );
+    },
+    m(target, anchor) {
+      insert(target, div5, anchor);
+      append(div5, header);
+      append(header, div2);
+      append(div2, div1);
+      append(div1, h2);
+      append(div1, t1);
+      append(div1, div0);
+      append(div0, t2);
+      append(div0, t3);
+      append(div2, t4);
+      append(div2, p);
+      append(header, t6);
+      append(header, div3);
+      append(div5, t7);
+      append(div5, div4);
+      for (let i = 0; i < each_blocks.length; i += 1) {
+        if (each_blocks[i]) {
+          each_blocks[i].m(div4, null);
+        }
+      }
+      append(div5, t8);
+      mount_component(modalcontainer, div5, null);
       current = true;
     },
     p(ctx2, dirty) {
-      if (dirty & /*accordionConfigs, app, services*/
-      19) {
+      if ((!current || dirty & /*plugin*/
+      1) && t3_value !== (t3_value = /*plugin*/
+      ctx2[0].manifest.version + ""))
+        set_data(t3, t3_value);
+      if (dirty & /*accordions, activeAccordionId, getAccordionProps, handleAccordionToggle*/
+      228) {
         each_value = ensure_array_like(
-          /*accordionConfigs*/
-          ctx2[4]
+          /*accordions*/
+          ctx2[5]
         );
         group_outros();
-        each_blocks = update_keyed_each(each_blocks, dirty, get_key, 1, ctx2, each_value, each_1_lookup, div, outro_and_destroy_block, create_each_block8, null, get_each_context8);
+        each_blocks = update_keyed_each(each_blocks, dirty, get_key, 1, ctx2, each_value, each_1_lookup, div4, outro_and_destroy_block, create_each_block2, null, get_each_context2);
         check_outros();
+      }
+      if (!current || dirty & /*modalActive*/
+      8) {
+        toggle_class(
+          div5,
+          "has-modal",
+          /*modalActive*/
+          ctx2[3]
+        );
       }
     },
     i(local) {
@@ -25878,123 +19692,72 @@ function create_if_block_14(ctx) {
       for (let i = 0; i < each_value.length; i += 1) {
         transition_in(each_blocks[i]);
       }
+      transition_in(modalcontainer.$$.fragment, local);
       current = true;
     },
     o(local) {
       for (let i = 0; i < each_blocks.length; i += 1) {
         transition_out(each_blocks[i]);
       }
+      transition_out(modalcontainer.$$.fragment, local);
       current = false;
     },
     d(detaching) {
       if (detaching) {
-        detach(div);
+        detach(div5);
       }
       for (let i = 0; i < each_blocks.length; i += 1) {
         each_blocks[i].d();
       }
+      destroy_component(modalcontainer);
     }
   };
 }
-function create_if_block9(ctx) {
-  let div;
-  let p;
-  let t0;
-  let t1;
-  let button;
-  let mounted;
-  let dispose;
-  return {
-    c() {
-      div = element("div");
-      p = element("p");
-      t0 = text(
-        /*error*/
-        ctx[3]
-      );
-      t1 = space();
-      button = element("button");
-      button.textContent = "Retry";
-      attr(div, "class", "settings-error svelte-lrwn3h");
-    },
-    m(target, anchor) {
-      insert(target, div, anchor);
-      append(div, p);
-      append(p, t0);
-      append(div, t1);
-      append(div, button);
-      if (!mounted) {
-        dispose = listen(
-          button,
-          "click",
-          /*click_handler*/
-          ctx[7]
-        );
-        mounted = true;
-      }
-    },
-    p(ctx2, dirty) {
-      if (dirty & /*error*/
-      8)
-        set_data(
-          t0,
-          /*error*/
-          ctx2[3]
-        );
-    },
-    i: noop,
-    o: noop,
-    d(detaching) {
-      if (detaching) {
-        detach(div);
-      }
-      mounted = false;
-      dispose();
-    }
-  };
-}
-function create_each_block8(key_1, ctx) {
+function create_each_block2(key_1, ctx) {
   let div;
   let switch_instance;
   let t;
-  let div_data_section_id_value;
   let current;
+  const switch_instance_spread_levels = [
+    /*getAccordionProps*/
+    ctx[7](
+      /*accordion*/
+      ctx[19]
+    )
+  ];
+  function click_handler() {
+    return (
+      /*click_handler*/
+      ctx[13](
+        /*accordion*/
+        ctx[19]
+      )
+    );
+  }
   var switch_value = (
-    /*config*/
-    ctx[9].component
+    /*accordion*/
+    ctx[19].component
   );
   function switch_props(ctx2, dirty) {
-    return {
-      props: {
-        app: (
-          /*app*/
-          ctx2[0]
-        ),
-        aiService: (
-          /*services*/
-          ctx2[1].aiService
-        ),
-        settingsService: (
-          /*services*/
-          ctx2[1].settingsService
-        ),
-        generationService: (
-          /*services*/
-          ctx2[1].generationService
-        ),
-        adapterRegistry: (
-          /*services*/
-          ctx2[1].adapterRegistry
-        ),
-        tagManagementService: (
-          /*services*/
-          ctx2[1].tagManagementService
+    let switch_instance_props = {};
+    for (let i = 0; i < switch_instance_spread_levels.length; i += 1) {
+      switch_instance_props = assign(switch_instance_props, switch_instance_spread_levels[i]);
+    }
+    if (dirty !== void 0 && dirty & /*getAccordionProps, accordions*/
+    160) {
+      switch_instance_props = assign(switch_instance_props, get_spread_update(switch_instance_spread_levels, [get_spread_object(
+        /*getAccordionProps*/
+        ctx2[7](
+          /*accordion*/
+          ctx2[19]
         )
-      }
-    };
+      )]));
+    }
+    return { props: switch_instance_props };
   }
   if (switch_value) {
     switch_instance = construct_svelte_component(switch_value, switch_props(ctx));
+    switch_instance.$on("click", click_handler);
   }
   return {
     key: key_1,
@@ -26004,9 +19767,21 @@ function create_each_block8(key_1, ctx) {
       if (switch_instance)
         create_component(switch_instance.$$.fragment);
       t = space();
-      attr(div, "class", "settings-section svelte-lrwn3h");
-      attr(div, "data-section-id", div_data_section_id_value = /*config*/
-      ctx[9].id);
+      attr(div, "class", "accordion-wrapper svelte-na1rkd");
+      set_style(
+        div,
+        "--animation-delay",
+        /*accordion*/
+        ctx[19].priority * 100 + "ms"
+      );
+      attr(div, "role", "listitem");
+      toggle_class(
+        div,
+        "active",
+        /*activeAccordionId*/
+        ctx[2] === /*accordion*/
+        ctx[19].id
+      );
       this.first = div;
     },
     m(target, anchor) {
@@ -26018,8 +19793,8 @@ function create_each_block8(key_1, ctx) {
     },
     p(new_ctx, dirty) {
       ctx = new_ctx;
-      if (switch_value !== (switch_value = /*config*/
-      ctx[9].component)) {
+      if (switch_value !== (switch_value = /*accordion*/
+      ctx[19].component)) {
         if (switch_instance) {
           group_outros();
           const old_component = switch_instance;
@@ -26030,6 +19805,7 @@ function create_each_block8(key_1, ctx) {
         }
         if (switch_value) {
           switch_instance = construct_svelte_component(switch_value, switch_props(ctx, dirty));
+          switch_instance.$on("click", click_handler);
           create_component(switch_instance.$$.fragment);
           transition_in(switch_instance.$$.fragment, 1);
           mount_component(switch_instance, div, t);
@@ -26037,32 +19813,25 @@ function create_each_block8(key_1, ctx) {
           switch_instance = null;
         }
       } else if (switch_value) {
-        const switch_instance_changes = {};
-        if (dirty & /*app*/
-        1)
-          switch_instance_changes.app = /*app*/
-          ctx[0];
-        if (dirty & /*services*/
-        2)
-          switch_instance_changes.aiService = /*services*/
-          ctx[1].aiService;
-        if (dirty & /*services*/
-        2)
-          switch_instance_changes.settingsService = /*services*/
-          ctx[1].settingsService;
-        if (dirty & /*services*/
-        2)
-          switch_instance_changes.generationService = /*services*/
-          ctx[1].generationService;
-        if (dirty & /*services*/
-        2)
-          switch_instance_changes.adapterRegistry = /*services*/
-          ctx[1].adapterRegistry;
-        if (dirty & /*services*/
-        2)
-          switch_instance_changes.tagManagementService = /*services*/
-          ctx[1].tagManagementService;
+        const switch_instance_changes = dirty & /*getAccordionProps, accordions*/
+        160 ? get_spread_update(switch_instance_spread_levels, [get_spread_object(
+          /*getAccordionProps*/
+          ctx[7](
+            /*accordion*/
+            ctx[19]
+          )
+        )]) : {};
         switch_instance.$set(switch_instance_changes);
+      }
+      if (!current || dirty & /*activeAccordionId, accordions*/
+      36) {
+        toggle_class(
+          div,
+          "active",
+          /*activeAccordionId*/
+          ctx[2] === /*accordion*/
+          ctx[19].id
+        );
       }
     },
     i(local) {
@@ -26086,67 +19855,50 @@ function create_each_block8(key_1, ctx) {
     }
   };
 }
-function create_fragment19(ctx) {
-  let div1;
-  let div0;
-  let t3;
-  let current_block_type_index;
-  let if_block;
+function create_fragment14(ctx) {
+  let if_block_anchor;
   let current;
-  const if_block_creators = [create_if_block9, create_if_block_14, create_else_block6];
-  const if_blocks = [];
-  function select_block_type(ctx2, dirty) {
-    if (
-      /*error*/
-      ctx2[3]
-    )
-      return 0;
-    if (
-      /*isInitialized*/
-      ctx2[2]
-    )
-      return 1;
-    return 2;
-  }
-  current_block_type_index = select_block_type(ctx, -1);
-  if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx);
+  let if_block = (
+    /*isInitialized*/
+    ctx[1] && !/*destroyed*/
+    ctx[4] && create_if_block7(ctx)
+  );
   return {
     c() {
-      div1 = element("div");
-      div0 = element("div");
-      div0.innerHTML = `<h2 class="svelte-lrwn3h">GraphWeaver</h2> <p class="svelte-lrwn3h">Configure AI models, manage properties and tags, and customize your knowledge graph generation.</p>`;
-      t3 = space();
-      if_block.c();
-      attr(div0, "class", "settings-header svelte-lrwn3h");
-      attr(div1, "class", "graphweaver-plugin-settings svelte-lrwn3h");
+      if (if_block)
+        if_block.c();
+      if_block_anchor = empty();
     },
     m(target, anchor) {
-      insert(target, div1, anchor);
-      append(div1, div0);
-      append(div1, t3);
-      if_blocks[current_block_type_index].m(div1, null);
+      if (if_block)
+        if_block.m(target, anchor);
+      insert(target, if_block_anchor, anchor);
       current = true;
     },
     p(ctx2, [dirty]) {
-      let previous_block_index = current_block_type_index;
-      current_block_type_index = select_block_type(ctx2, dirty);
-      if (current_block_type_index === previous_block_index) {
-        if_blocks[current_block_type_index].p(ctx2, dirty);
-      } else {
+      if (
+        /*isInitialized*/
+        ctx2[1] && !/*destroyed*/
+        ctx2[4]
+      ) {
+        if (if_block) {
+          if_block.p(ctx2, dirty);
+          if (dirty & /*isInitialized, destroyed*/
+          18) {
+            transition_in(if_block, 1);
+          }
+        } else {
+          if_block = create_if_block7(ctx2);
+          if_block.c();
+          transition_in(if_block, 1);
+          if_block.m(if_block_anchor.parentNode, if_block_anchor);
+        }
+      } else if (if_block) {
         group_outros();
-        transition_out(if_blocks[previous_block_index], 1, 1, () => {
-          if_blocks[previous_block_index] = null;
+        transition_out(if_block, 1, 1, () => {
+          if_block = null;
         });
         check_outros();
-        if_block = if_blocks[current_block_type_index];
-        if (!if_block) {
-          if_block = if_blocks[current_block_type_index] = if_block_creators[current_block_type_index](ctx2);
-          if_block.c();
-        } else {
-          if_block.p(ctx2, dirty);
-        }
-        transition_in(if_block, 1);
-        if_block.m(div1, null);
       }
     },
     i(local) {
@@ -26161,13 +19913,16 @@ function create_fragment19(ctx) {
     },
     d(detaching) {
       if (detaching) {
-        detach(div1);
+        detach(if_block_anchor);
       }
-      if_blocks[current_block_type_index].d();
+      if (if_block)
+        if_block.d(detaching);
     }
   };
 }
-function instance19($$self, $$props, $$invalidate) {
+function instance14($$self, $$props, $$invalidate) {
+  let $hasActiveModal;
+  component_subscribe($$self, hasActiveModal, ($$value) => $$invalidate(12, $hasActiveModal = $$value));
   var __awaiter = this && this.__awaiter || function(thisArg, _arguments, P, generator) {
     function adopt(value) {
       return value instanceof P ? value : new P(function(resolve) {
@@ -26197,436 +19952,937 @@ function instance19($$self, $$props, $$invalidate) {
   };
   let { app } = $$props;
   let { plugin } = $$props;
-  let services = {};
-  let isInitialized = false;
-  let error = null;
-  const accordionConfigs = [
+  let { settingsService } = $$props;
+  let { aiService } = $$props;
+  let { tagManagementService } = $$props;
+  let isInitialized2 = false;
+  let activeAccordionId = null;
+  let modalActive;
+  let destroyed = false;
+  const accordions = [
     {
       id: "modelHookup",
       component: ModelHookupAccordion_default,
-      title: "Model Hookup",
+      title: "\u{1F50C} Model Hookup",
       description: "Configure AI providers and models",
-      priority: 1
-    },
-    {
-      id: "knowledgeBloom",
-      component: KnowledgeBloomAccordion_default,
-      title: "Knowledge Bloom",
-      description: "Generate notes from wikilinks",
-      priority: 2
-    },
-    {
-      id: "ontologyGeneration",
-      component: OntologyGenerationAccordion_default,
-      title: "Ontology Generation",
-      description: "Generate and manage ontologies",
-      priority: 3
+      priority: 1,
+      enabled: true
     },
     {
       id: "propertyManager",
       component: PropertyManagerAccordion_default,
-      title: "Property Manager",
-      description: "Manage custom properties",
-      priority: 4
+      title: "\u{1F4CA} Property Manager",
+      description: "Create and manage custom properties for your notes.",
+      priority: 2,
+      enabled: true
     },
     {
       id: "tagManager",
       component: TagManagerAccordion_default,
-      title: "Tag Manager",
+      title: "\u{1F3F7}\uFE0F Tag Manager",
       description: "Manage custom tags",
-      priority: 5
+      priority: 3,
+      enabled: true
+    },
+    {
+      id: "ontologyGenerator",
+      component: OntologyGenerationAccordion_default,
+      title: "\u{1F9E0} Ontology Generation",
+      description: "Generate and manage ontologies for your vault.",
+      priority: 4,
+      enabled: (settingsService === null || settingsService === void 0 ? void 0 : settingsService.isReady()) && (aiService === null || aiService === void 0 ? void 0 : aiService.isReady())
+    },
+    {
+      id: "knowledgeBloom",
+      component: KnowledgeBloomAccordion_default,
+      title: "\u{1F338} Knowledge Bloom",
+      description: "Enhance your knowledge graph with Bloom features.",
+      priority: 5,
+      enabled: (settingsService === null || settingsService === void 0 ? void 0 : settingsService.isReady()) && (aiService === null || aiService === void 0 ? void 0 : aiService.isReady())
     },
     {
       id: "batchProcessor",
       component: BatchProcessorAccordion_default,
-      title: "Batch Processor",
-      description: "Process multiple files",
-      priority: 6
+      title: "\u{1F504} Batch Processor",
+      description: "Process multiple files to generate front matter and wikilinks.",
+      priority: 6,
+      enabled: settingsService === null || settingsService === void 0 ? void 0 : settingsService.isReady()
     },
     {
       id: "advanced",
       component: AdvancedAccordion_default,
-      title: "Advanced Settings",
-      description: "Configure advanced options",
-      priority: 7
+      title: "\u2699\uFE0F Advanced",
+      description: "Configuration options for the plugin.",
+      priority: 7,
+      enabled: true
     }
-  ].sort((a, b) => a.priority - b.priority);
-  onMount(() => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-      yield initializeServices2();
-    } catch (e) {
-      $$invalidate(3, error = e instanceof Error ? e.message : "Failed to initialize services");
-    }
-  }));
-  function initializeServices2() {
-    return __awaiter(this, void 0, void 0, function* () {
-      const aiService = plugin === null || plugin === void 0 ? void 0 : plugin.getAIService();
-      if (!aiService)
-        throw new Error("AIService not initialized");
-      const settingsService = plugin === null || plugin === void 0 ? void 0 : plugin.getSettingsService();
-      if (!settingsService)
-        throw new Error("SettingsService not initialized");
-      const tagManagementService = new TagManagementService(app);
-      try {
-        $$invalidate(1, services = {
-          aiService,
-          settingsService,
-          tagManagementService,
-          generationService: aiService.getGenerationService(),
-          adapterRegistry: aiService.getAdapterRegistry()
-        });
-        $$invalidate(2, isInitialized = true);
-      } catch (err) {
-        console.warn("Optional services not available:", err);
-        $$invalidate(1, services = {
-          aiService,
-          settingsService,
-          tagManagementService
-        });
-        $$invalidate(2, isInitialized = true);
+  ].sort((a, b) => a.priority - b.priority).filter((config) => config.enabled);
+  let unsubscribeUI = null;
+  function subscribeToUIStore() {
+    unsubscribeUI = uiStore.subscribe((state) => {
+      if (!destroyed) {
+        $$invalidate(3, modalActive = state.modalStack.length > 0);
       }
     });
   }
-  const click_handler = () => initializeServices2();
+  function initialize() {
+    return __awaiter(this, void 0, void 0, function* () {
+      console.log("\u{1F987} Initializing settings tab...");
+      if (!app || !plugin || !settingsService || !aiService) {
+        console.error("\u{1F987} Required dependencies not provided");
+        return;
+      }
+      try {
+        const servicesReady = settingsService.isReady() && aiService.isReady() && accordions.some((acc) => acc.enabled);
+        if (servicesReady) {
+          console.log("\u{1F987} Services ready, initializing UI...");
+          $$invalidate(1, isInitialized2 = true);
+          subscribeToUIStore();
+        } else {
+          console.log("\u{1F987} Waiting for services to be ready...");
+          yield waitForServices();
+        }
+      } catch (error) {
+        console.error("\u{1F987} Initialization error:", error);
+        throw error;
+      }
+    });
+  }
+  function waitForServices(timeout = 5e3) {
+    return __awaiter(this, void 0, void 0, function* () {
+      const start = Date.now();
+      while (Date.now() - start < timeout) {
+        if (settingsService.isReady() && aiService.isReady()) {
+          $$invalidate(1, isInitialized2 = true);
+          subscribeToUIStore();
+          return;
+        }
+        yield new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      throw new Error("Services initialization timeout");
+    });
+  }
+  function handleAccordionToggle(accordionId) {
+    if (modalActive)
+      return;
+    $$invalidate(2, activeAccordionId = activeAccordionId === accordionId ? null : accordionId);
+    uiStore.update((state) => Object.assign(Object.assign({}, state), {
+      activeAccordion: activeAccordionId,
+      lastInteraction: Date.now()
+    }));
+  }
+  onMount(() => __awaiter(void 0, void 0, void 0, function* () {
+    if (!destroyed) {
+      yield initialize();
+    }
+  }));
+  onDestroy(() => {
+    $$invalidate(4, destroyed = true);
+    if (unsubscribeUI) {
+      unsubscribeUI();
+    }
+    $$invalidate(1, isInitialized2 = false);
+  });
+  function getAccordionProps(accordion) {
+    return {
+      app,
+      settingsService,
+      aiService,
+      tagManagementService,
+      title: accordion.title,
+      description: accordion.description,
+      isOpen: activeAccordionId === accordion.id,
+      plugin
+    };
+  }
+  const click_handler = (accordion) => handleAccordionToggle(accordion.id);
   $$self.$$set = ($$props2) => {
     if ("app" in $$props2)
-      $$invalidate(0, app = $$props2.app);
+      $$invalidate(8, app = $$props2.app);
     if ("plugin" in $$props2)
-      $$invalidate(6, plugin = $$props2.plugin);
+      $$invalidate(0, plugin = $$props2.plugin);
+    if ("settingsService" in $$props2)
+      $$invalidate(9, settingsService = $$props2.settingsService);
+    if ("aiService" in $$props2)
+      $$invalidate(10, aiService = $$props2.aiService);
+    if ("tagManagementService" in $$props2)
+      $$invalidate(11, tagManagementService = $$props2.tagManagementService);
+  };
+  $$self.$$.update = () => {
+    if ($$self.$$.dirty & /*$hasActiveModal*/
+    4096) {
+      $:
+        $$invalidate(3, modalActive = $hasActiveModal);
+    }
   };
   return [
-    app,
-    services,
-    isInitialized,
-    error,
-    accordionConfigs,
-    initializeServices2,
     plugin,
+    isInitialized2,
+    activeAccordionId,
+    modalActive,
+    destroyed,
+    accordions,
+    handleAccordionToggle,
+    getAccordionProps,
+    app,
+    settingsService,
+    aiService,
+    tagManagementService,
+    $hasActiveModal,
     click_handler
   ];
 }
 var SettingsTab = class extends SvelteComponent {
   constructor(options) {
     super();
-    init(this, options, instance19, create_fragment19, safe_not_equal, { app: 0, plugin: 6 }, add_css12);
+    init(
+      this,
+      options,
+      instance14,
+      create_fragment14,
+      safe_not_equal,
+      {
+        app: 8,
+        plugin: 0,
+        settingsService: 9,
+        aiService: 10,
+        tagManagementService: 11
+      },
+      add_css14
+    );
   }
 };
 var SettingsTab_default = SettingsTab;
 
 // src/settings/GraphWeaverSettingTab.ts
-var GraphWeaverSettingTab = class extends import_obsidian23.PluginSettingTab {
+var import_lodash = __toESM(require_lodash(), 1);
+var GraphWeaverSettingTab = class extends import_obsidian26.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
     this.svelteComponent = null;
+    this.mountElement = null;
+    this.isInitialized = false;
+    this.initializationAttempts = 0;
+    this.MAX_INIT_ATTEMPTS = 3;
+    this.INIT_RETRY_DELAY = 1e3;
+    // ms
+    // Debounced error handler to prevent error message spam
+    this.debouncedError = (0, import_lodash.debounce)((message) => {
+      new import_obsidian26.Notice(`Settings Error: ${message}`);
+    }, 1e3, { leading: true, trailing: false });
+    this.plugin = plugin;
+    this.app = app;
   }
+  /**
+   * Safely initializes and displays the settings tab
+   */
   display() {
-    const { containerEl } = this;
-    containerEl.empty();
-    this.svelteComponent = new SettingsTab_default({
-      target: containerEl,
-      props: {
-        app: this.app,
-        plugin: this.plugin
+    return __async(this, null, function* () {
+      try {
+        yield this.ensureInitialization();
+        yield this.mountComponent();
+      } catch (error) {
+        console.error("\u{1F987} Settings initialization failed:", error);
+        yield this.handleInitializationError(error);
       }
     });
   }
-  hide() {
-    var _a;
-    (_a = this.svelteComponent) == null ? void 0 : _a.$destroy();
-    this.svelteComponent = null;
+  /**
+   * Ensures proper initialization of required services
+   */
+  ensureInitialization() {
+    return __async(this, null, function* () {
+      if (this.isInitialized)
+        return;
+      const { containerEl } = this;
+      if (!containerEl) {
+        throw new Error("Container element is not initialized");
+      }
+      if (!this.plugin.isReady()) {
+        yield this.plugin.ensureInitialized();
+      }
+      containerEl.empty();
+      this.isInitialized = true;
+    });
+  }
+  /**
+   * Safely mounts the Svelte component
+   */
+  mountComponent() {
+    return __async(this, null, function* () {
+      const { containerEl } = this;
+      if (!containerEl || !this.isInitialized)
+        return;
+      try {
+        const mountPoint = containerEl.createDiv();
+        mountPoint.addClass("vertical-tab-content", "graphweaver-settings");
+        this.mountElement = mountPoint;
+        if (!this.svelteComponent && mountPoint) {
+          this.svelteComponent = new SettingsTab_default({
+            target: mountPoint,
+            props: {
+              app: this.app,
+              plugin: this.plugin,
+              settingsService: this.plugin.settings,
+              aiService: this.plugin.ai,
+              tagManagementService: this.plugin.tagManager
+            }
+          });
+        }
+      } catch (error) {
+        throw new Error(`Failed to mount settings component: ${error instanceof Error ? error.message : "Unknown error"}`);
+      }
+    });
+  }
+  /**
+   * Handles initialization errors with retry logic
+   */
+  handleInitializationError(error) {
+    return __async(this, null, function* () {
+      this.initializationAttempts++;
+      if (this.initializationAttempts < this.MAX_INIT_ATTEMPTS) {
+        console.log(`\u{1F987} Retrying initialization (${this.initializationAttempts}/${this.MAX_INIT_ATTEMPTS})...`);
+        yield new Promise((resolve) => setTimeout(resolve, this.INIT_RETRY_DELAY));
+        yield this.display();
+      } else {
+        this.handleError(error);
+        this.showFallbackUI();
+      }
+    });
+  }
+  /**
+   * Handles and displays errors
+   */
+  handleError(error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("\u{1F987} Settings error:", error);
+    this.debouncedError(message);
+  }
+  /**
+   * Shows fallback UI when initialization fails
+   */
+  showFallbackUI() {
     const { containerEl } = this;
+    if (!containerEl)
+      return;
     containerEl.empty();
+    const errorEl = containerEl.createDiv();
+    errorEl.addClass("settings-error");
+    const messageEl = errorEl.createDiv();
+    messageEl.setText("Failed to initialize settings. Please try reloading Obsidian.");
+    const retryButton = errorEl.createEl("button");
+    retryButton.setText("Retry");
+    retryButton.onclick = () => __async(this, null, function* () {
+      this.initializationAttempts = 0;
+      this.isInitialized = false;
+      yield this.display();
+    });
+  }
+  /**
+   * Safely cleans up the component and its resources
+   */
+  hide() {
+    try {
+      if (this.svelteComponent) {
+        this.svelteComponent.$destroy();
+        this.svelteComponent = null;
+      }
+      if (this.mountElement) {
+        this.mountElement.empty();
+        this.mountElement = null;
+      }
+      const { containerEl } = this;
+      if (containerEl) {
+        containerEl.empty();
+      }
+      this.isInitialized = false;
+      this.initializationAttempts = 0;
+    } catch (error) {
+      console.error("\u{1F987} Error during cleanup:", error);
+    }
+  }
+};
+
+// src/managers/CommandManager.ts
+var CommandManager = class extends TypedEventEmitter {
+  constructor(plugin) {
+    super();
+    this.plugin = plugin;
+    this.serviceId = "command-manager";
+    this.serviceName = "Command Manager";
+    this.state = "uninitialized" /* Uninitialized */;
+    this.error = null;
+    this.commands = /* @__PURE__ */ new Map();
+  }
+  /**
+   * Initialize command manager
+   */
+  initialize() {
+    return __async(this, null, function* () {
+      try {
+        if (this.state !== "uninitialized" /* Uninitialized */) {
+          console.log("\u{1F987} [CommandManager] Already initialized");
+          return;
+        }
+        console.log("\u{1F987} [CommandManager] Starting initialization...");
+        this.state = "initializing" /* Initializing */;
+        const registry = ServiceRegistry.getInstance();
+        if (!registry.hasRegisteredServices()) {
+          throw new ServiceError(
+            this.serviceName,
+            "Service registry must be initialized before command manager"
+          );
+        }
+        yield this.registerDefaultCommands();
+        console.log("\u{1F987} [CommandManager] Initialization complete");
+        this.state = "ready" /* Ready */;
+      } catch (error) {
+        this.state = "error" /* Error */;
+        this.error = ServiceError.from(this.serviceName, error);
+        console.error("\u{1F987} [CommandManager] Initialization failed:", this.error);
+        throw this.error;
+      }
+    });
+  }
+  /**
+   * Register a new command
+   */
+  registerCommand(command) {
+    if (this.commands.has(command.id)) {
+      throw new ServiceError(this.serviceName, `Command ${command.id} already registered`);
+    }
+    const wrappedCommand = this.wrapCommand(command);
+    this.plugin.addCommand(wrappedCommand);
+    this.commands.set(command.id, wrappedCommand);
+    this.emit("commandRegistered", wrappedCommand);
+  }
+  /**
+   * Execute a command by ID
+   */
+  executeCommand(_0) {
+    return __async(this, arguments, function* (id, context = {}) {
+      const command = this.commands.get(id);
+      if (!command) {
+        throw new ServiceError(this.serviceName, `Command ${id} not found`);
+      }
+      const execContext = {
+        source: context.source || "command-palette",
+        timestamp: Date.now(),
+        data: context.data
+      };
+      const startTime = performance.now();
+      try {
+        if (command.checkCallback) {
+          if (!command.checkCallback(false)) {
+            throw new Error("Command preconditions not met");
+          }
+        }
+        if (command.callback) {
+          yield command.callback();
+        }
+        const result = {
+          success: true,
+          duration: performance.now() - startTime
+        };
+        this.emit("commandExecuted", id, result, execContext);
+      } catch (error) {
+        const result = {
+          success: false,
+          error: error instanceof Error ? error : new Error(String(error)),
+          duration: performance.now() - startTime
+        };
+        this.emit("commandFailed", id, result.error, execContext);
+        throw error;
+      }
+    });
+  }
+  /**
+   * Check if manager is ready
+   */
+  isReady() {
+    return this.state === "ready" /* Ready */;
+  }
+  /**
+   * Get current state
+   */
+  getState() {
+    return { state: this.state, error: this.error };
+  }
+  /**
+   * Clean up resources
+   */
+  destroy() {
+    return __async(this, null, function* () {
+      this.commands.clear();
+      this.state = "destroyed" /* Destroyed */;
+    });
+  }
+  /**
+   * Validate active file existence
+   */
+  validateActiveFile(checking) {
+    const activeFile = this.plugin.app.workspace.getActiveFile();
+    if (checking)
+      return !!activeFile;
+    if (!activeFile) {
+      if (!checking) {
+        console.error("\u{1F987} [CommandManager] No active file");
+      }
+      return false;
+    }
+    return true;
+  }
+  /**
+   * Register default plugin commands
+   */
+  registerDefaultCommands() {
+    return __async(this, null, function* () {
+      try {
+        console.log("\u{1F987} [CommandManager] Registering default commands...");
+        const defaultCommands = [
+          {
+            id: "generate-frontmatter",
+            name: "Generate Front Matter",
+            checkCallback: (checking) => this.validateActiveFile(checking)
+          },
+          {
+            id: "generate-wikilinks",
+            name: "Generate Wikilinks",
+            checkCallback: (checking) => this.validateActiveFile(checking)
+          },
+          {
+            id: "generate-knowledge-bloom",
+            name: "Generate Knowledge Bloom",
+            checkCallback: (checking) => {
+              if (!this.validateActiveFile(checking))
+                return false;
+              return true;
+            }
+          },
+          {
+            id: "batch-process-files",
+            name: "Batch Process Files",
+            checkCallback: (checking) => {
+              return true;
+            }
+          }
+        ];
+        for (const command of defaultCommands) {
+          try {
+            this.registerCommand(command);
+          } catch (error) {
+            console.error(`\uFFFD\uFFFD [CommandManager] Failed to register command ${command.id}:`, error);
+            throw error;
+          }
+        }
+        console.log("\u{1F987} [CommandManager] Default commands registered successfully");
+      } catch (error) {
+        throw new ServiceError(
+          this.serviceName,
+          "Failed to register default commands",
+          error instanceof Error ? error : new Error(String(error))
+        );
+      }
+    });
+  }
+  /**
+   * Wrap command with error handling and events
+   */
+  wrapCommand(command) {
+    return __spreadProps(__spreadValues({}, command), {
+      callback: () => __async(this, null, function* () {
+        const context = {
+          source: "command-palette",
+          timestamp: Date.now()
+        };
+        try {
+          yield this.executeCommand(command.id, context);
+        } catch (error) {
+          console.error(`\u{1F987} [CommandManager] Error executing ${command.id}:`, error);
+          throw error;
+        }
+      }),
+      checkCallback: command.checkCallback
+    });
+  }
+  /**
+   * Helper to get active file with type checking
+   */
+  getActiveFile() {
+    const file = this.plugin.app.workspace.getActiveFile();
+    if (!file) {
+      throw new ServiceError(this.serviceName, "No active file");
+    }
+    return file;
   }
 };
 
 // main.ts
-var import_lodash = __toESM(require_lodash(), 1);
-var GraphWeaverPlugin = class extends import_obsidian24.Plugin {
-  constructor() {
-    super(...arguments);
-    this.SAVE_DEBOUNCE_MS = 1e3;
-    this.unsubscribers = [];
-    this.registeredServices = [];
+var GraphWeaverPlugin = class extends import_obsidian27.Plugin {
+  constructor(app, manifest) {
+    super(app, manifest);
+    this.CONFIG = {
+      INIT_RETRY_MS: 5e3,
+      MAX_INIT_RETRIES: 3,
+      SAVE_INTERVAL_MS: 1e3
+    };
+    this.initRetryCount = 0;
     this.isInitialized = false;
+    this.initializedServices = /* @__PURE__ */ new Set();
+    this.initializationPromise = null;
+    this.settingTab = null;
+    this.commandManager = new CommandManager(this);
+    this.serviceRegistry = ServiceRegistry.getInstance();
   }
   /**
    * Plugin load lifecycle method
    */
   onload() {
     return __async(this, null, function* () {
-      console.log("\u{1F987} [GraphWeaver] Starting plugin load sequence...");
       try {
-        console.log("\u{1F987} [GraphWeaver] Initializing core services...");
-        yield initializeCoreServices(this);
-        console.log("\u{1F987} [GraphWeaver] Core services initialized successfully");
-        console.log("\u{1F987} [GraphWeaver] Initializing plugin infrastructure...");
-        yield this.initializePluginInfrastructure();
-        console.log("\u{1F987} [GraphWeaver] Plugin infrastructure initialized");
-        console.log("\u{1F987} [GraphWeaver] Setting up plugin features...");
-        yield this.setupPluginFeatures();
-        console.log("\u{1F987} [GraphWeaver] Plugin features setup complete");
-        this.notifySuccess("GraphWeaver initialized successfully! \u{1F680}");
-      } catch (error) {
-        this.handleError("Critical failure during plugin load", error);
-        throw error;
-      }
-    });
-  }
-  /**
-   * Initialize core plugin infrastructure
-   */
-  initializePluginInfrastructure() {
-    return __async(this, null, function* () {
-      if (this.isInitialized) {
-        console.log("\u{1F987} [GraphWeaver] Plugin already initialized, skipping...");
-        return;
-      }
-      try {
-        console.log("\u{1F987} [GraphWeaver] Starting stores initialization...");
-        yield this.initializeStores();
-        console.log("\u{1F987} [GraphWeaver] Stores initialized successfully");
-        console.log("\u{1F987} [GraphWeaver] Starting services registration...");
-        yield this.registerServices();
-        console.log("\u{1F987} [GraphWeaver] Services registered successfully");
-        console.log("\u{1F987} [GraphWeaver] Setting up event listeners...");
-        this.setupEventListeners();
-        console.log("\u{1F987} [GraphWeaver] Event listeners configured");
+        console.log("\u{1F987} Starting GraphWeaver initialization...");
+        yield this.initializeCore();
+        this.settings = new SettingsService(this);
+        yield this.settings.initialize();
+        const jsonValidationService = new JsonValidationService();
+        yield jsonValidationService.initialize();
+        const databaseService = new DatabaseService(this);
+        yield databaseService.initialize();
+        const wikilinkProcessor = new WikilinkTextProcessor();
+        yield wikilinkProcessor.initialize();
+        const adapterRegistry = new AdapterRegistry(this.settings, jsonValidationService);
+        yield adapterRegistry.initialize();
+        const generatorFactory = new GeneratorFactory(
+          this.app,
+          this.settings,
+          adapterRegistry,
+          wikilinkProcessor
+        );
+        yield generatorFactory.initialize();
+        const operationManager = new AIOperationManager(adapterRegistry, generatorFactory);
+        yield operationManager.initialize();
+        this.ai = new AIService(
+          this.app,
+          operationManager,
+          this.settings,
+          jsonValidationService,
+          databaseService,
+          wikilinkProcessor
+        );
+        yield this.ai.initialize();
+        this.tagManager = new TagManagementService(this.app, this);
+        yield this.tagManager.initialize();
+        yield this.initializeServices();
+        yield this.registerFeatures();
         this.isInitialized = true;
+        console.log("\u{1F987} GraphWeaver initialization complete!");
+        new import_obsidian27.Notice("GraphWeaver initialized successfully! \u{1F680}");
       } catch (error) {
-        console.error("\u{1F987} [GraphWeaver] Failed to initialize plugin infrastructure:", error);
-        throw error;
+        yield this.handleInitializationError(error);
       }
     });
   }
   /**
-   * Initialize plugin stores with saved data
+   * Initialize core plugin components
    */
-  initializeStores() {
+  initializeCore() {
     return __async(this, null, function* () {
-      console.log("\u{1F987} [GraphWeaver] Loading saved plugin data...");
-      const savedData = yield this.loadData();
-      console.log("\u{1F987} [GraphWeaver] Saved data loaded:", savedData ? "Found" : "Not found");
       try {
+        console.log("\u{1F987} Initializing core components...");
+        const savedData = yield this.loadData();
         yield initializeStores({
           plugin: this,
-          data: {
-            settings: savedData == null ? void 0 : savedData.settings,
-            processing: savedData == null ? void 0 : savedData.processing,
-            ai: savedData == null ? void 0 : savedData.ai,
-            ui: savedData == null ? void 0 : savedData.ui,
-            files: savedData == null ? void 0 : savedData.files
-          }
+          data: savedData
         });
-        console.log("\u{1F987} [GraphWeaver] Stores initialized with saved data");
+        yield this.serviceRegistry.initializeRegistry();
+        yield initializeCoreServices(this);
+        console.log("\u{1F987} Core initialization complete");
       } catch (error) {
-        console.error("\u{1F987} [GraphWeaver] Store initialization failed:", error);
-        throw error;
+        throw new ServiceError("Core Initialization", "Failed to initialize core components", error);
       }
     });
   }
   /**
-   * Register and initialize services
+   * Initialize and register all services
    */
-  registerServices() {
+  initializeServices() {
     return __async(this, null, function* () {
-      console.log("\u{1F987} [GraphWeaver] Beginning service registration...");
-      const registry = ServiceRegistry.getInstance();
       try {
-        console.log("\u{1F987} [GraphWeaver] Registering AI services...");
-        yield registerAIServices(this.app, this);
-        console.log("\u{1F987} [GraphWeaver] Registering file services...");
+        console.log("\u{1F987} Starting service initialization...");
+        const ServiceIds = {
+          SETTINGS: "settingsService",
+          JSON_VALIDATION: "jsonValidationService",
+          DATABASE: "databaseService",
+          WIKILINK: "wikilinkProcessor",
+          ADAPTER_REGISTRY: "adapterRegistry",
+          GENERATOR_FACTORY: "generatorFactory",
+          AI_OPERATION: "aiOperationManager",
+          AI_SERVICE: "aiService",
+          FILE_PROCESSOR: "fileProcessorService"
+        };
+        this.initializedServices.clear();
+        console.log("\u{1F987} Initializing Core Services (Group 1)...");
+        this.settingsService = new SettingsService(this);
+        yield this.settingsService.initialize();
+        yield this.verifyServiceReady(this.settingsService, "Settings Service");
+        yield this.serviceRegistry.registerService(ServiceIds.SETTINGS, this.settingsService);
+        this.initializedServices.add(ServiceIds.SETTINGS);
+        const jsonValidationService = new JsonValidationService();
+        yield jsonValidationService.initialize();
+        yield this.verifyServiceReady(jsonValidationService, "JSON Validation Service");
+        yield this.serviceRegistry.registerService(ServiceIds.JSON_VALIDATION, jsonValidationService);
+        this.initializedServices.add(ServiceIds.JSON_VALIDATION);
+        const databaseService = new DatabaseService(this);
+        yield databaseService.initialize();
+        yield this.verifyServiceReady(databaseService, "Database Service");
+        yield this.serviceRegistry.registerService(ServiceIds.DATABASE, databaseService);
+        this.initializedServices.add(ServiceIds.DATABASE);
+        console.log("\u{1F987} Initializing Processing Services (Group 2)...");
+        const wikilinkProcessor = new WikilinkTextProcessor();
+        yield wikilinkProcessor.initialize();
+        yield this.verifyServiceReady(wikilinkProcessor, "Wikilink Processor");
+        yield this.serviceRegistry.registerService(ServiceIds.WIKILINK, wikilinkProcessor);
+        this.initializedServices.add(ServiceIds.WIKILINK);
+        console.log("\u{1F987} Initializing Registry Services (Group 3)...");
+        const adapterRegistry = new AdapterRegistry(this.settingsService, jsonValidationService);
+        yield adapterRegistry.initialize();
+        yield this.verifyServiceReady(adapterRegistry, "Adapter Registry");
+        yield this.serviceRegistry.registerService(ServiceIds.ADAPTER_REGISTRY, adapterRegistry);
+        this.initializedServices.add(ServiceIds.ADAPTER_REGISTRY);
+        const generatorFactory = new GeneratorFactory(
+          this.app,
+          this.settingsService,
+          adapterRegistry,
+          wikilinkProcessor
+        );
+        yield generatorFactory.initialize();
+        yield this.verifyServiceReady(generatorFactory, "Generator Factory");
+        yield this.serviceRegistry.registerService(ServiceIds.GENERATOR_FACTORY, generatorFactory);
+        this.initializedServices.add(ServiceIds.GENERATOR_FACTORY);
+        console.log("\u{1F987} Initializing AI Services (Group 4)...");
+        const operationManager = new AIOperationManager(adapterRegistry, generatorFactory);
+        yield operationManager.initialize();
+        yield this.verifyServiceReady(operationManager, "AI Operation Manager");
+        yield this.serviceRegistry.registerService(ServiceIds.AI_OPERATION, operationManager);
+        this.initializedServices.add(ServiceIds.AI_OPERATION);
+        this.aiService = new AIService(
+          this.app,
+          operationManager,
+          this.settingsService,
+          jsonValidationService,
+          databaseService,
+          wikilinkProcessor
+        );
+        yield this.aiService.initialize();
+        yield this.verifyServiceReady(this.aiService, "AI Service");
+        yield this.serviceRegistry.registerService(ServiceIds.AI_SERVICE, this.aiService);
+        this.initializedServices.add(ServiceIds.AI_SERVICE);
+        console.log("\u{1F987} Initializing File Services (Group 5)...");
+        let fileScannerService;
+        if (!this.initializedServices.has("fileScannerService")) {
+          console.log("\u{1F987} Creating new FileScannerService instance");
+          fileScannerService = new FileScannerService(this.app.vault);
+          yield fileScannerService.initialize();
+          yield this.verifyServiceReady(fileScannerService, "File Scanner Service");
+          yield this.serviceRegistry.registerService("fileScannerService", fileScannerService);
+          this.initializedServices.add("fileScannerService");
+        } else {
+          console.log("\u{1F987} Reusing existing FileScannerService instance");
+          fileScannerService = this.serviceRegistry.getService("fileScannerService");
+        }
+        const processingStateStore = writable({
+          isProcessing: false,
+          currentFile: null,
+          progress: 0,
+          error: null,
+          queue: [],
+          state: "idle" /* IDLE */,
+          filesQueued: 0,
+          filesProcessed: 0,
+          filesRemaining: 0,
+          errors: [],
+          startTime: null,
+          estimatedTimeRemaining: null
+        });
+        let fileProcessorService = null;
+        if (!this.initializedServices.has(ServiceIds.FILE_PROCESSOR)) {
+          console.log("\u{1F987} Creating new FileProcessorService instance");
+          fileProcessorService = new FileProcessorService(
+            this.app,
+            this.aiService,
+            this.settingsService,
+            databaseService,
+            fileScannerService,
+            generatorFactory,
+            processingStateStore
+          );
+          yield fileProcessorService.initialize();
+          yield this.verifyServiceReady(fileProcessorService, "File Processor Service");
+          yield this.serviceRegistry.registerService(ServiceIds.FILE_PROCESSOR, fileProcessorService);
+          this.initializedServices.add(ServiceIds.FILE_PROCESSOR);
+        }
+        console.log("\u{1F987} Registering remaining services...");
         yield registerFileServices(this.app);
-        this.registeredServices = Array.from(registry.getRegisteredServices());
-        console.log(`\u{1F987} [GraphWeaver] Registered ${this.registeredServices.length} services`);
+        yield registerUIServices();
+        console.log("\u{1F987} Initializing UI services...");
+        yield initializeUIServices();
+        yield this.verifyAllServices();
+        console.log("\u{1F987} Service initialization complete");
       } catch (error) {
-        console.error("\u{1F987} [GraphWeaver] Service registration failed:", error);
-        throw error;
+        console.error("\u{1F987} Service initialization failed:", error);
+        throw new ServiceError(
+          "Service Initialization",
+          "Failed to initialize services",
+          error instanceof Error ? error : void 0
+        );
       }
     });
   }
-  /**
-   * Set up plugin features and UI components
-   */
-  setupPluginFeatures() {
+  waitForDependencies(services, context) {
     return __async(this, null, function* () {
-      console.log("\u{1F987} [GraphWeaver] Setting up plugin commands...");
-      this.registerPluginCommands();
-      console.log("\u{1F987} [GraphWeaver] Adding settings tab...");
-      this.addSettingTab(new GraphWeaverSettingTab(this.app, this));
+      console.log(`\u{1F987} Waiting for dependencies: ${context}...`);
+      const timeout = 3e4;
+      const startTime = Date.now();
+      while (services.some((service) => !service.isReady())) {
+        if (Date.now() - startTime > timeout) {
+          const notReady = services.filter((s) => !s.isReady()).map((s) => s.serviceName);
+          throw new Error(`Timeout waiting for dependencies: ${notReady.join(", ")}`);
+        }
+        yield new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      console.log(`\u{1F987} All dependencies ready for: ${context}`);
     });
   }
   /**
-   * Set up store subscriptions and event listeners
+   * Verify that a specific service is ready
    */
-  setupEventListeners() {
-    console.log("\u{1F987} [GraphWeaver] Creating debounced save function...");
-    const debouncedSave = this.createDebouncedSave();
-    console.log("\u{1F987} [GraphWeaver] Setting up store subscriptions...");
-    this.subscribeToStores(debouncedSave);
-  }
-  /**
-   * Create debounced save function
-   */
-  createDebouncedSave() {
-    return (0, import_lodash.debounce)((state) => __async(this, null, function* () {
-      console.log("\u{1F987} [GraphWeaver] Saving plugin state...");
-      try {
-        yield this.saveData(state);
-        console.log("\u{1F987} [GraphWeaver] Plugin state saved successfully");
-      } catch (error) {
-        this.handleError("Failed to save plugin data", error);
+  verifyServiceReady(service, serviceName) {
+    return __async(this, null, function* () {
+      console.log(`\u{1F987} Verifying ${serviceName}...`);
+      if (service.isReady()) {
+        console.log(`\u{1F987} ${serviceName} is ready`);
+        return;
       }
-    }), this.SAVE_DEBOUNCE_MS);
-  }
-  /**
-   * Subscribe to all stores for state management
-   */
-  subscribeToStores(debouncedSave) {
-    const stores = [
-      { store: pluginStore, name: "pluginStore" },
-      { store: settingsStore, name: "settingsStore" },
-      { store: aiStore, name: "aiStore" },
-      { store: processingStore, name: "processingStore" },
-      { store: UIStore.getInstance(), name: "UIStore" }
-    ];
-    stores.forEach(({ store, name }) => {
-      console.log(`\u{1F987} [GraphWeaver] Setting up ${name} subscription...`);
-      this.unsubscribers.push(
-        store.subscribe((value) => {
-          console.log(`\u{1F987} [GraphWeaver] ${name} updated, triggering save...`);
-          debouncedSave(__spreadValues({}, get_store_value(pluginStore)));
-        })
+      for (let i = 0; i < 50; i++) {
+        yield new Promise((resolve) => setTimeout(resolve, 100));
+        if (service.isReady()) {
+          console.log(`\u{1F987} ${serviceName} is ready after waiting`);
+          return;
+        }
+      }
+      throw new ServiceError(
+        serviceName,
+        `Service failed to reach ready state after initialization`
       );
     });
   }
   /**
-   * Register plugin commands
+   * Verify all services are ready
    */
-  registerPluginCommands() {
-    const commands = [
-      {
-        id: "generate-frontmatter",
-        name: "Generate Front Matter",
-        callback: () => this.generateFrontMatter()
-      },
-      {
-        id: "generate-wikilinks",
-        name: "Generate Wikilinks",
-        callback: () => this.generateWikilinks()
-      },
-      {
-        id: "generate-knowledge-bloom",
-        name: "Generate Knowledge Bloom",
-        callback: () => this.generateKnowledgeBloom()
-      },
-      {
-        id: "batch-process-files",
-        name: "Batch Process Files",
-        callback: () => this.batchProcessFiles()
+  verifyAllServices() {
+    return __async(this, null, function* () {
+      console.log("\u{1F987} Verifying all services...");
+      const services = this.serviceRegistry.getRegisteredServices();
+      const notReady = services.filter((s) => !s.service.isReady());
+      if (notReady.length > 0) {
+        const names = notReady.map((s) => s.name).join(", ");
+        console.error("\u{1F987} Services not ready:", names);
+        throw new ServiceError(
+          "Service Verification",
+          `Services not ready: ${names}`
+        );
       }
-    ];
-    commands.forEach((command) => {
-      console.log(`\u{1F987} [GraphWeaver] Registering command: ${command.name}`);
-      this.addCommand(command);
+      console.log("\u{1F987} All services verified and ready");
     });
   }
   /**
-   * Command implementations
+   * Register plugin features
    */
-  generateFrontMatter() {
+  registerFeatures() {
     return __async(this, null, function* () {
-      console.log("\u{1F987} [GraphWeaver] Executing generateFrontMatter command...");
-      if (!this.validateActiveFile())
-        return;
-    });
-  }
-  generateWikilinks() {
-    return __async(this, null, function* () {
-      console.log("\u{1F987} [GraphWeaver] Executing generateWikilinks command...");
-      if (!this.validateActiveFile())
-        return;
-    });
-  }
-  generateKnowledgeBloom() {
-    return __async(this, null, function* () {
-      console.log("\u{1F987} [GraphWeaver] Executing generateKnowledgeBloom command...");
-      if (!this.validateActiveFile())
-        return;
-    });
-  }
-  batchProcessFiles() {
-    return __async(this, null, function* () {
-      console.log("\u{1F987} [GraphWeaver] Executing batchProcessFiles command...");
-      if (!this.validateActiveFile())
-        return;
+      try {
+        console.log("\u{1F987} Registering features...");
+        yield this.commandManager.initialize();
+        if (!this.settingTab) {
+          this.settingTab = new GraphWeaverSettingTab(this.app, this);
+          this.addSettingTab(this.settingTab);
+        }
+        this.registerInterval(
+          window.setInterval(
+            () => this.saveData(pluginStore.getSnapshot()),
+            this.CONFIG.SAVE_INTERVAL_MS
+          )
+        );
+        console.log("\u{1F987} Feature registration complete");
+      } catch (error) {
+        throw new ServiceError("Feature Registration", "Failed to register features", error);
+      }
     });
   }
   /**
-   * Validate active file exists
+   * Handle initialization errors with retry logic
    */
-  validateActiveFile() {
-    var _a;
-    if (!((_a = this.app.workspace.activeLeaf) == null ? void 0 : _a.view)) {
-      this.notifyError("No active file. Please open a file first.");
-      return false;
-    }
-    return true;
-  }
-  /**
-   * Error handling
-   */
-  handleError(context, error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(`\u{1F987} [GraphWeaver] ${context}:`, error);
-    this.notifyError(`${context}. Check console for details.`);
-  }
-  /**
-   * Notification helpers
-   */
-  notifySuccess(message) {
-    console.log(`\u{1F987} [GraphWeaver] Success: ${message}`);
-    new import_obsidian24.Notice(message);
-  }
-  notifyError(message) {
-    console.error(`\u{1F987} [GraphWeaver] Error: ${message}`);
-    new import_obsidian24.Notice(message);
+  handleInitializationError(error) {
+    return __async(this, null, function* () {
+      console.error("\u{1F987} Initialization error:", error);
+      if (this.initRetryCount < this.CONFIG.MAX_INIT_RETRIES) {
+        this.initRetryCount++;
+        new import_obsidian27.Notice(`Initialization failed. Retrying... (${this.initRetryCount}/${this.CONFIG.MAX_INIT_RETRIES})`);
+        setTimeout(() => this.onload(), this.CONFIG.INIT_RETRY_MS);
+      } else {
+        new import_obsidian27.Notice("Failed to initialize plugin. Please restart Obsidian.");
+        throw error instanceof Error ? error : new Error(String(error));
+      }
+    });
   }
   /**
    * Plugin unload lifecycle method
    */
   onunload() {
     return __async(this, null, function* () {
-      console.log("\u{1F987} [GraphWeaver] Starting plugin unload sequence...");
+      var _a;
       try {
-        yield this.cleanup();
-        this.notifySuccess("GraphWeaver unloaded successfully! \u{1F44B}");
+        console.log("\u{1F987} Unloading GraphWeaver...");
+        yield (_a = this.commandManager) == null ? void 0 : _a.destroy();
+        yield destroyUIServices();
+        yield this.serviceRegistry.destroyAll();
+        if (this.settingTab) {
+          this.settingTab = null;
+        }
+        console.log("\u{1F987} GraphWeaver unloaded successfully");
       } catch (error) {
-        this.handleError("Error during plugin unload", error);
+        console.error("\u{1F987} Error during plugin unload:", error);
       }
     });
   }
   /**
-   * Cleanup plugin resources
+   * Public getter for initialization state
    */
-  cleanup() {
+  isReady() {
+    var _a, _b, _c;
+    return this.isInitialized && !this.initializationPromise && ((_a = this.settingsService) == null ? void 0 : _a.isReady()) && ((_b = this.aiService) == null ? void 0 : _b.isReady()) && ((_c = this.tagManager) == null ? void 0 : _c.isReady());
+  }
+  getAIService() {
+    if (!this.isReady()) {
+      throw new ServiceError("Plugin", "Plugin not ready. Services still initializing.");
+    }
+    return this.aiService;
+  }
+  getSettingsService() {
+    if (!this.isReady()) {
+      throw new ServiceError("Plugin", "Plugin not ready. Services still initializing.");
+    }
+    return this.settingsService;
+  }
+  ensureInitialized() {
     return __async(this, null, function* () {
-      console.log("\u{1F987} [GraphWeaver] Running cleanup...");
-      try {
-        console.log("\u{1F987} [GraphWeaver] Cleaning up store subscriptions...");
-        this.unsubscribers.forEach((unsub) => unsub());
-        this.unsubscribers = [];
-        if (this.registeredServices.length > 0) {
-          console.log("\u{1F987} [GraphWeaver] Destroying registered services...");
-          yield destroyCoreServices(this.registeredServices);
-        }
-        this.registeredServices = [];
-        this.isInitialized = false;
-        console.log("\u{1F987} [GraphWeaver] Cleanup completed successfully");
-      } catch (error) {
-        console.error("\u{1F987} [GraphWeaver] Cleanup failed:", error);
-        throw error;
+      if (!this.initializationPromise) {
+        this.initializationPromise = this.initializeServices().finally(() => {
+          this.initializationPromise = null;
+        });
       }
+      return this.initializationPromise;
     });
   }
 };

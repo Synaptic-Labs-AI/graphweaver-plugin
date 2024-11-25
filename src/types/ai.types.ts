@@ -162,3 +162,27 @@ export interface AIAdapter {
      */
     destroy?(): Promise<void>;
 }
+
+/**
+ * AI state definition
+ * @interface
+ */
+
+export interface KnowledgeBloomSettings {
+    selectedModel: string;
+    defaultPrompt?: string;
+}
+
+export interface GeneratedNote {
+    title: string;
+    content: string;
+}
+
+export interface KnowledgeBloomResult {
+    generatedNotes: GeneratedNote[];
+    stats?: {
+        processedLinks: number;
+        successfulGenerations: number;
+        errors: number;
+    };
+}

@@ -66,10 +66,9 @@ export class StoreService implements IService {
                     'SettingsService not available in ServiceRegistry'
                 );
             }
-            initializeSettingsStore(settingsService);
+            initializeSettingsStore(this.plugin);
             this.stores.settings = settingsStore;
-            const settings = await settingsService.getSettings();
-            await this.stores.settings.initialize(settings);
+            await this.stores.settings.initialize();
             console.log('🦇 [StoreService] Settings store initialized');
 
             // Initialize AI store

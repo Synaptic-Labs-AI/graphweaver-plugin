@@ -41,6 +41,7 @@
     "vite": "^4.3.9"
   },
   "dependencies": {
+    "@clack/prompts": "^0.8.2",
     "@popperjs/core": "^2.11.8",
     "@types/uuid": "^10.0.0",
     "ajv": "^8.17.1",

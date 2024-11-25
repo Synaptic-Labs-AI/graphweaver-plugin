@@ -5,6 +5,7 @@ import { CoreService } from '../core/CoreService';
 import { ServiceError } from '../core/ServiceError';
 import { IConfigurableService } from '../core/IService';
 import { EventEmitter } from 'events';
+import { LifecycleState } from '@type/base.types';
 
 /**
  * Configuration interface for scanner
@@ -66,6 +67,7 @@ export class FileScannerService extends CoreService implements IConfigurableServ
         config: Partial<FileScannerConfig> = {}
     ) {
         super('file-scanner', 'File Scanner Service');
+        this.state = LifecycleState.Uninitialized;
         
         // Initialize configuration
         this.config = {
@@ -83,8 +85,36 @@ export class FileScannerService extends CoreService implements IConfigurableServ
      * Initialize scanner service
      */
     protected async initializeInternal(): Promise<void> {
-        // No special initialization needed
-        if (this.config.debug) {
+        try {
+            console.log('🦇 FileScannerService: Starting initialization...');
+            this.state = LifecycleState.Initializing;
+
+            // Basic validation of vault
+            if (!this.vault) {
+                throw new Error('Vault is required but not provided');
+            }
+
+            // Test vault access
+            await this.testVaultAccess();
+
+            console.log('🦇 FileScannerService: Initialization complete');
+            this.state = LifecycleState.Ready;
+        } catch (error) {
+            this.state = LifecycleState.Error;
+            console.error('🦇 FileScannerService initialization failed:', error);
+            throw new ServiceError(
+                this.serviceName,
+                'Failed to initialize file scanner',
+                error instanceof Error ? error : undefined
+            );
+        }
+    }
+
+    private async testVaultAccess(): Promise<void> {
+        try {
+            await this.vault.getMarkdownFiles();
+        } catch (error) {
+            throw new Error('Failed to access vault');
         }
     }
 

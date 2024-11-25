@@ -1,6 +1,6 @@
 // src/services/ai/OperationExecutor.ts
 
-import { operationStore } from '@stores/operationStore';
+import { operationStore } from '@stores/OperationStore';
 import type { OperationStatus, OperationType } from '@type/operations.types';
 import { OperationConfig } from '../../types/operations.types';
 

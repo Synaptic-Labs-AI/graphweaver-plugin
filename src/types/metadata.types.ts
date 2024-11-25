@@ -1,3 +1,5 @@
+import type GraphWeaverPlugin from 'main';
+
 /**
  * Metadata Types Module
  * @module types/metadata
@@ -98,6 +100,7 @@ export interface TagManagerState {
     hierarchy?: Record<string, string[]>;
     /** Tag relationships */
     relationships?: Record<string, string[]>;
+    tags: Tag[]; // Added 'tags' property
 }
 
 /**
@@ -111,4 +114,17 @@ export interface MetadataValidationResult {
     errors?: string[];
     /** Fields that failed validation */
     invalidFields?: string[];
+}
+
+/**
+ * Base interface for tag management services
+ */
+export interface ITagManagementService {
+    readonly metadataPath: string;
+    readonly plugin: GraphWeaverPlugin;
+    initialize(): Promise<void>;
+    updateTags(tags: Tag[]): Promise<void>;
+    getTags(): Promise<Tag[]>;
+    isReady(): boolean;
+    ensureMetadataFile(): Promise<void>;
 }

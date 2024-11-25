@@ -46,6 +46,19 @@ export function createEnhancedStore<T extends Record<string, any> | null>(initia
 }
 
 /**
+ * Creates a base store with core functionality
+ */
+export function createBaseStore<T>(initialValue: T): BaseStore<T> {
+    const store = writable(initialValue);
+    return {
+        ...store,
+        initialize: async () => store.set(initialValue),
+        reset: async () => store.set(initialValue),
+        getSnapshot: () => get(store)
+    };
+}
+
+/**
  * Creates a persisted store that saves to localStorage
  */
 export function createPersistedStore<T extends Record<string, any>>(

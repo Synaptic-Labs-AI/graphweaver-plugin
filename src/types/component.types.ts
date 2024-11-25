@@ -6,15 +6,19 @@ import type { Notification } from '@type/store.types';
 import type { AIProvider, AIAdapter } from '@type/ai.types';
 import type { AIGenerationService } from '@services/ai/AIGenerationService';
 import type { AdapterRegistry } from '@services/ai/AdapterRegistry';
-import type { TagManagementService } from '@services/ai/AITagManagementService';
+import type { TagManagementService } from '../services/tags/TagManagementService'; // Updated import
 
 /**
  * Base service props interface
  */
+
 export interface ServiceProps {
     app: App;
-    settingsService: SettingsService;
     aiService: AIService;
+    settingsService: SettingsService;
+    adapterRegistry?: AdapterRegistry;
+    tagManagementService?: TagManagementService; // Removed AITagManagementService
+    generationService?: AIGenerationService;
 }
 
 /**
@@ -52,18 +56,37 @@ export interface ModalProps<T = unknown> {
  */
 export interface ServiceModalProps<T = unknown> extends ModalProps<T>, ServiceProps {}
 
-/**
- * Base component with common patterns
- */
+// Update the existing BaseComponentProps to be more explicit
 export interface BaseComponentProps extends ServiceProps {
+    /** Optional component title */
     title?: string;
+    /** Optional component description */
     description?: string;
+    /** Controls component visibility or expanded state */
     isOpen?: boolean;
+    /** Optional CSS class names */
+    className?: string;
 }
 
-// Accordion specific types
+/**
+ * Accordion specific types with Flowbite integration
+ */
 export interface AccordionProps extends BaseComponentProps {
-    title: string; // Make title required for accordions
+    /** Title text displayed in the accordion header */
+    title: string;
+    /** Optional description text shown below the header */
+    description?: string;
+    /** Controls the open/closed state of the accordion */
+    isOpen?: boolean;
+    /** Optional registry for AI adapters */
+    adapterRegistry?: AdapterRegistry;
+    /** Optional service for tag management */
+    tagManagementService?: TagManagementService;
+    /** Optional Flowbite-specific props */
+    flush?: boolean;
+    alwaysOpen?: boolean;
+    activeClasses?: string;
+    inactiveClasses?: string;
 }
 
 // Property management types
@@ -121,7 +144,8 @@ export interface OntologyGenerationProps extends ServiceProps {
 }
 
 // Modal specific props
-export interface BatchProcessorModalProps extends ServiceModalProps {
+export interface BatchProcessorModalProps extends ServiceProps {
+    onClose: () => void;
     onProcessComplete?: () => void;
 }
 
@@ -163,12 +187,6 @@ export interface ButtonProps extends ComponentEvents {
     className?: string;
 }
 
-// Result types
-export interface GeneratedNote {
-    title: string;
-    content: string;
-}
-
 export interface TagConversionResult {
     newTags: Tag[];
     modifiedTags: Tag[];
@@ -176,7 +194,12 @@ export interface TagConversionResult {
 }
 
 export interface OntologyInput {
-    content: string;
+    files: { basename: string }[];
+    folders: { name: string }[];
+    tags: string[];
+    provider: string;
+    modelApiName: string;
+    userContext?: string;
     existingTags?: Tag[];
     existingProperties?: PropertyTag[];
 }
