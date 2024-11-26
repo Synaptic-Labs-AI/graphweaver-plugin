@@ -1,8 +1,7 @@
 import { Notice, requestUrl, RequestUrlResponse } from 'obsidian';
-import { AIProvider, AIResponse, AIAdapter, AIModel } from '@type/ai.types';
-import { AIModelMap } from '@type/aiModels';
-import { SettingsService } from '@services/SettingsService';
-import { JsonValidationService } from '@services/JsonValidationService';
+import { AIProvider, AIResponse, AIAdapter, AIModel, AIModelMap } from '../models/AIModels';
+import { SettingsService } from '../services/SettingsService';
+import { JsonValidationService } from '../services/JsonValidationService';
 
 export class AnthropicAdapter implements AIAdapter {
     public apiKey: string;
@@ -12,7 +11,7 @@ export class AnthropicAdapter implements AIAdapter {
         public settingsService: SettingsService,
         public jsonValidationService: JsonValidationService
     ) {
-        const aiProviderSettings = this.settingsService.getSettingSection('aiProvider');
+        const aiProviderSettings = this.settingsService.getSetting('aiProvider');
         this.apiKey = aiProviderSettings.apiKeys[AIProvider.Anthropic] || '';
         this.models = AIModelMap[AIProvider.Anthropic];
     }

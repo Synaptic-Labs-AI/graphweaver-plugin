@@ -1,10 +1,9 @@
 import { TFile, App, Notice } from 'obsidian';
 import { BaseGenerator, BaseGeneratorInput, BaseGeneratorOutput } from './BaseGenerator';
-import { AIAdapter, AIResponseOptions } from '@type/ai.types';
-import { SettingsService } from '@services/SettingsService';
-import { FrontMatterGenerator, FrontMatterInput } from '@generators/FrontMatterGenerator';
-import { PropertyTag } from '@type/metadata.types';
-import { WikilinkTextProcessor } from '@services/WikilinkTextProcessor';
+import { AIAdapter, AIResponseOptions } from '../models/AIModels';
+import { SettingsService } from '../services/SettingsService';
+import { FrontMatterGenerator, FrontMatterInput, FrontMatterOutput } from './FrontMatterGenerator';
+import { PropertyTag } from '../models/PropertyTag';
 
 /**
  * Input interface for the Knowledge Bloom generator
@@ -33,18 +32,15 @@ export interface KnowledgeBloomOutput extends BaseGeneratorOutput {
 export class KnowledgeBloomGenerator extends BaseGenerator<KnowledgeBloomInput, KnowledgeBloomOutput> {
     public frontMatterGenerator: FrontMatterGenerator;
     public currentInput: KnowledgeBloomInput | null = null;
-    private wikilinkProcessor: WikilinkTextProcessor;
 
     constructor(
         aiAdapter: AIAdapter,
         settingsService: SettingsService,
         public app: App,
-        frontMatterGenerator: FrontMatterGenerator,
-        wikilinkProcessor: WikilinkTextProcessor
+        frontMatterGenerator: FrontMatterGenerator // Inject FrontMatterGenerator
     ) {
         super(aiAdapter, settingsService);
         this.frontMatterGenerator = frontMatterGenerator;
-        this.wikilinkProcessor = wikilinkProcessor;
     }
 
     /**
@@ -54,30 +50,28 @@ export class KnowledgeBloomGenerator extends BaseGenerator<KnowledgeBloomInput, 
      */
     public async generate(input: KnowledgeBloomInput): Promise<KnowledgeBloomOutput> {
         this.currentInput = input;
+        console.log('KnowledgeBloomGenerator: Starting generation process');
         
         try {
             if (!this.validateInput(input)) {
                 throw new Error('Invalid input for Knowledge Bloom generation');
             }
 
-            // First, process and extract wikilinks
             const wikilinks = await this.extractWikilinks(input.sourceFile);
+            console.log(`KnowledgeBloomGenerator: Found ${wikilinks.length} unique wikilinks`);
 
             if (wikilinks.length === 0) {
                 throw new Error('No wikilinks found in the source file.');
             }
 
-            // Setup output and process wikilinks
             const folderPath = this.getFolderPath(input.sourceFile);
             const output: KnowledgeBloomOutput = { generatedNotes: [] };
 
-            // Process wikilinks concurrently with Promise.allSettled
             const generationPromises = wikilinks.map(link => 
                 this.processWikilink(link, folderPath, input, output)
             );
 
             await Promise.allSettled(generationPromises);
-            
             return output;
             
         } catch (error) {
@@ -88,80 +82,9 @@ export class KnowledgeBloomGenerator extends BaseGenerator<KnowledgeBloomInput, 
     }
 
     /**
-     * Extract and generate wikilinks from a file
-     */
-    public async extractWikilinks(file: TFile): Promise<string[]> {
-        try {
-            const content = await this.app.vault.read(file);
-
-            // First, process the content to generate wikilinks
-            const existingWikilinks = new Set<string>();
-            const suggestedLinks = await this.generateSuggestedLinks(content);
-            
-            // Use the processor to add wikilinks
-            const processedContent = this.wikilinkProcessor.addWikilinks(
-                content,
-                suggestedLinks,
-                existingWikilinks
-            );
-
-            // Extract the wikilinks using the processor's methods
-            const links = this.wikilinkProcessor.extractExistingWikilinks(processedContent);
-            
-            // Update the source file with processed content
-            await this.app.vault.modify(file, processedContent);
-            
-            return Array.from(new Set(links));
-        } catch (error) {
-            console.error('❌ Error extracting wikilinks:', error);
-            throw new Error(`Failed to extract wikilinks: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
-    }
-
-    /**
-     * Generate suggested links using AI
-     */
-    private async generateSuggestedLinks(content: string): Promise<string[]> {
-        try {
-            const prompt = `
-Analyze the following content and identify key phrases, proper nouns, concepts, and terms that would make good wiki links. 
-Focus on important concepts, technical terms, proper nouns, and significant phrases.
-Return them as a simple array of strings.
-
-Content:
-${content}
-
-Return ONLY the array of strings, nothing else.
-`;
-            
-            const model = await this.getCurrentModel();
-            const response = await this.aiAdapter.generateResponse(prompt, model);
-            
-            if (!response.success || !response.data) {
-                throw new Error('Failed to generate suggested links');
-            }
-
-            // Parse the response to get an array of strings
-            let suggestions: string[] = [];
-            if (Array.isArray(response.data)) {
-                suggestions = response.data.filter(item => typeof item === 'string');
-            } else if (typeof response.data === 'object' && response.data !== null) {
-                suggestions = Object.values(response.data)
-                    .filter(item => typeof item === 'string');
-            }
-
-            return suggestions;
-
-        } catch (error) {
-            console.error('❌ Error generating suggested links:', error);
-            return [];
-        }
-    }
-
-    /**
      * Process a single wikilink to generate a new note
      */
-    public async processWikilink(
+    private async processWikilink(
         link: string, 
         folderPath: string, 
         input: KnowledgeBloomInput, 
@@ -169,6 +92,7 @@ Return ONLY the array of strings, nothing else.
     ): Promise<void> {
         try {
             if (this.doesNoteExist(link, folderPath)) {
+                console.log(`KnowledgeBloomGenerator: Note for "${link}" already exists. Skipping.`);
                 return;
             }
 
@@ -181,8 +105,9 @@ Return ONLY the array of strings, nothing else.
             await this.app.vault.create(newFilePath, finalContent);
 
             output.generatedNotes.push({ title: link, content: finalContent });
+            console.log(`KnowledgeBloomGenerator: Successfully generated note for "${link}".`);
         } catch (error) {
-            console.error(`❌ Error processing wikilink "${link}":`, error);
+            console.error(`Error processing wikilink "${link}":`, error);
             new Notice(`Failed to generate note for "${link}": ${(error as Error).message}`);
         }
     }
@@ -190,7 +115,7 @@ Return ONLY the array of strings, nothing else.
     /**
      * Generate markdown content for a single wikilink
      */
-    public async generateMarkdownContent(link: string, input: KnowledgeBloomInput): Promise<string> {
+    private async generateMarkdownContent(link: string, input: KnowledgeBloomInput): Promise<string> {
         const prompt = this.preparePrompt({
             ...input,
             currentWikilink: link,
@@ -209,6 +134,7 @@ Return ONLY the array of strings, nothing else.
         
         // Handle different response types with proper type checking
         if (typeof content === 'object' && content !== null) {
+            // Type assertion for accessing potential properties
             const contentObj = content as Record<string, unknown>;
             
             if ('content' in contentObj && typeof contentObj.content === 'string') {
@@ -220,15 +146,17 @@ Return ONLY the array of strings, nothing else.
             }
         }
 
-        // Clean the content
+        // Ensure we have a string and clean it
         const contentString = String(content).trim();
+
+        // Remove any accidentally included front matter
         return contentString.replace(/^---\n[\s\S]*?\n---\n*/g, '');
     }
 
     /**
      * Add front matter to the generated content
      */
-    public async addFrontMatter(content: string): Promise<string> {
+    private async addFrontMatter(content: string): Promise<string> {
         const frontMatterInput: FrontMatterInput = {
             content,
             customProperties: this.extractCustomProperties(content),
@@ -240,13 +168,23 @@ Return ONLY the array of strings, nothing else.
     }
 
     /**
+     * Extract unique wikilinks from a file
+     */
+    private async extractWikilinks(file: TFile): Promise<string[]> {
+        const content = await this.app.vault.read(file);
+        const wikilinks = content.match(/\[\[([^\]]+)\]\]/g) || [];
+        const links = wikilinks.map(link => link.slice(2, -2));
+        return Array.from(new Set(links.map(link => link.toLowerCase())));
+    }
+
+    /**
      * Extract custom properties from content
      */
     protected extractCustomProperties(content: string): PropertyTag[] {
         try {
             return this.settingsService.getSettings().frontMatter.customProperties;
         } catch (error) {
-            console.error('❌ Error extracting custom properties:', error);
+            console.error('Error extracting custom properties:', error);
             return [];
         }
     }
@@ -256,9 +194,9 @@ Return ONLY the array of strings, nothing else.
      */
     protected extractCustomTags(content: string): string[] {
         try {
-            return this.settingsService.getSettings().tags.customTags.map((tag: { name: string }) => tag.name);
+            return this.settingsService.getSettings().tags.customTags.map(tag => tag.name);
         } catch (error) {
-            console.error('❌ Error extracting custom tags:', error);
+            console.error('Error extracting custom tags:', error);
             return [];
         }
     }
@@ -279,7 +217,6 @@ Act as an expert Research Assistant that specializes in writing structured notes
 - Write the note in Markdown format.
 - Do NOT include any JSON objects or front matter.
 - Ensure the content is well-structured and comprehensive.
-- Include relevant wikilinks to other concepts where appropriate.
 - Omit any words before or after the Markdown content.
 
 # TOPIC
@@ -292,7 +229,7 @@ ${input.userPrompt ? `## Additional Context:\n${input.userPrompt}` : ''}
     /**
      * Check if a note exists at the given path
      */
-    public doesNoteExist(title: string, folderPath: string): boolean {
+    private doesNoteExist(title: string, folderPath: string): boolean {
         const filePath = `${folderPath}/${title}.md`;
         const file = this.app.vault.getAbstractFileByPath(filePath);
         return file instanceof TFile;
@@ -301,7 +238,7 @@ ${input.userPrompt ? `## Additional Context:\n${input.userPrompt}` : ''}
     /**
      * Get the folder path for the new note
      */
-    public getFolderPath(file: TFile): string {
+    private getFolderPath(file: TFile): string {
         const pathSegments = file.path.split('/');
         pathSegments.pop();
         return pathSegments.join('/');
@@ -312,6 +249,7 @@ ${input.userPrompt ? `## Additional Context:\n${input.userPrompt}` : ''}
      */
     protected validateInput(input: KnowledgeBloomInput): boolean {
         const isValid = input?.sourceFile instanceof TFile;
+        console.log(`KnowledgeBloomGenerator: Input validation result: ${isValid}`);
         return isValid;
     }
 
@@ -333,7 +271,7 @@ ${input.userPrompt ? `## Additional Context:\n${input.userPrompt}` : ''}
      * Handle generation errors
      */
     protected handleError(error: Error): never {
-        console.error(`❌ KnowledgeBloomGenerator: Knowledge Bloom generation error: ${error.message}`, error);
+        console.error(`KnowledgeBloomGenerator: Knowledge Bloom generation error: ${error.message}`, error);
         new Notice(`Knowledge Bloom generation failed: ${error.message}`);
         throw error;
     }

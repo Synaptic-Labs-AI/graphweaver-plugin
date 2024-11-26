@@ -1,7 +1,6 @@
 {
   "name": "obsidian-graphweaver",
   "version": "1.0.0",
-  "type": "module",
   "description": "AI-powered knowledge graph and ontology generator for Obsidian.",
   "main": "main.js",
   "scripts": {
@@ -18,44 +17,22 @@
   "author": "Your Name",
   "license": "MIT",
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^24.0.0",
-    "@rollup/plugin-node-resolve": "^15.0.0",
-    "@rollup/plugin-typescript": "^11.1.5",
-    "@sveltejs/adapter-auto": "^2.0.0",
-    "@sveltejs/kit": "^1.20.4",
-    "@tsconfig/svelte": "^3.0.0",
-    "@types/lodash": "^4.14.191",
     "@types/node": "^16.11.6",
-    "autoprefixer": "^10.4.14",
+    "@typescript-eslint/eslint-plugin": "5.29.0",
+    "@typescript-eslint/parser": "5.29.0",
+    "axios": "^1.7.7",
     "builtin-modules": "3.3.0",
+    "commander": "^12.1.0",
     "esbuild": "0.17.3",
-    "esbuild-plugin-alias": "^0.2.1",
-    "esbuild-svelte": "^0.7.3",
-    "postcss": "^8.4.24",
-    "svelte": "^4.0.0",
-    "svelte-check": "^3.4.3",
-    "svelte-preprocess": "^5.0.0",
-    "tailwindcss": "^3.3.2",
+    "obsidian": "^1.7.2",
     "tslib": "2.4.0",
-    "typescript": "^4.7.4",
-    "vite": "^4.3.9"
-  },
-  "dependencies": {
-    "@clack/prompts": "^0.8.2",
-    "@popperjs/core": "^2.11.8",
-    "@types/uuid": "^10.0.0",
-    "ajv": "^8.17.1",
-    "chart.js": "^4.4.6",
-    "classnames": "^2.5.1",
-    "dotenv": "^16.4.5",
-    "flowbite": "^1.8.1",
-    "flowbite-svelte": "^0.44.24",
-    "lodash": "^4.17.21",
-    "svelte-chartjs": "^3.1.5",
-    "svelte-chat": "^0.5.8",
-    "uuid": "^11.0.3"
+    "typescript": "4.7.4"
   },
   "peerDependencies": {
-    "obsidian": "^1.7.2"
+    "obsidian": "^1.1.1"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "dotenv": "^16.4.5"
   }
 }

@@ -1,29 +1,33 @@
 {
   "compilerOptions": {
-    "target": "ES2015",
-    "module": "ESNext",
-    "lib": ["ESNext", "DOM"],
-    "strict": true,
-    "moduleResolution": "Node",
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
-    "paths": {
-      "@adapters/*": ["src/adapters/*"],
-      "@components/*": ["src/components/*"],
-      "@generators/*": ["src/generators/*"],
-      "@managers/*": ["src/managers/*"],
-      "@models/*": ["src/models/*"],
-      "@registrations/*": ["src/registrations/*"],
-      "@services/*": ["src/services/*"],
-      "@settings/*": ["src/settings/*"],
-      "@state/*": ["src/state/*"],
-      "@stores/*": ["src/stores/*"],
-      "@type/*": ["src/types/*"],
-      "@utils/*": ["src/utils/*"]
-    }
+    "inlineSourceMap": true,
+    "inlineSources": true,
+    "module": "ESNext",
+    "target": "ES6",
+    "allowJs": true,
+    "noImplicitAny": true,
+    "moduleResolution": "node",
+    "importHelpers": true,
+    "isolatedModules": true,
+    "strictNullChecks": true,
+    "lib": [
+      "DOM",
+      "ES5",
+      "ES6",
+      "ES7"
+    ],
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "*.js"
+  ]
 }

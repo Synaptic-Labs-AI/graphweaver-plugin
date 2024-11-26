@@ -1,171 +1,87 @@
-// GraphWeaverSettingTab.ts
-import { App, PluginSettingTab, Notice } from 'obsidian';
-import type GraphWeaverPlugin from '../../main';
-import SettingsTab from './SettingsTab.svelte';
-import { debounce } from 'lodash';
+// src/settings/GraphWeaverSettingTab.ts
 
-/**
- * Settings tab for GraphWeaver plugin
- * Handles initialization, mounting, and lifecycle of settings components
- */
+import { App, PluginSettingTab } from 'obsidian';
+import GraphWeaverPlugin from '../../main'; // Adjust based on your project structure
+
+// Import each accordion individually
+import { ModelHookupAccordion } from '../components/accordions/ModelHookupAccordion';
+import { PropertyManagerAccordion } from '../components/accordions/PropertyManagerAccordion';
+import { TagManagerAccordion } from '../components/accordions/TagManagerAccordion';
+import { OntologyGenerationAccordion } from '../components/accordions/OntologyGenerationAccordion';
+import { BatchProcessorAccordion } from '../components/accordions/BatchProcessorAccordion';
+import { AdvancedAccordion } from '../components/accordions/AdvancedAccordion';
+import { KnowledgeBloomAccordion } from '../components/accordions/KnowledgeBloomAccordion';
+
 export class GraphWeaverSettingTab extends PluginSettingTab {
-    private svelteComponent: SettingsTab | null = null;
-    private mountElement: HTMLElement | null = null;
-    private isInitialized = false;
-    private initializationAttempts = 0;
-    private readonly MAX_INIT_ATTEMPTS = 3;
-    private readonly INIT_RETRY_DELAY = 1000; // ms
+    plugin: GraphWeaverPlugin; // Replace with your actual plugin type
 
-    // Debounced error handler to prevent error message spam
-    private debouncedError = debounce((message: string) => {
-        new Notice(`Settings Error: ${message}`);
-    }, 1000, { leading: true, trailing: false });
-
-    constructor(app: App, private plugin: GraphWeaverPlugin) {
+    constructor(app: App, plugin: GraphWeaverPlugin) { // Ensure correct types
         super(app, plugin);
         this.plugin = plugin;
-        this.app = app;
     }
 
-    /**
-     * Safely initializes and displays the settings tab
-     */
-    async display(): Promise<void> {
-        try {
-            await this.ensureInitialization();
-            await this.mountComponent();
-        } catch (error) {
-            console.error('🦇 Settings initialization failed:', error);
-            await this.handleInitializationError(error);
-        }
-    }
-
-    /**
-     * Ensures proper initialization of required services
-     */
-    private async ensureInitialization(): Promise<void> {
-        if (this.isInitialized) return;
-
+    display(): void {
         const { containerEl } = this;
-        if (!containerEl) {
-            throw new Error('Container element is not initialized');
-        }
-
-        // Wait for plugin services to be ready
-        if (!this.plugin.isReady()) {
-            await this.plugin.ensureInitialized();
-        }
 
         containerEl.empty();
-        this.isInitialized = true;
-    }
 
-    /**
-     * Safely mounts the Svelte component
-     */
-    private async mountComponent(): Promise<void> {
-        const { containerEl } = this;
-        if (!containerEl || !this.isInitialized) return;
+        containerEl.createEl('h2', { text: 'GraphWeaver Settings' });
 
-        try {
-            // Create mount point with explicit parent
-            const mountPoint = containerEl.createDiv();
-            mountPoint.addClass('vertical-tab-content', 'graphweaver-settings');
-            this.mountElement = mountPoint;
+        // Instantiate and render each accordion with required arguments
+        const modelHookupContainer = containerEl.createDiv();
+        new ModelHookupAccordion(
+            this.app,
+            modelHookupContainer,
+            this.plugin.settingsService,
+            this.plugin.aiService
+        ).render();
 
-            // Only create new component if none exists
-            if (!this.svelteComponent && mountPoint) {
-                this.svelteComponent = new SettingsTab({
-                    target: mountPoint,
-                    props: {
-                        app: this.app,
-                        plugin: this.plugin,
-                        settingsService: this.plugin.settings,
-                        aiService: this.plugin.ai,
-                        tagManagementService: this.plugin.tagManager,
-                    }
-                });
-            }
-        } catch (error) {
-            throw new Error(`Failed to mount settings component: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
-    }
+        const propertyManagerContainer = containerEl.createDiv();
+        new PropertyManagerAccordion(
+            this.app,
+            propertyManagerContainer,
+            this.plugin.settingsService,
+            this.plugin.aiService
+        ).render();
 
-    /**
-     * Handles initialization errors with retry logic
-     */
-    private async handleInitializationError(error: unknown): Promise<void> {
-        this.initializationAttempts++;
-        
-        if (this.initializationAttempts < this.MAX_INIT_ATTEMPTS) {
-            console.log(`🦇 Retrying initialization (${this.initializationAttempts}/${this.MAX_INIT_ATTEMPTS})...`);
-            
-            // Wait before retrying
-            await new Promise(resolve => setTimeout(resolve, this.INIT_RETRY_DELAY));
-            await this.display();
-        } else {
-            this.handleError(error);
-            this.showFallbackUI();
-        }
-    }
+        const tagManagerContainer = containerEl.createDiv();
+        new TagManagerAccordion(
+            this.app,
+            tagManagerContainer,
+            this.plugin.settingsService,
+            this.plugin.aiService
+        ).render();
 
-    /**
-     * Handles and displays errors
-     */
-    private handleError(error: unknown): void {
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('🦇 Settings error:', error);
-        this.debouncedError(message);
-    }
+        const ontologyGenerationContainer = containerEl.createDiv();
+        new OntologyGenerationAccordion(
+            this.app,
+            ontologyGenerationContainer,
+            this.plugin.settingsService,
+            this.plugin.aiService
+        ).render();
 
-    /**
-     * Shows fallback UI when initialization fails
-     */
-    private showFallbackUI(): void {
-        const { containerEl } = this;
-        if (!containerEl) return;
-        
-        containerEl.empty();
-        
-        const errorEl = containerEl.createDiv();
-        errorEl.addClass('settings-error');
-        
-        const messageEl = errorEl.createDiv();
-        messageEl.setText('Failed to initialize settings. Please try reloading Obsidian.');
-        
-        const retryButton = errorEl.createEl('button');
-        retryButton.setText('Retry');
-        retryButton.onclick = async () => {
-            this.initializationAttempts = 0;
-            this.isInitialized = false;
-            await this.display();
-        };
-    }
+        const batchProcessorContainer = containerEl.createDiv();
+        new BatchProcessorAccordion(
+            this.app,
+            batchProcessorContainer,
+            this.plugin.settingsService,
+            this.plugin.aiService
+        ).render();
 
-    /**
-     * Safely cleans up the component and its resources
-     */
-    hide(): void {
-        try {
-            if (this.svelteComponent) {
-                this.svelteComponent.$destroy();
-                this.svelteComponent = null;
-            }
-            
-            if (this.mountElement) {
-                this.mountElement.empty();
-                this.mountElement = null;
-            }
+        const advancedContainer = containerEl.createDiv();
+        new AdvancedAccordion(
+            this.app,
+            advancedContainer,
+            this.plugin.settingsService,
+            this.plugin.aiService
+        ).render();
 
-            const { containerEl } = this;
-            if (containerEl) {
-                containerEl.empty();
-            }
-
-            this.isInitialized = false;
-            this.initializationAttempts = 0;
-        } catch (error) {
-            console.error('🦇 Error during cleanup:', error);
-        }
+        const knowledgeBloomContainer = containerEl.createDiv();
+        new KnowledgeBloomAccordion(
+            this.app,
+            knowledgeBloomContainer,
+            this.plugin.settingsService,
+            this.plugin.aiService
+        ).render();
     }
 }

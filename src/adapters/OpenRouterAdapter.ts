@@ -1,10 +1,9 @@
 // src/adapters/OpenRouterAdapter.ts
 
 import { Notice, requestUrl, RequestUrlResponse } from 'obsidian';
-import { AIProvider, AIResponse, AIAdapter, AIModel, AIResponseOptions } from '@type/ai.types';
-import { AIModelMap } from '@type/aiModels';
-import { SettingsService } from '@services/SettingsService';
-import { JsonValidationService } from '@services/JsonValidationService';
+import { AIProvider, AIResponse, AIAdapter, AIModel, AIModelMap, AIResponseOptions } from '../models/AIModels';
+import { SettingsService } from '../services/SettingsService';
+import { JsonValidationService } from '../services/JsonValidationService';
 
 /**
  * OpenRouter AI service adapter implementation
@@ -18,7 +17,7 @@ export class OpenRouterAdapter implements AIAdapter {
         public settingsService: SettingsService,
         public jsonValidationService: JsonValidationService
     ) {
-        const aiProviderSettings = this.settingsService.getSettingSection('aiProvider');
+        const aiProviderSettings = this.settingsService.getSetting('aiProvider');
         this.apiKey = aiProviderSettings.apiKeys[AIProvider.OpenRouter] || '';
         this.models = AIModelMap[AIProvider.OpenRouter];
     }
@@ -107,7 +106,7 @@ export class OpenRouterAdapter implements AIAdapter {
     /**
      * Make a request to the OpenRouter API
      */
-    public async makeApiRequest(
+    private async makeApiRequest(
         apiModel: string, 
         prompt: string, 
         temperature: number, 
@@ -159,7 +158,7 @@ export class OpenRouterAdapter implements AIAdapter {
     /**
      * Extract content from API response
      */
-    public extractContentFromResponse(response: RequestUrlResponse): string {
+    private extractContentFromResponse(response: RequestUrlResponse): string {
         if (!response.json?.choices?.[0]?.message?.content) {
             throw new Error('Invalid response format from OpenRouter API');
         }
@@ -169,7 +168,7 @@ export class OpenRouterAdapter implements AIAdapter {
     /**
      * Get temperature setting
      */
-    public getTemperature(settings: any): number {
+    private getTemperature(settings: any): number {
         return (settings.advanced?.temperature >= 0 && settings.advanced?.temperature <= 1) 
             ? settings.advanced.temperature 
             : 0.7;
@@ -178,14 +177,14 @@ export class OpenRouterAdapter implements AIAdapter {
     /**
      * Get max tokens setting
      */
-    public getMaxTokens(settings: any): number {
+    private getMaxTokens(settings: any): number {
         return (settings.advanced?.maxTokens > 0) ? settings.advanced.maxTokens : 1000;
     }
 
     /**
      * Handle errors in API calls
      */
-    public handleError(error: unknown): AIResponse {
+    private handleError(error: unknown): AIResponse {
         console.error('Error in OpenRouter API call:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         new Notice(`OpenRouter API Error: ${errorMessage}`);

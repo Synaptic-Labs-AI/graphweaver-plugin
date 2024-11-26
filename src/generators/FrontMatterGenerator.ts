@@ -1,25 +1,25 @@
 // src/generators/FrontMatterGenerator.ts
 
-import { BaseGenerator, BaseGeneratorInput, BaseGeneratorOutput } from '@generators/BaseGenerator';
-import { AIAdapter, AIProvider } from '@type/ai.types';
-import { SettingsService } from '@services/SettingsService';
-import { JsonSchemaGenerator } from '@generators/JsonSchemaGenerator';
-import { PropertyTag } from '@type/metadata.types';
+import { BaseGenerator, BaseGeneratorInput, BaseGeneratorOutput } from './BaseGenerator';
+import { AIAdapter } from '../adapters/AIAdapter';
+import { SettingsService } from '../services/SettingsService';
+import { JsonSchemaGenerator } from './JsonSchemaGenerator';
+import { PropertyTag } from '../models/PropertyTag';
 
 /**
  * Input interface for front matter generation
  */
 export interface FrontMatterInput extends BaseGeneratorInput {
-    content: string;                   
-    customProperties?: PropertyTag[];  
-    customTags?: string[];             
+    content: string;                   // The note content to generate front matter for
+    customProperties?: PropertyTag[];  // Optional custom properties
+    customTags?: string[];             // Optional custom tags
 }
 
 /**
  * Output interface for front matter generation
  */
 export interface FrontMatterOutput extends BaseGeneratorOutput {
-    content: string;                   
+    content: string;                   // The content with generated front matter
 }
 
 /**
@@ -44,6 +44,7 @@ export class FrontMatterGenerator extends BaseGenerator<FrontMatterInput, FrontM
      * @returns Promise resolving to content with front matter
      */
     public async generate(input: FrontMatterInput): Promise<FrontMatterOutput> {
+        console.log('FrontMatterGenerator: Starting generation');
         
         try {
             const settings = this.getSettings();
@@ -52,22 +53,28 @@ export class FrontMatterGenerator extends BaseGenerator<FrontMatterInput, FrontM
             const completeInput: FrontMatterInput = {
                 ...input,
                 customProperties: input.customProperties || settings.frontMatter.customProperties,
-                customTags: input.customTags || settings.tags.customTags.map((tag: { name: string }) => tag.name)
+                customTags: input.customTags || settings.tags.customTags.map(tag => tag.name)
             };
+
+            console.log('FrontMatterGenerator: Complete input prepared:', completeInput);
 
             const prompt = this.preparePrompt(completeInput);
             const model = await this.getCurrentModel();
             
+            console.log('FrontMatterGenerator: Sending request to AI');
             const aiResponse = await this.aiAdapter.generateResponse(prompt, model);
+            
+            console.log('FrontMatterGenerator: AI response received:', aiResponse);
 
             if (!aiResponse.success || !aiResponse.data) {
-                return { content: input.content }; 
+                console.error('FrontMatterGenerator: AI response was unsuccessful or empty');
+                return { content: input.content }; // Return original content if AI generation fails
             }
 
             return this.formatOutput(aiResponse.data, completeInput);
         } catch (error) {
             console.error('FrontMatterGenerator: Error during generation:', error);
-            return { content: input.content };
+            return { content: input.content }; // Return original content on error
         }
     }
 
@@ -85,30 +92,30 @@ export class FrontMatterGenerator extends BaseGenerator<FrontMatterInput, FrontM
         const tagPrompt = input.customTags?.join(', ') || '';
     
         return `
-# MISSION
-Act as an expert analyzer and creator of metadata, with a specialization in ontological organization for Obsidian Vaults. Generate ONLY front matter fields based on the provided schema and available properties/tags.
-
-# GUIDELINES
-- You must ONLY use the properties provided in the schema
-- Front matter fields will NOT include the note content itself
-- Prioritize using available tags, but remain flexible in choosing additional relevant tags
-- Return ONLY the formatted JSON object with front matter fields
-- Do NOT include the content field in your response
-
-## Custom Properties
-${propertyPrompt}
-
-## Available Tags
-${tagPrompt}
-
-## Note Content for Reference (OMIT FROM OUTPUT)
-${input.content}
-
-## JSON Schema for Front Matter Fields:
-${JSON.stringify(schema, null, 2)}
-
-Generate ONLY the front matter fields as JSON. Do not include any other text or the note content.
-`;
+    # MISSION
+    Act as an expert analyzer and creator of metadata, with a specialization in ontological organization for Obsidian Vaults. Generate ONLY front matter fields based on the provided schema and available properties/tags.
+    
+    # GUIDELINES
+    - You must ONLY use the properties provided in the schema
+    - Front matter fields will NOT include the note content itself
+    - Prioritize using available tags, but remain flexible in choosing additional relevant tags
+    - Return ONLY the formatted JSON object with front matter fields
+    - Do NOT include the content field in your response
+    
+    ## Custom Properties
+    ${propertyPrompt}
+    
+    ## Available Tags
+    ${tagPrompt}
+    
+    ## Note Content for Reference (OMIT FROM OUTPUT)
+    ${input.content}
+    
+    ## JSON Schema for Front Matter Fields:
+    ${JSON.stringify(schema, null, 2)}
+    
+    Generate ONLY the front matter fields as JSON. Do not include any other text or the note content.
+    `;
     }
 
     /**
@@ -118,6 +125,7 @@ Generate ONLY the front matter fields as JSON. Do not include any other text or 
      * @returns Formatted output with front matter
      */
     protected formatOutput(aiResponse: any, originalInput: FrontMatterInput): FrontMatterOutput {
+        console.log('FrontMatterGenerator: Formatting AI response into front matter');
     
         const parsedResponse = this.parseAIResponse(aiResponse);
         if (!parsedResponse) {
@@ -132,6 +140,8 @@ Generate ONLY the front matter fields as JSON. Do not include any other text or 
     
         const frontMatter = this.convertToFrontMatter(parsedResponse);
         const finalContent = this.mergeFrontMatter(originalInput.content, frontMatter);
+    
+        console.log('FrontMatterGenerator: Front matter generated successfully');
     
         return { content: finalContent };
     }
@@ -205,7 +215,7 @@ Generate ONLY the front matter fields as JSON. Do not include any other text or 
      */
     protected async getCurrentModel(): Promise<string> {
         const settings = this.getSettings();
-        const providerType: AIProvider = this.aiAdapter.getProviderType();
+        const providerType = this.aiAdapter.getProviderType();
         const modelApiName = settings.aiProvider?.selectedModels?.[providerType];
         
         if (!modelApiName) {

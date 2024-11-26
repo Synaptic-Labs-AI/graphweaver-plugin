@@ -1,22 +1,21 @@
 import { Notice, requestUrl, RequestUrlResponse } from 'obsidian';
-import { AIProvider, AIResponse, AIAdapter, AIModel, AIResponseOptions } from '@type/ai.types';
-import { AIModelMap } from '@type/aiModels';
-import { SettingsService } from '@services/SettingsService';
-import { JsonValidationService } from '@services/JsonValidationService';
+import { AIProvider, AIResponse, AIAdapter, AIModel, AIModelMap, AIResponseOptions } from '../models/AIModels';
+import { SettingsService } from '../services/SettingsService';
+import { JsonValidationService } from '../services/JsonValidationService';
 
 /**
  * Groq service adapter implementation
  * Handles communication with Groq's API for various models
  */
 export class GroqAdapter implements AIAdapter {
-    public apiKey: string;
-    public models: AIModel[];
+    private apiKey: string;
+    private models: AIModel[];
 
     constructor(
-        public settingsService: SettingsService,
-        public jsonValidationService: JsonValidationService
+        private settingsService: SettingsService,
+        private jsonValidationService: JsonValidationService
     ) {
-        const aiProviderSettings = this.settingsService.getSettingSection('aiProvider');
+        const aiProviderSettings = this.settingsService.getSetting('aiProvider');
         this.apiKey = aiProviderSettings.apiKeys[AIProvider.Groq] || '';
         this.models = AIModelMap[AIProvider.Groq];
     }
@@ -95,7 +94,7 @@ export class GroqAdapter implements AIAdapter {
     /**
      * Make a request to the Groq API
      */
-    public async makeApiRequest(params: {
+    private async makeApiRequest(params: {
         model: string;
         prompt: string;
         temperature: number;
@@ -141,7 +140,7 @@ export class GroqAdapter implements AIAdapter {
     /**
      * Extract content from API response
      */
-    public extractContentFromResponse(response: RequestUrlResponse): string {
+    private extractContentFromResponse(response: RequestUrlResponse): string {
         if (!response.json?.choices?.[0]?.message?.content) {
             throw new Error('Invalid response format from Groq API');
         }
@@ -151,7 +150,7 @@ export class GroqAdapter implements AIAdapter {
     /**
      * Get temperature setting
      */
-    public getTemperature(settings: any): number {
+    private getTemperature(settings: any): number {
         return (settings.advanced?.temperature >= 0 && settings.advanced?.temperature <= 1)
             ? settings.advanced.temperature
             : 0.7;
@@ -160,14 +159,14 @@ export class GroqAdapter implements AIAdapter {
     /**
      * Get max tokens setting
      */
-    public getMaxTokens(settings: any): number {
+    private getMaxTokens(settings: any): number {
         return (settings.advanced?.maxTokens > 0) ? settings.advanced.maxTokens : 1000;
     }
 
     /**
      * Handle errors in API calls
      */
-    public handleError(error: unknown): AIResponse {
+    private handleError(error: unknown): AIResponse {
         console.error('Error in Groq API call:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         new Notice(`Groq API Error: ${errorMessage}`);

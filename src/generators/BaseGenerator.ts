@@ -1,8 +1,6 @@
-// src/generators/BaseGenerator.ts
-
-import { AIAdapter, AIProvider } from '@type/ai.types';
-import { SettingsService } from '@services/SettingsService';
-import { PluginSettings } from '@type/settings.types';
+import { AIAdapter } from '../adapters/AIAdapter';
+import { SettingsService } from '../services/SettingsService';
+import { PluginSettings } from '../settings/Settings';
 
 /**
  * Base interface for all generator inputs
@@ -29,34 +27,18 @@ export interface PreparePromptInput extends BaseGeneratorInput {
 }
 
 /**
- * Interface for service lifecycle management
- */
-export interface IService {
-    /**
-     * Initialize the service.
-     */
-    initialize(): Promise<void>;
-
-    /**
-     * Destroy the service and clean up resources.
-     */
-    destroy(): Promise<void>;
-}
-
-/**
  * Abstract base class for all generators
  * @template TInput Type of input the generator accepts
  * @template TOutput Type of output the generator produces
  */
-export abstract class BaseGenerator<
-    TInput extends BaseGeneratorInput = BaseGeneratorInput,
-    TOutput extends BaseGeneratorOutput = BaseGeneratorOutput
-> implements IService
-{
-    protected constructor(
-        protected readonly aiAdapter: AIAdapter,
-        protected readonly settingsService: SettingsService
-    ) {}
+export abstract class BaseGenerator<TInput extends BaseGeneratorInput = BaseGeneratorInput, TOutput extends BaseGeneratorOutput = BaseGeneratorOutput> {
+    protected aiAdapter: AIAdapter;
+    protected settingsService: SettingsService;
+
+    constructor(aiAdapter: AIAdapter, settingsService: SettingsService) {
+        this.aiAdapter = aiAdapter;
+        this.settingsService = settingsService;
+    }
 
     /**
      * Generate content based on input and settings.
@@ -81,24 +63,6 @@ export abstract class BaseGenerator<
         } catch (error) {
             return this.handleError(error as Error);
         }
-    }
-
-    /**
-     * Initialize the generator.
-     * Derived classes can override this method if specific initialization is needed.
-     */
-    public async initialize(): Promise<void> {
-        // Default implementation does nothing.
-        // Derived classes can override this method to perform specific initialization tasks.
-    }
-
-    /**
-     * Destroy the generator.
-     * Derived classes can override this method to clean up resources.
-     */
-    public async destroy(): Promise<void> {
-        // Default implementation does nothing.
-        // Derived classes can override this method to perform specific cleanup tasks.
     }
 
     /**
@@ -134,7 +98,7 @@ export abstract class BaseGenerator<
      * Can be overridden by subclasses to use specific model settings.
      */
     protected getSelectedModel(settings: PluginSettings): string | undefined {
-        const provider: AIProvider = this.aiAdapter.getProviderType();
+        const provider = this.aiAdapter.getProviderType();
         return settings.aiProvider?.selectedModels?.[provider];
     }
 

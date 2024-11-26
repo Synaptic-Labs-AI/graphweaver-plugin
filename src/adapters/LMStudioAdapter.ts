@@ -1,11 +1,11 @@
 import { Notice, requestUrl } from 'obsidian';
 import { SettingsService } from '../services/SettingsService';
 import { JsonValidationService } from '../services/JsonValidationService';
-import { AIProvider, AIResponse, AIAdapter, AIResponseOptions } from '../types/ai.types';
+import { AIProvider, AIResponse, AIAdapter, AIResponseOptions } from '../models/AIModels';
 
 export class LMStudioAdapter implements AIAdapter {
-    public model: string = '';
-    public port: string = '';
+    public model: string;
+    public port: string;
 
     constructor(
         public settingsService: SettingsService,
@@ -166,7 +166,7 @@ export class LMStudioAdapter implements AIAdapter {
     }
 
     public updateSettings(): void {
-        const localLMStudioSettings = this.settingsService.getSettingSection('localLMStudio');
+        const localLMStudioSettings = this.settingsService.getSetting('localLMStudio');
         this.model = localLMStudioSettings.modelName;
         this.port = localLMStudioSettings.port.toString();
     }
