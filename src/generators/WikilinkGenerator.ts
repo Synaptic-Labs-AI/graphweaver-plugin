@@ -233,28 +233,41 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
     }
 
     /**
-     * Normalizes text for wikilink usage while preserving original capitalization
+     * Normalizes text for wikilink usage with title case capitalization
      * @param text - The text to be normalized
-     * @returns Normalized text with preserved capitalization
+     * @returns Normalized text with title case capitalization
      */
     public normalizeWikilinkText(text: string): string {
-        // Store original text to preserve capitalization
-        const originalText = text.trim();
-        
-        // Replace multiple spaces with single space
-        let normalized = originalText.replace(/\s+/g, ' ');
+        // Store original text and normalize spaces
+        const trimmed = text.trim();
+        let normalized = trimmed.replace(/\s+/g, ' ');
         
         // Remove special characters except allowed ones
         normalized = normalized.replace(this.PATTERNS.SPECIAL_CHARS_REGEX, 
             char => this.CONFIG.ALLOWED_SPECIAL_CHARS.includes(char) ? char : '');
         
-        // If the normalized text differs only in case from original,
-        // preserve the original capitalization
-        if (normalized.toLowerCase() === originalText.toLowerCase()) {
-            return originalText;
-        }
-        
-        return normalized;
+        // Apply title case
+        return this.toTitleCase(normalized);
+    }
+
+    /**
+     * Converts a string to title case, capitalizing the first letter of each significant word
+     */
+    private toTitleCase(text: string): string {
+        // List of words to keep lowercase unless they're the first word
+        const minorWords = new Set([
+            'a', 'an', 'the', 'and', 'but', 'or', 'for', 'nor', 
+            'as', 'at', 'by', 'for', 'from', 'in', 'into', 'near', 
+            'of', 'on', 'onto', 'to', 'with'
+        ]);
+
+        return text.split(' ').map((word, index) => {
+            // Always capitalize first and last words
+            if (index === 0 || word.length > 3 || !minorWords.has(word.toLowerCase())) {
+                return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+            }
+            return word.toLowerCase();
+        }).join(' ');
     }
 
     /**

@@ -12,6 +12,7 @@ import { AIAdapter } from 'src/adapters/AIAdapter';
 export interface KnowledgeBloomInput extends BaseGeneratorInput {
     sourceFile: TFile;            
     userPrompt?: string;          
+    template?: string;           // Add template parameter
     currentWikilink?: string;     
     currentNoteTitle?: string;    
 }
@@ -83,6 +84,16 @@ export class KnowledgeBloomGenerator extends BaseGenerator<KnowledgeBloomInput, 
     }
 
     /**
+     * Capitalize each word in a title
+     */
+    private capitalizeTitle(title: string): string {
+        return title
+            .split(/[\s-]/)
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+    }
+
+    /**
      * Process a single wikilink to generate a new note
      */
     private async processWikilink(
@@ -92,21 +103,23 @@ export class KnowledgeBloomGenerator extends BaseGenerator<KnowledgeBloomInput, 
         output: KnowledgeBloomOutput
     ): Promise<void> {
         try {
-            if (this.doesNoteExist(link, folderPath)) {
-                console.log(`KnowledgeBloomGenerator: Note for "${link}" already exists. Skipping.`);
+            const capitalizedLink = this.capitalizeTitle(link);
+            
+            if (this.doesNoteExist(capitalizedLink, folderPath)) {
+                console.log(`KnowledgeBloomGenerator: Note for "${capitalizedLink}" already exists. Skipping.`);
                 return;
             }
 
             // Generate the note content
-            const markdownContent = await this.generateMarkdownContent(link, input);
+            const markdownContent = await this.generateMarkdownContent(capitalizedLink, input);
             const finalContent = await this.addFrontMatter(markdownContent);
 
-            // Create the new note
-            const newFilePath = `${folderPath}/${link}.md`;
+            // Create the new note using capitalized title
+            const newFilePath = `${folderPath}/${capitalizedLink}.md`;
             await this.app.vault.create(newFilePath, finalContent);
 
-            output.generatedNotes.push({ title: link, content: finalContent });
-            console.log(`KnowledgeBloomGenerator: Successfully generated note for "${link}".`);
+            output.generatedNotes.push({ title: capitalizedLink, content: finalContent });
+            console.log(`KnowledgeBloomGenerator: Successfully generated note for "${capitalizedLink}".`);
         } catch (error) {
             console.error(`Error processing wikilink "${link}":`, error);
             new Notice(`Failed to generate note for "${link}": ${(error as Error).message}`);
@@ -210,7 +223,7 @@ export class KnowledgeBloomGenerator extends BaseGenerator<KnowledgeBloomInput, 
             throw new Error('Missing required wikilink or note title');
         }
 
-        return `
+        const basePrompt = input.template || `
 # MISSION
 Act as an expert Research Assistant that specializes in writing structured notes that are accessible and practical based on a provided topic.
 
@@ -219,12 +232,21 @@ Act as an expert Research Assistant that specializes in writing structured notes
 - OMIT any JSON objects or front matter.
 - Ensure the content is well-structured and comprehensive.
 - OMIT any words before or after the Markdown content.
-
-# TOPIC
-Write a detailed note about "${input.currentWikilink}" in relation to "${input.currentNoteTitle}".
-
-${input.userPrompt ? `## Additional Context:\n${input.userPrompt}` : ''}
 `;
+
+        // Add relational context before the template content
+        const relationContext = `
+# CONTEXT
+You are creating a new note about [[${input.currentWikilink}]] which was referenced in the note [[${input.currentNoteTitle}]].
+Your task is to generate content that not only explains ${input.currentWikilink} but also considers its relationship to ${input.currentNoteTitle}.
+`;
+
+        // Combine all parts of the prompt
+        const finalPrompt = `${relationContext}
+${basePrompt}
+${input.userPrompt ? `\n## Additional Context:\n${input.userPrompt}` : ''}`;
+
+        return finalPrompt.trim();
     }
 
     /**

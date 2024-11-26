@@ -1,11 +1,12 @@
-import { App, Setting, TextAreaComponent, ButtonComponent, Notice, DropdownComponent, TFile } from "obsidian";
+import { App, Setting, TextComponent, Notice, DropdownComponent } from "obsidian";
 import { BaseAccordion } from "./BaseAccordion";
 import { SettingsService } from "../../services/SettingsService";
 import { AIService } from "../../services/AIService";
+import { KnowledgeBloomModal } from "../modals/KnowledgeBloomModal";
 
 export class KnowledgeBloomAccordion extends BaseAccordion {
-    public userPromptInput: TextAreaComponent;
-    public modelSelector: DropdownComponent;
+    private modelSelector: DropdownComponent;
+    private templateFolderInput: TextComponent;
 
     constructor(
         protected app: App,
@@ -19,32 +20,19 @@ export class KnowledgeBloomAccordion extends BaseAccordion {
     public render(): void {
         const contentEl = this.createAccordion(
             "🌺 Knowledge Bloom",
-            "Generate notes from wikilinks in your current note."
+            "Generate notes from wikilinks using templates."
         );
         this.createDescription(contentEl);
         this.createModelSelector(contentEl);
-        this.createUserPromptInput(contentEl);
-        this.createGenerateButton(contentEl);
+        this.createTemplateFolderSetting(contentEl);
     }
 
-    public createDescription(containerEl: HTMLElement): void {
+    private createDescription(containerEl: HTMLElement): void {
         const descEl = containerEl.createDiv({ cls: "knowledge-bloom-description" });
-        descEl.createEl("p", { text: "Knowledge Bloom analyzes the current note, extracts wikilinks, and generates new notes for each link. This helps expand your knowledge base and create connections between ideas." });
-        
-        descEl.createEl("p", { text: "For best results, we recommend using Perplexity models as they can search online for up-to-date information." });
-
-        const listEl = descEl.createEl("ul");
-        [
-            "Automatically creates notes for missing links",
-            "Generates content based on the context of your note",
-            "Helps build a more comprehensive knowledge graph",
-            "Saves time on manual note creation and research"
-        ].forEach(item => {
-            listEl.createEl("li", { text: item });
-        });
+        descEl.createEl("p", { text: "Knowledge Bloom analyzes your notes, extracts wikilinks, and generates new notes using your templates." });
     }
 
-    public createModelSelector(containerEl: HTMLElement): void {
+    private createModelSelector(containerEl: HTMLElement): void {
         const selectorEl = containerEl.createDiv({ cls: "knowledge-bloom-model-selector" });
         new Setting(selectorEl)
             .setName("AI Model")
@@ -82,65 +70,20 @@ export class KnowledgeBloomAccordion extends BaseAccordion {
         }
     }
 
-    public createUserPromptInput(containerEl: HTMLElement): void {
-        const promptEl = containerEl.createDiv({ cls: "knowledge-bloom-prompt" });
-        new Setting(promptEl)
-            .setName("Additional Context")
-            .setDesc("Provide any additional context or instructions for note generation (optional)")
-            .addTextArea(text => {
-                this.userPromptInput = text;
-                text.inputEl.rows = 4;
-                text.inputEl.cols = 50;
-                return text;
+    private createTemplateFolderSetting(containerEl: HTMLElement): void {
+        const knowledgeBloomSettings = this.settingsService.getKnowledgeBloomSettings();
+        new Setting(containerEl)
+            .setName("Templates Folder")
+            .setDesc("Path to your templates folder (e.g., 'Templates' or 'Templates/Knowledge Bloom')")
+            .addText(text => {
+                this.templateFolderInput = text;
+                text.setValue(knowledgeBloomSettings.templateFolder)
+                    .onChange(async (value) => {
+                        await this.settingsService.updateKnowledgeBloomSetting('templateFolder', value);
+                        await this.settingsService.saveSettings();
+                    });
             });
     }
 
-    public createGenerateButton(containerEl: HTMLElement): void {
-        const buttonEl = containerEl.createDiv({ cls: "knowledge-bloom-generate-button" });
-        new Setting(buttonEl)
-            .addButton((button: ButtonComponent) => {
-                button
-                    .setButtonText("Generate Knowledge Bloom")
-                    .setCta()
-                    .onClick(() => this.handleGenerateKnowledgeBloom(button));
-            });
-    }
-
-    public async handleGenerateKnowledgeBloom(button: ButtonComponent): Promise<void> {
-        const activeFile = this.app.workspace.getActiveFile();
-        if (!activeFile) {
-            new Notice("No active file. Please open a file to generate Knowledge Bloom.");
-            return;
-        }
-        
-        button.setDisabled(true);
-        button.setButtonText("Generating...");
-        
-        try {
-            const userPrompt = this.userPromptInput.getValue();
-            const result = await this.aiService.generateKnowledgeBloom(activeFile, userPrompt);
-            
-            if (result.generatedNotes.length > 0) {
-                // Create or update the generated notes in Obsidian
-                for (const note of result.generatedNotes) {
-                    const filePath = `${note.title}.md`;
-                    const existingFile = this.app.vault.getAbstractFileByPath(filePath);
-                    if (existingFile && existingFile instanceof TFile) {
-                        await this.app.vault.modify(existingFile, note.content);
-                    } else {
-                        await this.app.vault.create(filePath, note.content);
-                    }
-                }
-                new Notice(`Generated ${result.generatedNotes.length} new notes!`);
-            } else {
-                new Notice("No new notes were generated.");
-            }
-        } catch (error) {
-            console.error("Error generating Knowledge Bloom:", error);
-            new Notice(`Failed to generate Knowledge Bloom: ${(error as Error).message}`);
-        } finally {
-            button.setDisabled(false);
-            button.setButtonText("Generate Knowledge Bloom");
-        }
-    }
+    // Remove the createGenerateButton and openKnowledgeBloomModal methods as they're no longer needed
 }

@@ -8,6 +8,7 @@ import { JsonValidationService } from './src/services/JsonValidationService';
 import { BatchProcessor } from './src/generators/BatchProcessor';
 import { GraphWeaverSettingTab } from './src/settings/GraphWeaverSettingTab';
 import { FileProcessingResult } from 'src/models/ProcessingTypes';
+import { KnowledgeBloomModal } from 'src/components/modals/KnowledgeBloomModal';
 /**
  * Main plugin class for GraphWeaver
  * Manages plugin lifecycle and coordinates services
@@ -251,25 +252,14 @@ export default class GraphWeaverPlugin extends Plugin {
             return;
         }
 
-        try {
-            new Notice('Generating Knowledge Bloom...');
-            const result = await this.aiService.generateKnowledgeBloom(activeFile);
-            let createdCount = 0;
-
-            for (const note of result.generatedNotes) {
-                try {
-                    await this.createOrUpdateNote(note.title, note.content);
-                    createdCount++;
-                } catch (error) {
-                    console.error(`Failed to create note ${note.title}:`, error);
-                }
-            }
-
-            new Notice(`Successfully generated ${createdCount} of ${result.generatedNotes.length} notes!`);
-        } catch (error) {
-            console.error('Error generating Knowledge Bloom:', error);
-            new Notice('Error generating Knowledge Bloom. Check console for details.');
-        }
+        // Show the modal instead of directly generating
+        const modal = new KnowledgeBloomModal(
+            this.app,
+            activeFile,
+            this.settingsService,
+            this.aiService
+        );
+        modal.open();
     }
 
     /**

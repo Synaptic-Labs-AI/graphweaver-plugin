@@ -21,7 +21,8 @@ import {
     GroqAdapter, 
     OpenRouterAdapter, 
     LMStudioAdapter, 
-    PerplexityAdapter 
+    PerplexityAdapter,
+    MistralAdapter 
 } from '../adapters';
 
 /**
@@ -298,7 +299,8 @@ export class AutoGenerateService extends BaseService {
             [AIProvider.Groq, new GroqAdapter(this.settingsService, this.jsonValidationService)],
             [AIProvider.OpenRouter, new OpenRouterAdapter(this.settingsService, this.jsonValidationService)],
             [AIProvider.LMStudio, new LMStudioAdapter(this.settingsService, this.jsonValidationService)],
-            [AIProvider.Perplexity, new PerplexityAdapter(this.settingsService, this.jsonValidationService)]
+            [AIProvider.Perplexity, new PerplexityAdapter(this.settingsService, this.jsonValidationService)],
+            [AIProvider.Mistral, new MistralAdapter(this.settingsService, this.jsonValidationService)],
         ]);
     }
 }

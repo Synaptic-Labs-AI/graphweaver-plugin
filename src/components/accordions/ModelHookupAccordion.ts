@@ -264,7 +264,8 @@ export class ModelHookupAccordion extends BaseAccordion {
             [AIProvider.Groq]: "https://console.groq.com/keys",
             [AIProvider.OpenRouter]: "https://openrouter.ai/settings/keys",
             [AIProvider.LMStudio]: "https://lmstudio.ai/docs/basics/server",
-            [AIProvider.Perplexity]: "https://docs.perplexity.ai/guides/getting-started" // Add Perplexity link
+            [AIProvider.Perplexity]: "https://docs.perplexity.ai/guides/getting-started",
+            [AIProvider.Mistral]: "https://docs.mistral.ai/getting-started/quickstart/"
         };
         return websiteMap[provider] || "#";
     }
@@ -277,7 +278,8 @@ export class ModelHookupAccordion extends BaseAccordion {
             [AIProvider.Groq]: "Groq",
             [AIProvider.OpenRouter]: "OpenRouter",
             [AIProvider.LMStudio]: "LM Studio",
-            [AIProvider.Perplexity]: "Perplexity"
+            [AIProvider.Perplexity]: "Perplexity",
+            [AIProvider.Mistral]: "Mistral"
         };
         return formattedNames[provider] || provider;
     }

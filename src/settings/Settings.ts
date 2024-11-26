@@ -5,7 +5,8 @@ export interface KnowledgeBloomSettings {
     outputFolder: string;
     overwriteExisting: boolean;
     defaultPrompt: string;
-    selectedModel: string; // Add this line
+    selectedModel: string;
+    templateFolder: string;
 }
 
 export interface PluginSettings {
@@ -62,6 +63,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
     },
     knowledgeBloom: {
         selectedModel: 'string',
+        templateFolder: 'Templates',  // Changed from empty string to provide a default
         outputFolder: '',
         overwriteExisting: false,
         defaultPrompt: 'Generate a comprehensive note about {LINK}. Include key concepts, definitions, and relevant examples if applicable.'

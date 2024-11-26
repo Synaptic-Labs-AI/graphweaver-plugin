@@ -2,13 +2,15 @@
  * Defines the available AI providers
  */
 export enum AIProvider {
+    OpenRouter = 'openrouter',
     OpenAI = 'openai',
     Anthropic = 'anthropic',
     Google = 'google',
     Groq = 'groq',
-    OpenRouter = 'openrouter',
+    Mistral = 'mistral',
     Perplexity = 'perplexity',
-    LMStudio = 'lmstudio'
+    LMStudio = 'lmstudio',
+    
 }
 
 /**
@@ -465,6 +467,41 @@ export const AIModelMap: Record<AIProvider, AIModel[]> = {
                 supportsStreaming: false
             },
         }
+    ],
+    [AIProvider.Mistral]: [ // Added Mistral models
+        {
+            name: 'Mistral Large',
+            apiName: 'mistral-large-latest',
+            capabilities: {
+                maxTokens: 128000,
+                supportsStreaming: true
+            },
+            inputCostPer1M: 0,
+            outputCostPer1M: 0,
+            contextWindow: 128000
+        },
+        {
+            name: 'Ministral 8b',
+            apiName: 'ministral-8b-latest',
+            capabilities: {
+                maxTokens: 8192,
+                supportsStreaming: true
+            },
+            inputCostPer1M: 0,
+            outputCostPer1M: 0,
+            contextWindow: 128000
+        },
+        {
+            name: 'Mistral Nemo',
+            apiName: 'open-mistral-nemo',
+            capabilities: {
+                maxTokens: 8192,
+                supportsStreaming: true
+            },
+            inputCostPer1M: 0,
+            outputCostPer1M: 0,
+            contextWindow: 128000
+        },
     ]
 };
 

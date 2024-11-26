@@ -404,18 +404,19 @@ export class AIService extends BaseService {
      * Generates Knowledge Bloom content using AI.
      * @param sourceFile - The file containing wikilinks to generate notes for.
      * @param userPrompt - Optional user-provided context for note generation.
+     * @param template - Optional template for note generation.
      * @returns Promise<KnowledgeBloomOutput> - The generated notes and metadata
      */
-    public async generateKnowledgeBloom(sourceFile: TFile, userPrompt?: string): Promise<KnowledgeBloomOutput> {
-        try {
-            return await this.knowledgeBloomGenerator.generate({ 
-                sourceFile, 
-                userPrompt 
-            });
-        } catch (error) {
-            console.error("Error generating Knowledge Bloom:", error);
-            throw new Error(`Knowledge Bloom generation failed: ${(error as Error).message}`);
-        }
+    public async generateKnowledgeBloom(
+        sourceFile: TFile, 
+        userPrompt?: string,
+        template?: string
+    ): Promise<KnowledgeBloomOutput> {
+        return this.knowledgeBloomGenerator.generate({
+            sourceFile,
+            userPrompt,
+            template
+        });
     }
     
     /**

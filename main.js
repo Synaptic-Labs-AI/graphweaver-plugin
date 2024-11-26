@@ -27,7 +27,7 @@ __export(main_exports, {
   default: () => GraphWeaverPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian26 = require("obsidian");
+var import_obsidian27 = require("obsidian");
 
 // src/models/AIModels.ts
 var AIProvider = /* @__PURE__ */ ((AIProvider2) => {
@@ -481,6 +481,8 @@ var DEFAULT_SETTINGS = {
   },
   knowledgeBloom: {
     selectedModel: "string",
+    templateFolder: "Templates",
+    // Changed from empty string to provide a default
     outputFolder: "",
     overwriteExisting: false,
     defaultPrompt: "Generate a comprehensive note about {LINK}. Include key concepts, definitions, and relevant examples if applicable."
@@ -1722,21 +1724,52 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
     return !trimmed.match(this.PATTERNS.MALFORMED_REGEX);
   }
   /**
-   * Normalizes text for wikilink usage while preserving original capitalization
+   * Normalizes text for wikilink usage with title case capitalization
    * @param text - The text to be normalized
-   * @returns Normalized text with preserved capitalization
+   * @returns Normalized text with title case capitalization
    */
   normalizeWikilinkText(text) {
-    const originalText = text.trim();
-    let normalized = originalText.replace(/\s+/g, " ");
+    const trimmed = text.trim();
+    let normalized = trimmed.replace(/\s+/g, " ");
     normalized = normalized.replace(
       this.PATTERNS.SPECIAL_CHARS_REGEX,
       (char) => this.CONFIG.ALLOWED_SPECIAL_CHARS.includes(char) ? char : ""
     );
-    if (normalized.toLowerCase() === originalText.toLowerCase()) {
-      return originalText;
-    }
-    return normalized;
+    return this.toTitleCase(normalized);
+  }
+  /**
+   * Converts a string to title case, capitalizing the first letter of each significant word
+   */
+  toTitleCase(text) {
+    const minorWords = /* @__PURE__ */ new Set([
+      "a",
+      "an",
+      "the",
+      "and",
+      "but",
+      "or",
+      "for",
+      "nor",
+      "as",
+      "at",
+      "by",
+      "for",
+      "from",
+      "in",
+      "into",
+      "near",
+      "of",
+      "on",
+      "onto",
+      "to",
+      "with"
+    ]);
+    return text.split(" ").map((word, index) => {
+      if (index === 0 || word.length > 3 || !minorWords.has(word.toLowerCase())) {
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      }
+      return word.toLowerCase();
+    }).join(" ");
   }
   /**
    * Checks if a position is within an existing wikilink
@@ -2379,20 +2412,27 @@ var KnowledgeBloomGenerator = class extends BaseGenerator {
     }
   }
   /**
+   * Capitalize each word in a title
+   */
+  capitalizeTitle(title) {
+    return title.split(/[\s-]/).map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+  }
+  /**
    * Process a single wikilink to generate a new note
    */
   async processWikilink(link, folderPath, input, output) {
     try {
-      if (this.doesNoteExist(link, folderPath)) {
-        console.log(`KnowledgeBloomGenerator: Note for "${link}" already exists. Skipping.`);
+      const capitalizedLink = this.capitalizeTitle(link);
+      if (this.doesNoteExist(capitalizedLink, folderPath)) {
+        console.log(`KnowledgeBloomGenerator: Note for "${capitalizedLink}" already exists. Skipping.`);
         return;
       }
-      const markdownContent = await this.generateMarkdownContent(link, input);
+      const markdownContent = await this.generateMarkdownContent(capitalizedLink, input);
       const finalContent = await this.addFrontMatter(markdownContent);
-      const newFilePath = `${folderPath}/${link}.md`;
+      const newFilePath = `${folderPath}/${capitalizedLink}.md`;
       await this.app.vault.create(newFilePath, finalContent);
-      output.generatedNotes.push({ title: link, content: finalContent });
-      console.log(`KnowledgeBloomGenerator: Successfully generated note for "${link}".`);
+      output.generatedNotes.push({ title: capitalizedLink, content: finalContent });
+      console.log(`KnowledgeBloomGenerator: Successfully generated note for "${capitalizedLink}".`);
     } catch (error) {
       console.error(`Error processing wikilink "${link}":`, error);
       new import_obsidian10.Notice(`Failed to generate note for "${link}": ${error.message}`);
@@ -2477,7 +2517,7 @@ var KnowledgeBloomGenerator = class extends BaseGenerator {
     if (!input.currentWikilink || !input.currentNoteTitle) {
       throw new Error("Missing required wikilink or note title");
     }
-    return `
+    const basePrompt = input.template || `
 # MISSION
 Act as an expert Research Assistant that specializes in writing structured notes that are accessible and practical based on a provided topic.
 
@@ -2486,13 +2526,18 @@ Act as an expert Research Assistant that specializes in writing structured notes
 - OMIT any JSON objects or front matter.
 - Ensure the content is well-structured and comprehensive.
 - OMIT any words before or after the Markdown content.
-
-# TOPIC
-Write a detailed note about "${input.currentWikilink}" in relation to "${input.currentNoteTitle}".
-
-${input.userPrompt ? `## Additional Context:
-${input.userPrompt}` : ""}
 `;
+    const relationContext = `
+# CONTEXT
+You are creating a new note about [[${input.currentWikilink}]] which was referenced in the note [[${input.currentNoteTitle}]].
+Your task is to generate content that not only explains ${input.currentWikilink} but also considers its relationship to ${input.currentNoteTitle}.
+`;
+    const finalPrompt = `${relationContext}
+${basePrompt}
+${input.userPrompt ? `
+## Additional Context:
+${input.userPrompt}` : ""}`;
+    return finalPrompt.trim();
   }
   /**
    * Check if a note exists at the given path
@@ -2880,18 +2925,15 @@ var AIService = class extends BaseService {
    * Generates Knowledge Bloom content using AI.
    * @param sourceFile - The file containing wikilinks to generate notes for.
    * @param userPrompt - Optional user-provided context for note generation.
+   * @param template - Optional template for note generation.
    * @returns Promise<KnowledgeBloomOutput> - The generated notes and metadata
    */
-  async generateKnowledgeBloom(sourceFile, userPrompt) {
-    try {
-      return await this.knowledgeBloomGenerator.generate({
-        sourceFile,
-        userPrompt
-      });
-    } catch (error) {
-      console.error("Error generating Knowledge Bloom:", error);
-      throw new Error(`Knowledge Bloom generation failed: ${error.message}`);
-    }
+  async generateKnowledgeBloom(sourceFile, userPrompt, template) {
+    return this.knowledgeBloomGenerator.generate({
+      sourceFile,
+      userPrompt,
+      template
+    });
   }
   /**
    * Extracts custom properties from content based on settings.
@@ -4704,26 +4746,15 @@ var KnowledgeBloomAccordion = class extends BaseAccordion {
   render() {
     const contentEl = this.createAccordion(
       "\u{1F33A} Knowledge Bloom",
-      "Generate notes from wikilinks in your current note."
+      "Generate notes from wikilinks using templates."
     );
     this.createDescription(contentEl);
     this.createModelSelector(contentEl);
-    this.createUserPromptInput(contentEl);
-    this.createGenerateButton(contentEl);
+    this.createTemplateFolderSetting(contentEl);
   }
   createDescription(containerEl) {
     const descEl = containerEl.createDiv({ cls: "knowledge-bloom-description" });
-    descEl.createEl("p", { text: "Knowledge Bloom analyzes the current note, extracts wikilinks, and generates new notes for each link. This helps expand your knowledge base and create connections between ideas." });
-    descEl.createEl("p", { text: "For best results, we recommend using Perplexity models as they can search online for up-to-date information." });
-    const listEl = descEl.createEl("ul");
-    [
-      "Automatically creates notes for missing links",
-      "Generates content based on the context of your note",
-      "Helps build a more comprehensive knowledge graph",
-      "Saves time on manual note creation and research"
-    ].forEach((item) => {
-      listEl.createEl("li", { text: item });
-    });
+    descEl.createEl("p", { text: "Knowledge Bloom analyzes your notes, extracts wikilinks, and generates new notes using your templates." });
   }
   createModelSelector(containerEl) {
     const selectorEl = containerEl.createDiv({ cls: "knowledge-bloom-model-selector" });
@@ -4751,54 +4782,17 @@ var KnowledgeBloomAccordion = class extends BaseAccordion {
       this.settingsService.updateKnowledgeBloomSetting("selectedModel", models[0]);
     }
   }
-  createUserPromptInput(containerEl) {
-    const promptEl = containerEl.createDiv({ cls: "knowledge-bloom-prompt" });
-    new import_obsidian24.Setting(promptEl).setName("Additional Context").setDesc("Provide any additional context or instructions for note generation (optional)").addTextArea((text) => {
-      this.userPromptInput = text;
-      text.inputEl.rows = 4;
-      text.inputEl.cols = 50;
-      return text;
+  createTemplateFolderSetting(containerEl) {
+    const knowledgeBloomSettings = this.settingsService.getKnowledgeBloomSettings();
+    new import_obsidian24.Setting(containerEl).setName("Templates Folder").setDesc("Path to your templates folder (e.g., 'Templates' or 'Templates/Knowledge Bloom')").addText((text) => {
+      this.templateFolderInput = text;
+      text.setValue(knowledgeBloomSettings.templateFolder).onChange(async (value) => {
+        await this.settingsService.updateKnowledgeBloomSetting("templateFolder", value);
+        await this.settingsService.saveSettings();
+      });
     });
   }
-  createGenerateButton(containerEl) {
-    const buttonEl = containerEl.createDiv({ cls: "knowledge-bloom-generate-button" });
-    new import_obsidian24.Setting(buttonEl).addButton((button) => {
-      button.setButtonText("Generate Knowledge Bloom").setCta().onClick(() => this.handleGenerateKnowledgeBloom(button));
-    });
-  }
-  async handleGenerateKnowledgeBloom(button) {
-    const activeFile = this.app.workspace.getActiveFile();
-    if (!activeFile) {
-      new import_obsidian24.Notice("No active file. Please open a file to generate Knowledge Bloom.");
-      return;
-    }
-    button.setDisabled(true);
-    button.setButtonText("Generating...");
-    try {
-      const userPrompt = this.userPromptInput.getValue();
-      const result = await this.aiService.generateKnowledgeBloom(activeFile, userPrompt);
-      if (result.generatedNotes.length > 0) {
-        for (const note of result.generatedNotes) {
-          const filePath = `${note.title}.md`;
-          const existingFile = this.app.vault.getAbstractFileByPath(filePath);
-          if (existingFile && existingFile instanceof import_obsidian24.TFile) {
-            await this.app.vault.modify(existingFile, note.content);
-          } else {
-            await this.app.vault.create(filePath, note.content);
-          }
-        }
-        new import_obsidian24.Notice(`Generated ${result.generatedNotes.length} new notes!`);
-      } else {
-        new import_obsidian24.Notice("No new notes were generated.");
-      }
-    } catch (error) {
-      console.error("Error generating Knowledge Bloom:", error);
-      new import_obsidian24.Notice(`Failed to generate Knowledge Bloom: ${error.message}`);
-    } finally {
-      button.setDisabled(false);
-      button.setButtonText("Generate Knowledge Bloom");
-    }
-  }
+  // Remove the createGenerateButton and openKnowledgeBloomModal methods as they're no longer needed
 };
 
 // src/settings/GraphWeaverSettingTab.ts
@@ -4857,8 +4851,96 @@ var GraphWeaverSettingTab = class extends import_obsidian25.PluginSettingTab {
   }
 };
 
+// src/components/modals/KnowledgeBloomModal.ts
+var import_obsidian26 = require("obsidian");
+var KnowledgeBloomModal = class extends import_obsidian26.Modal {
+  constructor(app, sourceFile, settingsService, aiService) {
+    super(app);
+    this.sourceFile = sourceFile;
+    this.settingsService = settingsService;
+    this.aiService = aiService;
+    this.templates = [];
+  }
+  async onOpen() {
+    this.titleEl.setText("Knowledge Bloom Generator");
+    await this.loadTemplates();
+    this.renderContent();
+  }
+  async loadTemplates() {
+    var _a;
+    const templateFolder = ((_a = this.settingsService.getSettings().knowledgeBloom) == null ? void 0 : _a.templateFolder) || "";
+    if (!templateFolder) {
+      new import_obsidian26.Notice("Please set a templates folder in Knowledge Bloom settings.");
+      return;
+    }
+    try {
+      const folder = this.app.vault.getAbstractFileByPath(templateFolder);
+      if (!folder)
+        throw new Error("Templates folder not found");
+      this.templates = await this.app.vault.getAllLoadedFiles().filter(
+        (file) => file instanceof import_obsidian26.TFile && file.extension === "md" && file.path.startsWith(templateFolder)
+      );
+    } catch (error) {
+      console.error("Error loading templates:", error);
+      new import_obsidian26.Notice("Failed to load templates. Check your template folder path.");
+    }
+  }
+  renderContent() {
+    const { contentEl } = this;
+    new import_obsidian26.Setting(contentEl).setName("Note Template").setDesc("Select a template for the generated notes").addDropdown((dropdown) => {
+      this.templateSelect = dropdown;
+      this.templates.forEach((template) => {
+        dropdown.addOption(template.path, template.basename);
+      });
+    });
+    new import_obsidian26.Setting(contentEl).setName("Additional Context").setDesc("Provide any additional context for note generation").addTextArea((text) => {
+      this.contextInput = text;
+      text.inputEl.rows = 4;
+      text.inputEl.cols = 50;
+      return text;
+    });
+    const buttonContainer = contentEl.createDiv("button-container");
+    new import_obsidian26.Setting(buttonContainer).addButton((button) => {
+      this.generateButton = button;
+      button.setButtonText("Generate Notes").setCta().onClick(() => this.handleGenerate());
+    }).addButton(
+      (button) => button.setButtonText("Cancel").onClick(() => this.close())
+    );
+  }
+  async handleGenerate() {
+    const templatePath = this.templateSelect.getValue();
+    if (!templatePath) {
+      new import_obsidian26.Notice("Please select a template first.");
+      return;
+    }
+    this.generateButton.setDisabled(true);
+    this.generateButton.setButtonText("Generating...");
+    try {
+      const templateFile = this.app.vault.getAbstractFileByPath(templatePath);
+      const template = await this.app.vault.read(templateFile);
+      const result = await this.aiService.generateKnowledgeBloom(
+        this.sourceFile,
+        this.contextInput.getValue(),
+        template
+      );
+      if (result.generatedNotes.length > 0) {
+        new import_obsidian26.Notice(`Generated ${result.generatedNotes.length} new notes!`);
+        this.close();
+      } else {
+        new import_obsidian26.Notice("No new notes were generated.");
+      }
+    } catch (error) {
+      console.error("Error generating notes:", error);
+      new import_obsidian26.Notice(`Failed to generate notes: ${error.message}`);
+    } finally {
+      this.generateButton.setDisabled(false);
+      this.generateButton.setButtonText("Generate Notes");
+    }
+  }
+};
+
 // main.ts
-var GraphWeaverPlugin = class extends import_obsidian26.Plugin {
+var GraphWeaverPlugin = class extends import_obsidian27.Plugin {
   constructor() {
     super(...arguments);
     this.hasProcessedVaultStartup = false;
@@ -4871,7 +4953,7 @@ var GraphWeaverPlugin = class extends import_obsidian26.Plugin {
       await this.initializeServices();
       this.addPluginFunctionality();
     } catch (error) {
-      new import_obsidian26.Notice("Error loading GraphWeaver plugin. Check console for details.");
+      new import_obsidian27.Notice("Error loading GraphWeaver plugin. Check console for details.");
     }
   }
   /**
@@ -4968,7 +5050,7 @@ var GraphWeaverPlugin = class extends import_obsidian26.Plugin {
    * Show plugin menu
    */
   showPluginMenu(evt) {
-    const menu = new import_obsidian26.Menu();
+    const menu = new import_obsidian27.Menu();
     menu.addItem((item) => item.setTitle("Generate Frontmatter").setIcon("file-plus").onClick(this.generateFrontmatter.bind(this)));
     menu.addItem((item) => item.setTitle("Generate Wikilinks").setIcon("link").onClick(this.generateWikilinks.bind(this)));
     menu.addItem((item) => item.setTitle("Generate Knowledge Bloom").setIcon("flower").onClick(this.generateKnowledgeBloom.bind(this)));
@@ -4992,24 +5074,24 @@ var GraphWeaverPlugin = class extends import_obsidian26.Plugin {
   async generateFrontmatter() {
     const activeFile = this.app.workspace.getActiveFile();
     if (!activeFile) {
-      new import_obsidian26.Notice("No active file. Please open a file to generate frontmatter.");
+      new import_obsidian27.Notice("No active file. Please open a file to generate frontmatter.");
       return;
     }
     try {
-      new import_obsidian26.Notice("Generating frontmatter...");
+      new import_obsidian27.Notice("Generating frontmatter...");
       const result = await this.batchProcessor.generate({
         files: [activeFile],
         generateFrontMatter: true,
         generateWikilinks: false
       });
       if (result.fileResults[0].success) {
-        new import_obsidian26.Notice("Frontmatter generated successfully!");
+        new import_obsidian27.Notice("Frontmatter generated successfully!");
       } else if (result.fileResults[0].error) {
-        new import_obsidian26.Notice(`Error: ${result.fileResults[0].error}`);
+        new import_obsidian27.Notice(`Error: ${result.fileResults[0].error}`);
       }
     } catch (error) {
       console.error("Error generating frontmatter:", error);
-      new import_obsidian26.Notice("Error generating frontmatter. Check console for details.");
+      new import_obsidian27.Notice("Error generating frontmatter. Check console for details.");
     }
   }
   /**
@@ -5019,24 +5101,24 @@ var GraphWeaverPlugin = class extends import_obsidian26.Plugin {
   async generateWikilinks() {
     const activeFile = this.app.workspace.getActiveFile();
     if (!activeFile) {
-      new import_obsidian26.Notice("No active file. Please open a file to generate wikilinks.");
+      new import_obsidian27.Notice("No active file. Please open a file to generate wikilinks.");
       return;
     }
     try {
-      new import_obsidian26.Notice("Generating wikilinks...");
+      new import_obsidian27.Notice("Generating wikilinks...");
       const result = await this.batchProcessor.generate({
         files: [activeFile],
         generateFrontMatter: false,
         generateWikilinks: true
       });
       if (result.fileResults[0].success) {
-        new import_obsidian26.Notice("Wikilinks generated successfully!");
+        new import_obsidian27.Notice("Wikilinks generated successfully!");
       } else if (result.fileResults[0].error) {
-        new import_obsidian26.Notice(`Error: ${result.fileResults[0].error}`);
+        new import_obsidian27.Notice(`Error: ${result.fileResults[0].error}`);
       }
     } catch (error) {
       console.error("Error generating wikilinks:", error);
-      new import_obsidian26.Notice("Error generating wikilinks. Check console for details.");
+      new import_obsidian27.Notice("Error generating wikilinks. Check console for details.");
     }
   }
   /**
@@ -5046,26 +5128,16 @@ var GraphWeaverPlugin = class extends import_obsidian26.Plugin {
   async generateKnowledgeBloom() {
     const activeFile = this.app.workspace.getActiveFile();
     if (!activeFile) {
-      new import_obsidian26.Notice("No active file. Please open a file to generate Knowledge Bloom.");
+      new import_obsidian27.Notice("No active file. Please open a file to generate Knowledge Bloom.");
       return;
     }
-    try {
-      new import_obsidian26.Notice("Generating Knowledge Bloom...");
-      const result = await this.aiService.generateKnowledgeBloom(activeFile);
-      let createdCount = 0;
-      for (const note of result.generatedNotes) {
-        try {
-          await this.createOrUpdateNote(note.title, note.content);
-          createdCount++;
-        } catch (error) {
-          console.error(`Failed to create note ${note.title}:`, error);
-        }
-      }
-      new import_obsidian26.Notice(`Successfully generated ${createdCount} of ${result.generatedNotes.length} notes!`);
-    } catch (error) {
-      console.error("Error generating Knowledge Bloom:", error);
-      new import_obsidian26.Notice("Error generating Knowledge Bloom. Check console for details.");
-    }
+    const modal = new KnowledgeBloomModal(
+      this.app,
+      activeFile,
+      this.settingsService,
+      this.aiService
+    );
+    modal.open();
   }
   /**
    * Create or update a note
@@ -5073,7 +5145,7 @@ var GraphWeaverPlugin = class extends import_obsidian26.Plugin {
   async createOrUpdateNote(title, content) {
     const filePath = `${title}.md`;
     const file = this.app.vault.getAbstractFileByPath(filePath);
-    if (file instanceof import_obsidian26.TFile) {
+    if (file instanceof import_obsidian27.TFile) {
       await this.app.vault.modify(file, content);
     } else {
       await this.app.vault.create(filePath, content);
