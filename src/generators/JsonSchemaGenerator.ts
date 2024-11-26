@@ -36,9 +36,6 @@ export class JsonSchemaGenerator {
                 type: this.getJsonSchemaType(property.type),
                 description: `Create ${property.description}`
             };
-            if (property.required) {
-                schema.required.push(property.name);
-            }
         });
 
         // Add tags to the schema

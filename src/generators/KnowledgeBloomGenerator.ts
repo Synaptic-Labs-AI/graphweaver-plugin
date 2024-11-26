@@ -1,18 +1,19 @@
 import { TFile, App, Notice } from 'obsidian';
 import { BaseGenerator, BaseGeneratorInput, BaseGeneratorOutput } from './BaseGenerator';
-import { AIAdapter, AIResponseOptions } from '../models/AIModels';
+import { AIResponseOptions } from '../models/AIModels';
 import { SettingsService } from '../services/SettingsService';
 import { FrontMatterGenerator, FrontMatterInput, FrontMatterOutput } from './FrontMatterGenerator';
 import { PropertyTag } from '../models/PropertyTag';
+import { AIAdapter } from 'src/adapters/AIAdapter';
 
 /**
  * Input interface for the Knowledge Bloom generator
  */
 export interface KnowledgeBloomInput extends BaseGeneratorInput {
-    sourceFile: TFile;            // The source file containing wikilinks
-    userPrompt?: string;          // Optional user context for generation
-    currentWikilink?: string;     // Current wikilink being processed
-    currentNoteTitle?: string;    // Title of the current note
+    sourceFile: TFile;            
+    userPrompt?: string;          
+    currentWikilink?: string;     
+    currentNoteTitle?: string;    
 }
 
 /**
@@ -20,8 +21,8 @@ export interface KnowledgeBloomInput extends BaseGeneratorInput {
  */
 export interface KnowledgeBloomOutput extends BaseGeneratorOutput {
     generatedNotes: { 
-        title: string;            // Title of the generated note
-        content: string;          // Content of the generated note
+        title: string;            
+        content: string;          
     }[];
 }
 
@@ -37,7 +38,7 @@ export class KnowledgeBloomGenerator extends BaseGenerator<KnowledgeBloomInput, 
         aiAdapter: AIAdapter,
         settingsService: SettingsService,
         public app: App,
-        frontMatterGenerator: FrontMatterGenerator // Inject FrontMatterGenerator
+        frontMatterGenerator: FrontMatterGenerator
     ) {
         super(aiAdapter, settingsService);
         this.frontMatterGenerator = frontMatterGenerator;
@@ -215,9 +216,9 @@ Act as an expert Research Assistant that specializes in writing structured notes
 
 # GUIDELINES
 - Write the note in Markdown format.
-- Do NOT include any JSON objects or front matter.
+- OMIT any JSON objects or front matter.
 - Ensure the content is well-structured and comprehensive.
-- Omit any words before or after the Markdown content.
+- OMIT any words before or after the Markdown content.
 
 # TOPIC
 Write a detailed note about "${input.currentWikilink}" in relation to "${input.currentNoteTitle}".
@@ -244,42 +245,7 @@ ${input.userPrompt ? `## Additional Context:\n${input.userPrompt}` : ''}
         return pathSegments.join('/');
     }
 
-    /**
-     * Validate the input parameters
-     */
-    protected validateInput(input: KnowledgeBloomInput): boolean {
-        const isValid = input?.sourceFile instanceof TFile;
-        console.log(`KnowledgeBloomGenerator: Input validation result: ${isValid}`);
-        return isValid;
-    }
-
-    /**
-     * Get the current AI model
-     */
-    protected async getCurrentModel(): Promise<string> {
-        const settings = this.getSettings();
-        const selectedModel = settings.knowledgeBloom?.selectedModel;
-
-        if (!selectedModel) {
-            throw new Error('No model selected for Knowledge Bloom.');
-        }
-
-        return selectedModel;
-    }
-
-    /**
-     * Handle generation errors
-     */
-    protected handleError(error: Error): never {
-        console.error(`KnowledgeBloomGenerator: Knowledge Bloom generation error: ${error.message}`, error);
-        new Notice(`Knowledge Bloom generation failed: ${error.message}`);
-        throw error;
-    }
-
-    /**
-     * Format output (not used in this implementation)
-     */
-    protected formatOutput(_aiResponse: any, _originalInput: KnowledgeBloomInput): KnowledgeBloomOutput {
-        throw new Error('Method not implemented - using custom generate method');
+    protected formatOutput(output: KnowledgeBloomOutput): KnowledgeBloomOutput {
+        return output;
     }
 }

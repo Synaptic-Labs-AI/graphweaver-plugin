@@ -1,18 +1,19 @@
+
 import { requestUrl, RequestUrlResponse } from 'obsidian';
 import { AIProvider, AIModelMap } from '../models/AIModels';
 import { AIAdapter } from './AIAdapter';
 import { SettingsService } from 'src/services/SettingsService';
 import { JsonValidationService } from 'src/services/JsonValidationService';
 
-export class OpenAIAdapter extends AIAdapter {
+export class PerplexityAdapter extends AIAdapter {
     constructor(
         public settingsService: SettingsService,
         public jsonValidationService: JsonValidationService
     ) {
         super(settingsService, jsonValidationService);
         const aiProviderSettings = this.settingsService.getSetting('aiProvider');
-        this.apiKey = aiProviderSettings.apiKeys[AIProvider.OpenAI] || '';
-        this.models = AIModelMap[AIProvider.OpenAI];
+        this.apiKey = aiProviderSettings.apiKeys[AIProvider.Perplexity] || '';
+        this.models = AIModelMap[AIProvider.Perplexity];
     }
 
     protected async makeApiRequest(params: {
@@ -23,38 +24,39 @@ export class OpenAIAdapter extends AIAdapter {
         rawResponse?: boolean;
     }): Promise<RequestUrlResponse> {
         return await requestUrl({
-            url: 'https://api.openai.com/v1/chat/completions',
+            url: 'https://api.perplexity.ai/chat/completions',
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${this.apiKey}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
             },
             body: JSON.stringify({
                 model: params.model,
                 messages: [
                     {
                         role: 'system',
-                        content: params.rawResponse 
-                            ? 'You are a helpful assistant.' 
-                            : 'You are a helpful assistant that responds in JSON format.'
+                        content: 'Be precise and concise.'
                     },
-                    { role: 'user', content: params.prompt }
+                    {
+                        role: 'user',
+                        content: params.prompt
+                    }
                 ],
                 temperature: params.temperature,
-                max_tokens: params.maxTokens,
-                response_format: params.rawResponse ? undefined : { type: 'json_object' }
+                max_tokens: params.maxTokens
             })
         });
     }
 
     protected extractContentFromResponse(response: RequestUrlResponse): string {
         if (!response.json?.choices?.[0]?.message?.content) {
-            throw new Error('Invalid response format from OpenAI API');
+            throw new Error('Invalid response format from Perplexity API');
         }
         return response.json.choices[0].message.content;
     }
 
     public getProviderType(): AIProvider {
-        return AIProvider.OpenAI;
+        return AIProvider.Perplexity;
     }
 }

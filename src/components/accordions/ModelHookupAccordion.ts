@@ -3,7 +3,7 @@
 import { App, Setting, Notice, DropdownComponent, ButtonComponent } from "obsidian";
 import { AIService } from "../../services/AIService";
 import { SettingsService } from "../../services/SettingsService";
-import { AIProvider, AIModelMap, AIModel } from "../../models/AIModels";
+import { AIProvider, AIModelMap, AIModel, AIModelUtils } from "../../models/AIModels";
 import { BaseAccordion } from "./BaseAccordion";
 
 export class ModelHookupAccordion extends BaseAccordion {
@@ -11,12 +11,12 @@ export class ModelHookupAccordion extends BaseAccordion {
     public settingsContainer: HTMLElement;
 
     constructor(
-        public app: App,
-        containerEl: HTMLElement,
-        public settingsService: SettingsService,
-        public aiService: AIService
+        protected app: App,
+        protected containerEl: HTMLElement,
+        protected settingsService: SettingsService,
+        protected aiService: AIService
     ) {
-        super(containerEl);
+        super(app, containerEl, settingsService, aiService);
     }
 
     public render(): void {
@@ -78,7 +78,8 @@ export class ModelHookupAccordion extends BaseAccordion {
             .setName("API Key")
             .setDesc(`Enter your API key for ${this.getFormattedProviderName(provider)}`)
             .addText(text => {
-                text.setPlaceholder("Enter API Key")
+                text
+                    .setPlaceholder("Enter API Key")
                     .setValue(settings.aiProvider.apiKeys[provider] || "")
                     .onChange(async (value: string) => {
                         const currentApiKeys = this.settingsService.getNestedSetting('aiProvider', 'apiKeys');
@@ -86,6 +87,9 @@ export class ModelHookupAccordion extends BaseAccordion {
                         await this.settingsService.updateNestedSetting('aiProvider', 'apiKeys', updatedApiKeys);
                         this.aiService.reinitialize();
                     });
+                
+                // Set input type to password directly on the HTML element
+                text.inputEl.type = "password";
             });
     }
 
@@ -142,8 +146,76 @@ export class ModelHookupAccordion extends BaseAccordion {
                         const currentSelectedModels = this.settingsService.getNestedSetting('aiProvider', 'selectedModels');
                         const updatedSelectedModels = { ...currentSelectedModels, [provider]: value };
                         await this.settingsService.updateNestedSetting('aiProvider', 'selectedModels', updatedSelectedModels);
+                        this.renderModelSettings(containerEl, value);
+                    });
+                
+                // Render initial model settings
+                this.renderModelSettings(containerEl, currentModel);
+            });
+    }
+
+    private renderModelSettings(containerEl: HTMLElement, modelApiName: string): void {
+        const settings = this.settingsService.getSettings();
+        const model = AIModelUtils.getModelByApiName(modelApiName);
+        const modelConfigs = settings.aiProvider.modelConfigs as Record<string, { temperature: number; maxTokens: number; }>;
+        const modelConfig = (modelConfigs || {})[modelApiName] || {
+            temperature: 0.7,
+            maxTokens: model?.capabilities?.maxTokens || 4096
+        };
+
+        // Temperature Setting
+        new Setting(containerEl)
+            .setName("Temperature")
+            .setDesc("Controls randomness in responses (0.0-1.0)")
+            .addSlider(slider => {
+                slider.setLimits(0, 1, 0.1)
+                    .setValue(modelConfig.temperature)
+                    .onChange(async (value) => {
+                        await this.updateModelConfig(modelApiName, 'temperature', value);
+                    });
+            })
+            .addText(text => {
+                text.setPlaceholder("0.0-1.0")
+                    .setValue(modelConfig.temperature.toString())
+                    .onChange(async (value) => {
+                        const temp = parseFloat(value);
+                        if (!isNaN(temp) && temp >= 0 && temp <= 1) {
+                            await this.updateModelConfig(modelApiName, 'temperature', temp);
+                        }
                     });
             });
+
+        // Max Tokens Setting
+        new Setting(containerEl)
+            .setName("Max Tokens")
+            .setDesc(`Maximum response length (max: ${model?.capabilities?.maxTokens || 'unknown'})`)
+            .addText(text => {
+                text.setPlaceholder("Enter max tokens")
+                    .setValue(modelConfig.maxTokens.toString())
+                    .onChange(async (value) => {
+                        const tokens = parseInt(value);
+                        if (!isNaN(tokens) && tokens > 0) {
+                            await this.updateModelConfig(modelApiName, 'maxTokens', tokens);
+                        }
+                    });
+            });
+    }
+
+    private async updateModelConfig(modelApiName: string, key: 'temperature' | 'maxTokens', value: number): Promise<void> {
+        const settings = this.settingsService.getSettings();
+        const modelConfigs = settings.aiProvider.modelConfigs as Record<string, { temperature: number; maxTokens: number; }>;
+        const currentConfigs = modelConfigs || {};
+        const modelConfig = currentConfigs[modelApiName] || { temperature: 0.7, maxTokens: 4096 };
+        
+        const updatedConfigs = {
+            ...currentConfigs,
+            [modelApiName]: {
+                ...modelConfig,
+                [key]: value
+            }
+        };
+        
+        await this.settingsService.updateNestedSetting('aiProvider', 'modelConfigs', updatedConfigs);
     }
 
     public createTestButton(containerEl: HTMLElement, provider: AIProvider): void {
@@ -191,7 +263,8 @@ export class ModelHookupAccordion extends BaseAccordion {
             [AIProvider.Google]: "https://aistudio.google.com/apikey",
             [AIProvider.Groq]: "https://console.groq.com/keys",
             [AIProvider.OpenRouter]: "https://openrouter.ai/settings/keys",
-            [AIProvider.LMStudio]: "https://lmstudio.ai/docs/basics/server"
+            [AIProvider.LMStudio]: "https://lmstudio.ai/docs/basics/server",
+            [AIProvider.Perplexity]: "https://docs.perplexity.ai/guides/getting-started" // Add Perplexity link
         };
         return websiteMap[provider] || "#";
     }
@@ -203,7 +276,8 @@ export class ModelHookupAccordion extends BaseAccordion {
             [AIProvider.Google]: "Google Gemini",
             [AIProvider.Groq]: "Groq",
             [AIProvider.OpenRouter]: "OpenRouter",
-            [AIProvider.LMStudio]: "LM Studio"
+            [AIProvider.LMStudio]: "LM Studio",
+            [AIProvider.Perplexity]: "Perplexity"
         };
         return formattedNames[provider] || provider;
     }

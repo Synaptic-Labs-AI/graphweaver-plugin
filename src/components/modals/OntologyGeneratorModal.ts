@@ -2,7 +2,7 @@ import { Modal, App, Setting, DropdownComponent, TextAreaComponent, Notice, Butt
 import { AIService } from "../../services/AIService";
 import { OntologyResult } from "../../generators/OntologyGenerator";
 import { AIProvider, AIModel } from "../../models/AIModels";
-import { OntologyInput } from "../../models/OntologyTypes";
+import { OntologyInput } from "../../generators/OntologyGenerator";
 
 export class OntologyGeneratorModal extends Modal {
     public modelSelect: DropdownComponent;
@@ -134,14 +134,14 @@ export class OntologyGeneratorModal extends Modal {
             .setButtonText("Generate Ontology")
             .setCta()
             .setDisabled(this.availableModels.length === 0)
-            .onClick(() => this.generateOntology());
+            .onClick(() => this.handleOntologyGeneration());
 
         new ButtonComponent(buttonContainer)
             .setButtonText("Cancel")
             .onClick(() => this.close());
     }
 
-    public async generateOntology() {
+    public async handleOntologyGeneration() {
         const modelValue = this.modelSelect.getValue();
         if (!modelValue) {
             new Notice("Please select an AI model first.");

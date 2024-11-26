@@ -5,7 +5,6 @@ import { SettingsService } from './src/services/SettingsService';
 import { DatabaseService } from './src/services/DatabaseService';
 import { AutoGenerateService } from './src/services/AutoGenerateService';
 import { JsonValidationService } from './src/services/JsonValidationService';
-import { ProcessingStatusBar } from './src/components/status/ProcessingStatusBar';
 import { BatchProcessor } from './src/generators/BatchProcessor';
 import { GraphWeaverSettingTab } from './src/settings/GraphWeaverSettingTab';
 import { FileProcessingResult } from 'src/models/ProcessingTypes';
@@ -21,7 +20,6 @@ export default class GraphWeaverPlugin extends Plugin {
     public autoGenerateService: AutoGenerateService;
     public jsonValidationService: JsonValidationService;
     public batchProcessor: BatchProcessor;
-    public statusBar: ProcessingStatusBar | null = null;
     public hasProcessedVaultStartup: boolean = false;
 
     /**
@@ -31,7 +29,6 @@ export default class GraphWeaverPlugin extends Plugin {
         
         try {
             await this.initializeServices();
-            await this.initializeUI();
             this.addPluginFunctionality();
         } catch (error) {
             new Notice('Error loading GraphWeaver plugin. Check console for details.');
@@ -71,22 +68,8 @@ export default class GraphWeaverPlugin extends Plugin {
             this.app.vault,
             this.aiService,
             this.settingsService,
-            this.databaseService
-        );
-    }
-
-    /**
-     * Initialize plugin UI components
-     */
-    private async initializeUI(): Promise<void> {
-        const statusBarEl = this.addStatusBarItem();
-        this.statusBar = new ProcessingStatusBar(
-            this.app,
-            statusBarEl,
-            this.batchProcessor.eventEmitter,
-            this.aiService,
-            this.settingsService,
-            this.databaseService  // Add DatabaseService
+            this.databaseService,
+            this.jsonValidationService
         );
     }
 
@@ -130,12 +113,6 @@ export default class GraphWeaverPlugin extends Plugin {
             id: 'generate-knowledge-bloom',
             name: 'Generate Knowledge Bloom',
             callback: this.generateKnowledgeBloom.bind(this),
-        });
-
-        this.addCommand({
-            id: 'toggle-auto-generate',
-            name: 'Toggle Auto-Generate',
-            callback: this.toggleAutoGenerate.bind(this),
         });
     }
 
@@ -183,35 +160,8 @@ export default class GraphWeaverPlugin extends Plugin {
             .setTitle('Generate Knowledge Bloom')
             .setIcon('flower')
             .onClick(this.generateKnowledgeBloom.bind(this)));
-    
-        menu.addSeparator();
-    
-        menu.addItem((item) => item
-            .setTitle(this.settings.frontMatter.autoGenerate ? 'Disable Auto-Generate' : 'Enable Auto-Generate')
-            .setIcon(this.settings.frontMatter.autoGenerate ? 'toggle-right' : 'toggle-left')
-            .onClick(this.toggleAutoGenerate.bind(this)));
         
         menu.showAtMouseEvent(evt);
-    }
-
-    /**
-     * Toggle auto-generate functionality
-     */
-    public async toggleAutoGenerate(): Promise<void> {
-        this.settings.frontMatter.autoGenerate = !this.settings.frontMatter.autoGenerate;
-        await this.saveSettings();
-        
-        new Notice(
-            this.settings.frontMatter.autoGenerate
-                ? 'Auto-generate enabled'
-                : 'Auto-generate disabled'
-        );
-
-        // Only run auto-generate if it was just enabled and startup hasn't been processed
-        if (this.settings.frontMatter.autoGenerate && !this.hasProcessedVaultStartup) {
-            await this.autoGenerateService.runAutoGenerate();
-            this.hasProcessedVaultStartup = true;
-        }
     }
 
     /**
@@ -232,6 +182,7 @@ export default class GraphWeaverPlugin extends Plugin {
 
     /**
      * Generate front matter for active file
+     * Handles UI interaction and coordinates between services
      */
     public async generateFrontmatter(): Promise<void> {
         const activeFile = this.app.workspace.getActiveFile();
@@ -242,12 +193,16 @@ export default class GraphWeaverPlugin extends Plugin {
 
         try {
             new Notice('Generating frontmatter...');
-            const result = await this.processFile(activeFile, true, false);
+            const result = await this.batchProcessor.generate({
+                files: [activeFile],
+                generateFrontMatter: true,
+                generateWikilinks: false
+            });
             
-            if (result.success) {
+            if (result.fileResults[0].success) {
                 new Notice('Frontmatter generated successfully!');
-            } else if (result.error) {
-                new Notice(`Error: ${result.error}`);
+            } else if (result.fileResults[0].error) {
+                new Notice(`Error: ${result.fileResults[0].error}`);
             }
         } catch (error) {
             console.error('Error generating frontmatter:', error);
@@ -257,6 +212,7 @@ export default class GraphWeaverPlugin extends Plugin {
 
     /**
      * Generate wikilinks for active file
+     * Handles UI interaction and coordinates between services
      */
     public async generateWikilinks(): Promise<void> {
         const activeFile = this.app.workspace.getActiveFile();
@@ -267,12 +223,16 @@ export default class GraphWeaverPlugin extends Plugin {
 
         try {
             new Notice('Generating wikilinks...');
-            const result = await this.processFile(activeFile, false, true);
+            const result = await this.batchProcessor.generate({
+                files: [activeFile],
+                generateFrontMatter: false,
+                generateWikilinks: true
+            });
             
-            if (result.success) {
+            if (result.fileResults[0].success) {
                 new Notice('Wikilinks generated successfully!');
-            } else if (result.error) {
-                new Notice(`Error: ${result.error}`);
+            } else if (result.fileResults[0].error) {
+                new Notice(`Error: ${result.fileResults[0].error}`);
             }
         } catch (error) {
             console.error('Error generating wikilinks:', error);
@@ -282,6 +242,7 @@ export default class GraphWeaverPlugin extends Plugin {
 
     /**
      * Generate knowledge bloom for active file
+     * Handles UI interaction and file operations
      */
     public async generateKnowledgeBloom(): Promise<void> {
         const activeFile = this.app.workspace.getActiveFile();
@@ -293,12 +254,18 @@ export default class GraphWeaverPlugin extends Plugin {
         try {
             new Notice('Generating Knowledge Bloom...');
             const result = await this.aiService.generateKnowledgeBloom(activeFile);
-            
+            let createdCount = 0;
+
             for (const note of result.generatedNotes) {
-                await this.createOrUpdateNote(note.title, note.content);
+                try {
+                    await this.createOrUpdateNote(note.title, note.content);
+                    createdCount++;
+                } catch (error) {
+                    console.error(`Failed to create note ${note.title}:`, error);
+                }
             }
 
-            new Notice(`Generated ${result.generatedNotes.length} new notes!`);
+            new Notice(`Successfully generated ${createdCount} of ${result.generatedNotes.length} notes!`);
         } catch (error) {
             console.error('Error generating Knowledge Bloom:', error);
             new Notice('Error generating Knowledge Bloom. Check console for details.');
@@ -346,9 +313,7 @@ export default class GraphWeaverPlugin extends Plugin {
         if (this.autoGenerateService) {
             this.autoGenerateService.destroy();
         }
-        if (this.statusBar) {
-            this.statusBar.destroy();
-        }
+
 
         this.hasProcessedVaultStartup = false;
     }

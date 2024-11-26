@@ -1,6 +1,6 @@
 // src/components/accordions/OntologyGenerationAccordion.ts
 
-import { App, Setting, ButtonComponent, Notice } from "obsidian";
+import { App, Notice } from "obsidian";
 import { BaseAccordion } from "./BaseAccordion";
 import { SettingsService } from "../../services/SettingsService";
 import { AIService } from "../../services/AIService";
@@ -8,15 +8,8 @@ import { OntologyGeneratorModal } from "../modals/OntologyGeneratorModal";
 import { OntologyResult } from "../../generators/OntologyGenerator";
 
 export class OntologyGenerationAccordion extends BaseAccordion {
-    public settingsService: SettingsService;
-    public aiService: AIService;
-    public app: App;
-
     constructor(app: App, containerEl: HTMLElement, settingsService: SettingsService, aiService: AIService) {
-        super(containerEl);
-        this.app = app;
-        this.settingsService = settingsService;
-        this.aiService = aiService;
+        super(app, containerEl, settingsService, aiService);
     }
 
     public render(): void {
@@ -28,7 +21,7 @@ export class OntologyGenerationAccordion extends BaseAccordion {
         this.createGenerateButton(contentEl);
     }
 
-    public createDescription(containerEl: HTMLElement): void {
+    private createDescription(containerEl: HTMLElement): void {
         const descEl = containerEl.createDiv({ cls: "ontology-description" });
         descEl.createEl("p", { text: "The Ontology Generator analyzes your vault's structure, including tags, file names, and folder names, to create a comprehensive set of suggested tags. This tool helps you:" });
         
@@ -43,16 +36,14 @@ export class OntologyGenerationAccordion extends BaseAccordion {
         });
     }
 
-    public createGenerateButton(containerEl: HTMLElement): void {
-        new Setting(containerEl)
-            .addButton(button => this.setupGenerateButton(button));
-    }
-
-    public setupGenerateButton(button: ButtonComponent): void {
-        button
-            .setButtonText("Generate Ontology")
-            .setCta()
-            .onClick(() => this.openGeneratorModal());
+    private createGenerateButton(containerEl: HTMLElement): void {
+        this.createButton(
+            "",
+            "",
+            "Generate Ontology",
+            () => this.openGeneratorModal(),
+            true
+        );
     }
 
     public openGeneratorModal(): void {

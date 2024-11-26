@@ -4,35 +4,49 @@ import { SettingsService } from './SettingsService';
 import { DatabaseService } from './DatabaseService';
 import { BatchProcessor } from '../generators/BatchProcessor';
 import { 
-    ProcessingStatus,
     ProcessingEvent,
     ProcessingOptions,
     FileProcessingResult,
     ProcessingStats,
     DEFAULT_PROCESSING_OPTIONS
 } from '../models/ProcessingTypes';
-import { EventEmitter } from 'events';
+import { BaseService } from './BaseService';
+import { JsonValidationService } from './JsonValidationService';
+import { AIProvider } from 'src/models/AIModels';
+import { 
+    AIAdapter, 
+    OpenAIAdapter, 
+    AnthropicAdapter, 
+    GeminiAdapter, 
+    GroqAdapter, 
+    OpenRouterAdapter, 
+    LMStudioAdapter, 
+    PerplexityAdapter 
+} from '../adapters';
 
 /**
  * Enhanced service for automatic content generation during vault startup
  * Handles processing of unprocessed files when vault is first opened
  */
-export class AutoGenerateService {
+export class AutoGenerateService extends BaseService {
     public batchProcessor: BatchProcessor;
-    public eventEmitter: EventEmitter;
     public isProcessing: boolean = false;
     public isStartupComplete: boolean = false;
     public options: ProcessingOptions = DEFAULT_PROCESSING_OPTIONS;
     public readonly NOTIFICATION_TIMEOUT = 3000;
+    adapters: Map<AIProvider, AIAdapter>;
+    jsonValidationService: JsonValidationService;
 
     constructor(
         public app: App,
         public vault: Vault,
         public aiService: AIService,
         public settingsService: SettingsService,
-        public databaseService: DatabaseService
+        public databaseService: DatabaseService,
+        jsonValidationService: JsonValidationService // Add this parameter
     ) {
-        this.eventEmitter = new EventEmitter();
+        super();
+        this.jsonValidationService = jsonValidationService;
         this.initializeBatchProcessor();
     }
 
@@ -73,7 +87,7 @@ export class AutoGenerateService {
     
         ['progress', 'pause', 'resume', 'error'].forEach(event => {
             this.batchProcessor.on(event as keyof ProcessingEvent, (data) => {
-                this.eventEmitter.emit(event, data);
+                this.emitter.emit(event, data);  // Changed from eventEmitter to emitter
             });
         });
     }
@@ -204,7 +218,7 @@ export class AutoGenerateService {
         const result = await this.batchProcessor.generate({
             files,
             generateFrontMatter: true,
-            generateWikilinks: settings.advanced.generateWikilinks,
+            // generateWikilinks is now optional and can be omitted
             options: this.options
         });
 
@@ -243,17 +257,6 @@ export class AutoGenerateService {
     }
 
     /**
-     * Handle errors
-     */
-    public handleError(message: string, error: unknown): void {
-        console.error(message, error);
-        this.showNotification(
-            `${message} ${error instanceof Error ? error.message : 'Unknown error'}`,
-            true
-        );
-    }
-
-    /**
      * Show notification to user
      */
     public showNotification(message: string, isError: boolean = false): void {
@@ -274,7 +277,7 @@ export class AutoGenerateService {
      * Clean up resources
      */
     public destroy(): void {
-        this.eventEmitter.removeAllListeners();
+        this.emitter.removeAllListeners();  // Changed from eventEmitter to emitter
         this.isStartupComplete = false;
         this.isProcessing = false;
     }
@@ -285,5 +288,17 @@ export class AutoGenerateService {
      */
     public initializeStatusBar(_statusBarEl: HTMLElement): void {
         return;
+    }
+
+    public initializeAdapters(): void {
+        this.adapters = new Map<AIProvider, AIAdapter>([
+            [AIProvider.OpenAI, new OpenAIAdapter(this.settingsService, this.jsonValidationService)],
+            [AIProvider.Anthropic, new AnthropicAdapter(this.settingsService, this.jsonValidationService)],
+            [AIProvider.Google, new GeminiAdapter(this.settingsService, this.jsonValidationService)],
+            [AIProvider.Groq, new GroqAdapter(this.settingsService, this.jsonValidationService)],
+            [AIProvider.OpenRouter, new OpenRouterAdapter(this.settingsService, this.jsonValidationService)],
+            [AIProvider.LMStudio, new LMStudioAdapter(this.settingsService, this.jsonValidationService)],
+            [AIProvider.Perplexity, new PerplexityAdapter(this.settingsService, this.jsonValidationService)]
+        ]);
     }
 }

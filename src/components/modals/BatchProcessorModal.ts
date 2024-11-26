@@ -64,9 +64,13 @@ export class BatchProcessorModal extends Modal {
 
     public createFolderElement(folder: TFolder): HTMLElement {
         const folderEl = document.createElement("div");
-        folderEl.className = "folder";
+        folderEl.className = "folder collapsed"; // Start collapsed
 
         const nameEl = folderEl.createDiv({ cls: "folder-name" });
+
+        // Toggle arrow icon
+        const arrowIcon = nameEl.createSpan({ cls: "collapse-icon" });
+        arrowIcon.innerHTML = "▸"; // Right-pointing arrow when collapsed
 
         // Folder icon
         nameEl.createSpan({ cls: "icon folder-icon", text: "📁" });
@@ -84,12 +88,23 @@ export class BatchProcessorModal extends Modal {
         // Toggle folder open/closed
         nameEl.addEventListener("click", (e) => {
             if (e.target !== checkbox) {
-                folderEl.classList.toggle("open");
+                folderEl.classList.toggle("collapsed");
+                arrowIcon.innerHTML = folderEl.classList.contains("collapsed") ? "▸" : "▾";
             }
         });
 
-        // Folder checkbox change handler
-        checkbox.addEventListener("change", () => this.handleFolderCheckboxChange(checkbox));
+        // Folder checkbox change handler with immediate visual feedback
+        checkbox.addEventListener("change", () => {
+            this.handleFolderCheckboxChange(checkbox);
+            const isChecked = checkbox.checked;
+            
+            // Update visual state of child checkboxes
+            const childCheckboxes = contentEl.querySelectorAll("input[type='checkbox']") as NodeListOf<HTMLInputElement>;
+            childCheckboxes.forEach(childBox => {
+                childBox.checked = isChecked;
+                childBox.indeterminate = false;
+            });
+        });
 
         return folderEl;
     }
@@ -234,14 +249,12 @@ export class BatchProcessorModal extends Modal {
 
         // Always generate front matter in manual process
         console.log('BatchProcessorModal: Generating front matter');
-        const frontMatter = await this.aiService.generateFrontMatter(processedContent);
-        processedContent = this.addOrUpdateFrontMatter(processedContent, frontMatter);
+        const frontMatterOutput = await this.aiService.generateFrontMatter(processedContent);
+        if (frontMatterOutput.success && frontMatterOutput.frontMatter) {
+            processedContent = this.addOrUpdateFrontMatter(processedContent, frontMatterOutput.frontMatter);
+        }
 
         const settings = this.settingsService.getSettings();
-        if (settings.advanced.generateWikilinks) {
-            console.log('BatchProcessorModal: Generating wikilinks');
-            processedContent = await this.aiService.generateWikilinks(processedContent);
-        }
 
         return processedContent;
     }

@@ -9,10 +9,6 @@ export interface PropertyTag {
     name: string;
     description: string;
     type: PropertyType;
-    required: boolean;
-    defaultValue?: any;
-    options?: string[]; // For properties that have predefined options
-    multipleValues: boolean; // Whether the property can have multiple values
 }
 
 /**

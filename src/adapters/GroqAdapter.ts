@@ -1,20 +1,19 @@
 import { Notice, requestUrl, RequestUrlResponse } from 'obsidian';
-import { AIProvider, AIResponse, AIAdapter, AIModel, AIModelMap, AIResponseOptions } from '../models/AIModels';
+import { AIProvider, AIResponse, AIModel, AIModelMap, AIResponseOptions } from '../models/AIModels';
 import { SettingsService } from '../services/SettingsService';
 import { JsonValidationService } from '../services/JsonValidationService';
+import { AIAdapter } from './AIAdapter';
 
 /**
  * Groq service adapter implementation
  * Handles communication with Groq's API for various models
  */
-export class GroqAdapter implements AIAdapter {
-    private apiKey: string;
-    private models: AIModel[];
-
+export class GroqAdapter extends AIAdapter {
     constructor(
-        private settingsService: SettingsService,
-        private jsonValidationService: JsonValidationService
+        protected settingsService: SettingsService,
+        protected jsonValidationService: JsonValidationService
     ) {
+        super(settingsService, jsonValidationService);
         const aiProviderSettings = this.settingsService.getSetting('aiProvider');
         this.apiKey = aiProviderSettings.apiKeys[AIProvider.Groq] || '';
         this.models = AIModelMap[AIProvider.Groq];
@@ -66,35 +65,9 @@ export class GroqAdapter implements AIAdapter {
     }
 
     /**
-     * Test connection to Groq API
-     */
-    public async testConnection(prompt: string, modelApiName: string): Promise<boolean> {
-        try {
-            if (!this.apiKey) {
-                throw new Error('Groq API key is not set');
-            }
-
-            const response = await this.generateResponse(
-                prompt || "Return the word 'OK'.",
-                modelApiName,
-                { rawResponse: true }
-            );
-
-            if (!response.success || typeof response.data !== 'string') {
-                return false;
-            }
-
-            return response.data.toLowerCase().includes('ok');
-        } catch (error) {
-            console.error('Error in Groq test connection:', error);
-            return false;
-        }
-    }
-
-    /**
      * Make a request to the Groq API
      */
-    private async makeApiRequest(params: {
+    protected async makeApiRequest(params: {
         model: string;
         prompt: string;
         temperature: number;
@@ -140,7 +113,7 @@ export class GroqAdapter implements AIAdapter {
     /**
      * Extract content from API response
      */
-    private extractContentFromResponse(response: RequestUrlResponse): string {
+    protected extractContentFromResponse(response: RequestUrlResponse): string {
         if (!response.json?.choices?.[0]?.message?.content) {
             throw new Error('Invalid response format from Groq API');
         }
@@ -150,7 +123,7 @@ export class GroqAdapter implements AIAdapter {
     /**
      * Get temperature setting
      */
-    private getTemperature(settings: any): number {
+    protected getTemperature(settings: any): number {
         return (settings.advanced?.temperature >= 0 && settings.advanced?.temperature <= 1)
             ? settings.advanced.temperature
             : 0.7;
@@ -159,49 +132,18 @@ export class GroqAdapter implements AIAdapter {
     /**
      * Get max tokens setting
      */
-    private getMaxTokens(settings: any): number {
+    protected getMaxTokens(settings: any): number {
         return (settings.advanced?.maxTokens > 0) ? settings.advanced.maxTokens : 1000;
     }
 
     /**
      * Handle errors in API calls
      */
-    private handleError(error: unknown): AIResponse {
+    protected handleError(error: unknown): AIResponse {
         console.error('Error in Groq API call:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         new Notice(`Groq API Error: ${errorMessage}`);
         return { success: false, error: errorMessage };
-    }
-
-    /**
-     * Validate API key
-     */
-    public async validateApiKey(): Promise<boolean> {
-        try {
-            if (!this.apiKey) {
-                throw new Error('Groq API key is not set');
-            }
-
-            if (this.models.length === 0) {
-                throw new Error('No models available for Groq');
-            }
-
-            const isValid = await this.testConnection(
-                "Return the word 'OK'.",
-                this.models[0].apiName
-            );
-
-            if (isValid) {
-                new Notice('Groq API key validated successfully');
-                return true;
-            } else {
-                throw new Error('Failed to validate API key');
-            }
-        } catch (error) {
-            console.error('Error validating Groq API key:', error);
-            new Notice(`Failed to validate Groq API key: ${error instanceof Error ? error.message : 'Unknown error occurred'}`);
-            return false;
-        }
     }
 
     /**

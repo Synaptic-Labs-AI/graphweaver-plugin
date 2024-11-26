@@ -2,20 +2,21 @@
 
 import { App, TFile, TFolder, Notice } from "obsidian";
 import { 
-    AIProvider, 
-    AIAdapter, 
+    AIProvider,  
     AIResponse, 
     AIModel, 
     AIModelMap 
 } from '../models/AIModels';
 
 // Import Adapters
+import { AIAdapter } from "../adapters/AIAdapter";
 import { OpenAIAdapter } from "../adapters/OpenAIAdapter";
 import { AnthropicAdapter } from "../adapters/AnthropicAdapter";
 import { GeminiAdapter } from "../adapters/GeminiAdapter";
 import { GroqAdapter } from "../adapters/GroqAdapter";
 import { OpenRouterAdapter } from "../adapters/OpenRouterAdapter";
 import { LMStudioAdapter } from "../adapters/LMStudioAdapter";
+import { PerplexityAdapter } from '../adapters/PerplexityAdapter'; // Add this import
 
 // Import Services
 import { SettingsService } from "./SettingsService";
@@ -33,8 +34,9 @@ import { KnowledgeBloomGenerator, KnowledgeBloomOutput } from '../generators/Kno
 // Import Models
 import { Tag, PropertyTag } from '../models/PropertyTag';
 import { PluginSettings } from '../settings/Settings';
+import { BaseService } from './BaseService';
 
-export class AIService {
+export class AIService extends BaseService {
     public adapters: Map<AIProvider, AIAdapter>;
     public databaseService: DatabaseService;
     
@@ -52,6 +54,7 @@ export class AIService {
         public jsonValidationService: JsonValidationService,
         databaseService: DatabaseService
     ) {
+        super();
         this.databaseService = databaseService;
         this.adapters = new Map<AIProvider, AIAdapter>();
         this.initializeAdapters();
@@ -68,7 +71,8 @@ export class AIService {
             [AIProvider.Google, new GeminiAdapter(this.settingsService, this.jsonValidationService)],
             [AIProvider.Groq, new GroqAdapter(this.settingsService, this.jsonValidationService)],
             [AIProvider.OpenRouter, new OpenRouterAdapter(this.settingsService, this.jsonValidationService)],
-            [AIProvider.LMStudio, new LMStudioAdapter(this.settingsService, this.jsonValidationService)]
+            [AIProvider.LMStudio, new LMStudioAdapter(this.settingsService, this.jsonValidationService)],
+            [AIProvider.Perplexity, new PerplexityAdapter(this.settingsService, this.jsonValidationService)] // Initialize PerplexityAdapter
         ]);
     }
 
@@ -268,18 +272,18 @@ export class AIService {
     }
 
     /**
-     * Generates front matter for the given content.
+     * Generates front matter content using AI.
      * @param content - The content for which to generate front matter.
+     * @returns Promise<FrontMatterOutput> - The generated front matter result
      */
-    public async generateFrontMatter(content: string): Promise<string> {
+    public async generateFrontMatter(content: string): Promise<FrontMatterOutput> {
         try {
             const input: FrontMatterInput = { 
                 content, 
                 customProperties: this.extractCustomProperties(content),
                 customTags: this.extractCustomTags(content)
             };
-            const frontMatterResult: FrontMatterOutput = await this.frontMatterGenerator.generate(input);
-            return frontMatterResult.content;
+            return await this.frontMatterGenerator.generate(input);
         } catch (error) {
             console.error("Error generating front matter:", error);
             throw new Error(`Failed to generate front matter: ${(error as Error).message}`);
@@ -287,18 +291,17 @@ export class AIService {
     }
 
     /**
-     * Generates wikilinks for the given content.
+     * Generates wikilinks for the given content using AI.
      * @param content - The content for which to generate wikilinks.
-     * @returns Updated content with wikilinks generated.
+     * @returns Promise<WikilinkOutput> - The generated wikilinks result
      */
-    public async generateWikilinks(content: string): Promise<string> {
+    public async generateWikilinks(content: string): Promise<WikilinkOutput> {
         try {
             const existingPages = this.getExistingPages();
-            const wikilinkResult: WikilinkOutput = await this.wikilinkGenerator.generate({ 
+            return await this.wikilinkGenerator.generate({ 
                 content, 
                 existingPages 
             });
-            return wikilinkResult.content;
         } catch (error) {
             console.error("Error generating wikilinks:", error);
             throw new Error(`Failed to generate wikilinks: ${(error as Error).message}`);
@@ -398,15 +401,17 @@ export class AIService {
     }
 
     /**
-     * Generates new notes based on wikilinks in the given file.
+     * Generates Knowledge Bloom content using AI.
      * @param sourceFile - The file containing wikilinks to generate notes for.
      * @param userPrompt - Optional user-provided context for note generation.
+     * @returns Promise<KnowledgeBloomOutput> - The generated notes and metadata
      */
     public async generateKnowledgeBloom(sourceFile: TFile, userPrompt?: string): Promise<KnowledgeBloomOutput> {
         try {
-            const knowledgeBloomSettings = this.settingsService.getSettings().knowledgeBloom;
-            const selectedModel = knowledgeBloomSettings.selectedModel;
-            return await this.knowledgeBloomGenerator.generate({ sourceFile, userPrompt });
+            return await this.knowledgeBloomGenerator.generate({ 
+                sourceFile, 
+                userPrompt 
+            });
         } catch (error) {
             console.error("Error generating Knowledge Bloom:", error);
             throw new Error(`Knowledge Bloom generation failed: ${(error as Error).message}`);

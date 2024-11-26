@@ -6,6 +6,7 @@ import {
     FileProcessingResult,
     PersistentProcessingState
 } from '../models/ProcessingTypes';
+import { BaseService } from './BaseService';
 
 /**
  * Interface for database records
@@ -43,13 +44,14 @@ interface TimestampedProcessingStats extends ProcessingStats {
  * Enhanced database service for managing processing state and history
  * Handles persistent storage of processing results and statistics
  */
-export class DatabaseService {
+export class DatabaseService extends BaseService {
     private data: DatabaseRecord;
     private readonly MAX_HISTORY_LENGTH = 100;
     private readonly PRUNE_THRESHOLD = 1000;
     private readonly MONTH_IN_MS = 30 * 24 * 60 * 60 * 1000;
 
     constructor(private saveCallback?: (data: any) => Promise<void>) {
+        super();
         this.data = this.getDefaultData();
     }
 
@@ -57,32 +59,13 @@ export class DatabaseService {
      * Save data with callback and timestamp
      */
     private async save(): Promise<void> {
-        try {
-            this.data.lastUpdated = Date.now();
+        this.data.lastUpdated = Date.now();
+        await this.saveData(() => {
             if (this.saveCallback) {
-                await this.saveCallback(this.data);
+                return this.saveCallback(this.data);
             }
-            console.log('DatabaseService: Data saved successfully');
-        } catch (error) {
-            console.error('DatabaseService: Error saving data:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Save data with external callback
-     */
-    public async saveData(callback?: (data: any) => Promise<void>): Promise<void> {
-        try {
-            this.data.lastUpdated = Date.now();
-            if (callback) {
-                await callback(this.data);
-            }
-            console.log('DatabaseService: Data saved successfully');
-        } catch (error) {
-            console.error('DatabaseService: Error saving data:', error);
-            throw error;
-        }
+            return Promise.resolve();
+        });
     }
 
     /**

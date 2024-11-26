@@ -338,24 +338,55 @@
     margin-left: 10px;
 }
 
+.folder.collapsed > .folder-content {
+    display: none;
+}
+
 .folder-name {
     display: flex;
     align-items: center;
     cursor: pointer;
-    user-select: none;
+    padding: 4px 0;
 }
 
-.folder-checkbox {
-    margin-right: 5px;
+.folder-name:hover {
+    background-color: var(--background-secondary);
+}
+
+.collapse-icon {
+    width: 16px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 4px;
+}
+
+.folder-icon {
+    margin-right: 4px;
 }
 
 .folder-content {
     margin-left: 20px;
-    display: none;
 }
 
-.folder.open .folder-content {
-    display: block;
+.file {
+    margin-left: 10px;
+    padding: 4px 0;
+    display: flex;
+    align-items: center;
+}
+
+.file:hover {
+    background-color: var(--background-secondary);
+}
+
+.file-icon {
+    margin-right: 4px;
+}
+
+input[type="checkbox"] {
+    margin-right: 6px;
 }
 
 /* File Styles */

@@ -1,9 +1,10 @@
-import { Notice, requestUrl } from 'obsidian';
+import { Notice, requestUrl, RequestUrlResponse } from 'obsidian';
 import { SettingsService } from '../services/SettingsService';
 import { JsonValidationService } from '../services/JsonValidationService';
-import { AIProvider, AIResponse, AIAdapter, AIResponseOptions } from '../models/AIModels';
+import { AIProvider, AIResponse, AIResponseOptions } from '../models/AIModels';
+import { AIAdapter } from './AIAdapter';
 
-export class LMStudioAdapter implements AIAdapter {
+export class LMStudioAdapter extends AIAdapter {
     public model: string;
     public port: string;
 
@@ -11,7 +12,47 @@ export class LMStudioAdapter implements AIAdapter {
         public settingsService: SettingsService,
         public jsonValidationService: JsonValidationService
     ) {
+        super(settingsService, jsonValidationService);
         this.updateSettings();
+    }
+
+    protected async makeApiRequest(params: {
+        model: string;
+        prompt: string;
+        temperature: number;
+        maxTokens: number;
+        rawResponse?: boolean;
+    }): Promise<RequestUrlResponse> {
+        return await requestUrl({
+            url: `http://localhost:${this.port}/v1/chat/completions`,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: params.model,
+                messages: [
+                    {
+                        role: 'system',
+                        content: params.rawResponse
+                            ? 'You are a helpful assistant.'
+                            : 'You are a helpful assistant that responds in JSON format.'
+                    },
+                    { role: 'user', content: params.prompt }
+                ],
+                temperature: params.temperature,
+                max_tokens: params.maxTokens,
+                response_format: params.rawResponse ? undefined : { type: 'json_schema' },
+                stream: false
+            })
+        });
+    }
+
+    protected extractContentFromResponse(response: RequestUrlResponse): string {
+        if (!response.json?.choices?.[0]?.message?.content) {
+            throw new Error('Invalid response format from LM Studio API');
+        }
+        return response.json.choices[0].message.content;
     }
 
     public async generateResponse(
@@ -24,41 +65,19 @@ export class LMStudioAdapter implements AIAdapter {
                 throw new Error('LM Studio settings are not properly configured');
             }
 
-            const response = await requestUrl({
-                url: `http://localhost:${this.port}/v1/chat/completions`,
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    model: this.model,
-                    messages: [
-                        {
-                            role: "system",
-                            content: options?.rawResponse 
-                                ? "You are a helpful assistant." 
-                                : "You are a helpful assistant that responds in JSON format."
-                        },
-                        {
-                            role: "user",
-                            content: prompt
-                        }
-                    ],
-                    response_format: options?.rawResponse ? undefined : {
-                        type: "json_schema",
-                        json_schema: this.createJsonSchema()
-                    },
-                    temperature: 0.7,
-                    max_tokens: options?.maxTokens || 1000,
-                    stream: false
-                })
+            const response = await this.makeApiRequest({
+                model: this.model,
+                prompt,
+                temperature: 0.7,
+                maxTokens: options?.maxTokens || 1000,
+                rawResponse: options?.rawResponse
             });
 
             if (response.status !== 200) {
                 throw new Error(`API request failed with status ${response.status}`);
             }
 
-            const content = response.json.choices[0].message.content;
+            const content = this.extractContentFromResponse(response);
 
             // Handle raw response if requested
             if (options?.rawResponse) {
@@ -100,36 +119,6 @@ export class LMStudioAdapter implements AIAdapter {
         };
     }
 
-    public async testConnection(prompt: string, model: string = 'default'): Promise<boolean> {
-        try {
-            if (!this.isReady()) {
-                return false;
-            }
-
-            const response = await this.generateResponse("Return the word 'OK'.", model);
-            
-            if (!response.success || !response.data) {
-                return false;
-            }
-
-            // Type guard to check if data is an object with response property
-            if (typeof response.data === 'object' && response.data !== null && 
-                'response' in response.data && 
-                typeof (response.data as { response: unknown }).response === 'string') {
-                return (response.data as { response: string }).response.toLowerCase().includes('ok');
-            }
-
-            return false;
-        } catch (error) {
-            console.error('Error in LM Studio test connection:', error);
-            return false;
-        }
-    }
-
-    public async validateApiKey(): Promise<boolean> {
-        return this.isReady();
-    }
-
     public getAvailableModels(): string[] {
         return [this.model];
     }
@@ -161,8 +150,8 @@ export class LMStudioAdapter implements AIAdapter {
         return !!this.model && !!this.port;
     }
 
-    public getApiModelName(modelName: string): string | undefined {
-        return modelName;
+    public getApiModelName(modelName: string): string {
+        return modelName || 'default';
     }
 
     public updateSettings(): void {

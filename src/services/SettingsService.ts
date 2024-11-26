@@ -1,33 +1,52 @@
 import { PluginSettings, DEFAULT_SETTINGS, KnowledgeBloomSettings } from "../settings/Settings";
-import { EventEmitter } from "events";
 import { Plugin } from "obsidian";
 import { AIProvider } from "../models/AIModels";
 import { Tag } from "../models/PropertyTag";
 import { JsonValidationService } from "./JsonValidationService";
+import { BaseService, DeepPartial } from './BaseService'; 
 
 type SettingsKey = keyof PluginSettings;
 type NestedSettingsKey<T extends SettingsKey> = keyof PluginSettings[T];
 
-type DeepPartial<T> = {
-    [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+export type AIProviderKeys = 'selected' | 'apiKeys' | 'selectedModels' | 'modelConfigs';
+export type FrontMatterKeys = 'customProperties' | 'autoGenerate';
+export type LocalLMStudioKeys = 'enabled' | 'port' | 'modelName';
+export type OntologyKeys = 'lastGenerated';
+export type KnowledgeBloomKeys = 'outputFolder' | 'overwriteExisting' | 'defaultPrompt' | 'selectedModel';
+
+export type SettingSections = {
+    aiProvider: AIProviderKeys;
+    frontMatter: FrontMatterKeys;
+    localLMStudio: LocalLMStudioKeys;
+    ontology: OntologyKeys;
+    knowledgeBloom: KnowledgeBloomKeys;
 };
 
-export class SettingsService {
+// Remove DeepPartial type definition since it's now in BaseService
+
+export class SettingsService extends BaseService {
     public settings: PluginSettings;
-    public emitter: EventEmitter;
     public plugin: Plugin;
     public jsonValidationService: JsonValidationService;
 
     constructor(plugin: Plugin, initialSettings: PluginSettings) {
+        super();
         this.plugin = plugin;
         this.settings = initialSettings;
-        this.emitter = new EventEmitter();
-        this.jsonValidationService = new JsonValidationService(); // Initialize JsonValidationService
+        this.jsonValidationService = new JsonValidationService();
     }
 
     public async loadSettings(): Promise<void> {
         const data = await this.plugin.loadData();
-        this.settings = this.deepMerge(DEFAULT_SETTINGS, data as DeepPartial<PluginSettings>);
+        const mergedSettings = this.deepMerge(DEFAULT_SETTINGS, data || {});
+        // Ensure required properties are set
+        this.settings = {
+            ...mergedSettings,
+            aiProvider: {
+                ...mergedSettings.aiProvider,
+                selected: mergedSettings.aiProvider?.selected || DEFAULT_SETTINGS.aiProvider.selected
+            }
+        };
     }
 
     public getSettings(): PluginSettings {
@@ -46,7 +65,15 @@ export class SettingsService {
     }
 
     public async updateSettings(newSettings: DeepPartial<PluginSettings>): Promise<void> {
-        this.settings = this.deepMerge(this.settings, newSettings);
+        const mergedSettings = this.deepMerge(this.settings, newSettings);
+        // Ensure required properties are maintained
+        this.settings = {
+            ...mergedSettings,
+            aiProvider: {
+                ...mergedSettings.aiProvider,
+                selected: mergedSettings.aiProvider?.selected || this.settings.aiProvider.selected
+            }
+        };
         await this.saveSettings();
         this.emitter.emit('settingsChanged', this.settings);
     }
@@ -149,32 +176,7 @@ export class SettingsService {
     }
 
     public async saveSettings(): Promise<void> {
-        await this.plugin.saveData(this.settings);
-    }
-
-    public deepMerge<T>(target: T, source: DeepPartial<T>): T {
-        if (!this.isObject(target) || !this.isObject(source)) {
-            return source as T;
-        }
-    
-        const output = { ...target };
-        for (const key in source) {
-            if (source.hasOwnProperty(key)) {
-                if (this.isObject(source[key]) && this.isObject((target as any)[key])) {
-                    (output as any)[key] = this.deepMerge(
-                        (target as any)[key],
-                        source[key] as DeepPartial<T[keyof T]>
-                    );
-                } else if (source[key] !== undefined) {
-                    (output as any)[key] = source[key];
-                }
-            }
-        }
-        return output;
-    }
-    
-    public isObject(item: unknown): item is Record<string, unknown> {
-        return item !== null && typeof item === 'object' && !Array.isArray(item);
+        await this.saveData(() => this.plugin.saveData(this.settings));
     }
 
     // Getter for JsonValidationService

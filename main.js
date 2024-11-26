@@ -27,7 +27,7 @@ __export(main_exports, {
   default: () => GraphWeaverPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian27 = require("obsidian");
+var import_obsidian26 = require("obsidian");
 
 // src/models/AIModels.ts
 var AIProvider = /* @__PURE__ */ ((AIProvider2) => {
@@ -36,6 +36,7 @@ var AIProvider = /* @__PURE__ */ ((AIProvider2) => {
   AIProvider2["Google"] = "google";
   AIProvider2["Groq"] = "groq";
   AIProvider2["OpenRouter"] = "openrouter";
+  AIProvider2["Perplexity"] = "perplexity";
   AIProvider2["LMStudio"] = "lmstudio";
   return AIProvider2;
 })(AIProvider || {});
@@ -45,38 +46,50 @@ var AIModelMap = {
       name: "GPT 4o mini",
       apiName: "gpt-4o-mini",
       capabilities: {
-        maxTokens: 128e3,
+        maxTokens: 16e3,
         supportsFunctions: true,
         supportsStreaming: true
-      }
+      },
+      inputCostPer1M: 0.15,
+      outputCostPer1M: 0.6,
+      contextWindow: 128e3
     },
     {
       name: "GPT 4o",
       apiName: "gpt-4o",
       capabilities: {
-        maxTokens: 128e3,
+        maxTokens: 16e3,
         supportsFunctions: true,
         supportsStreaming: true,
         supportsVision: true
-      }
+      },
+      inputCostPer1M: 2.5,
+      outputCostPer1M: 10,
+      contextWindow: 128e3
     },
     {
       name: "GPT o1 Preview",
       apiName: "o1-preview",
       capabilities: {
-        maxTokens: 128e3,
+        maxTokens: 33e3,
         supportsFunctions: true,
         supportsStreaming: true
-      }
+      },
+      inputCostPer1M: 15,
+      outputCostPer1M: 60,
+      contextWindow: 128e3
     },
     {
       name: "GPT o1 Mini",
       apiName: "o1-mini",
       capabilities: {
-        maxTokens: 128e3,
+        maxTokens: 66e3,
         supportsFunctions: true,
         supportsStreaming: true
-      }
+      },
+      inputCostPer1M: 3,
+      outputCostPer1M: 12,
+      contextWindow: 128e3
     }
   ],
   ["anthropic" /* Anthropic */]: [
@@ -84,40 +97,64 @@ var AIModelMap = {
       name: "Claude 3 Haiku",
       apiName: "claude-3-haiku-20240307",
       capabilities: {
-        maxTokens: 2e5,
+        maxTokens: 8192,
         supportsFunctions: true,
         supportsStreaming: true
-      }
+      },
+      inputCostPer1M: 0.25,
+      outputCostPer1M: 1.25,
+      contextWindow: 2e5
+    },
+    {
+      name: "Claude 3.5 Haiku",
+      apiName: "claude-3-5-haiku-20241022",
+      capabilities: {
+        maxTokens: 8192,
+        supportsFunctions: true,
+        supportsStreaming: true
+      },
+      inputCostPer1M: 1,
+      outputCostPer1M: 5,
+      contextWindow: 2e5
     },
     {
       name: "Claude 3 Sonnet",
       apiName: "claude-3-sonnet-20240229",
       capabilities: {
-        maxTokens: 2e5,
+        maxTokens: 8192,
         supportsFunctions: true,
         supportsStreaming: true,
         supportsVision: true
-      }
+      },
+      inputCostPer1M: 3,
+      outputCostPer1M: 15,
+      contextWindow: 2e5
     },
     {
       name: "Claude 3 Opus",
       apiName: "claude-3-opus-20240229",
       capabilities: {
-        maxTokens: 2e5,
+        maxTokens: 8192,
         supportsFunctions: true,
         supportsStreaming: true,
         supportsVision: true
-      }
+      },
+      inputCostPer1M: 15,
+      outputCostPer1M: 75,
+      contextWindow: 2e5
     },
     {
       name: "Claude 3.5 Sonnet",
-      apiName: "claude-3-5-sonnet-20240620",
+      apiName: "claude-3-5-sonnet-20241022",
       capabilities: {
-        maxTokens: 2e5,
+        maxTokens: 8192,
         supportsFunctions: true,
         supportsStreaming: true,
         supportsVision: true
-      }
+      },
+      inputCostPer1M: 3,
+      outputCostPer1M: 15,
+      contextWindow: 2e5
     }
   ],
   ["google" /* Google */]: [
@@ -125,169 +162,259 @@ var AIModelMap = {
       name: "Gemini 1.5 Flash",
       apiName: "gemini-1.5-flash",
       capabilities: {
-        maxTokens: 32e3,
+        maxTokens: 8192,
         supportsStreaming: true
-      }
+      },
+      inputCostPer1M: 0.075,
+      outputCostPer1M: 0.3,
+      contextWindow: 1e6
     },
     {
       name: "Gemini 1.5 Flash 8B",
       apiName: "gemini-1.5-flash-8b",
       capabilities: {
-        maxTokens: 32e3,
+        maxTokens: 8192,
         supportsStreaming: true
-      }
+      },
+      inputCostPer1M: 0.0375,
+      outputCostPer1M: 0.15,
+      contextWindow: 1e6
     },
     {
       name: "Gemini 1.5 Pro",
       apiName: "gemini-1.5-pro",
       capabilities: {
-        maxTokens: 32e3,
+        maxTokens: 8192,
         supportsStreaming: true,
         supportsVision: true
-      }
+      },
+      inputCostPer1M: 2.5,
+      outputCostPer1M: 10,
+      contextWindow: 2e6
     }
   ],
   ["groq" /* Groq */]: [
     {
+      name: "Llama 3.2 90B",
+      apiName: "llama-3.2-90b-vision-preview",
+      capabilities: {
+        maxTokens: 8192,
+        supportsStreaming: true
+      },
+      inputCostPer1M: 0,
+      outputCostPer1M: 0,
+      contextWindow: 128e3
+    },
+    {
       name: "Llama 3.1 70B",
       apiName: "llama-3.1-70b-versatile",
       capabilities: {
-        maxTokens: 32e3,
+        maxTokens: 32768,
         supportsStreaming: true
-      }
+      },
+      inputCostPer1M: 0,
+      outputCostPer1M: 0,
+      contextWindow: 128e3
     },
     {
-      name: "Llama 3.1 8B",
-      apiName: "llama-3.1-8b-instant",
+      name: "Llama 3.2 11B",
+      apiName: "llama-3.2-11b-vision-preview",
       capabilities: {
-        maxTokens: 32e3,
+        maxTokens: 8192,
         supportsStreaming: true
-      }
-    },
-    {
-      name: "Llama 3.2 1B (Preview)",
-      apiName: "llama-3.2-1b-preview",
-      capabilities: {
-        maxTokens: 32e3,
-        supportsStreaming: true
-      }
+      },
+      inputCostPer1M: 0,
+      outputCostPer1M: 0,
+      contextWindow: 128e3
     },
     {
       name: "Llama 3.2 3B (Preview)",
       apiName: "llama-3.2-3b-preview",
       capabilities: {
-        maxTokens: 32e3,
+        maxTokens: 8192,
         supportsStreaming: true
-      }
+      },
+      inputCostPer1M: 0,
+      outputCostPer1M: 0,
+      contextWindow: 128e3
+    },
+    {
+      name: "Llama 3.2 1B (Preview)",
+      apiName: "llama-3.2-1b-preview",
+      capabilities: {
+        maxTokens: 8192,
+        supportsStreaming: true
+      },
+      inputCostPer1M: 0,
+      outputCostPer1M: 0,
+      contextWindow: 128e3
     }
   ],
   ["openrouter" /* OpenRouter */]: [
     {
-      name: "Anthropic Claude 3 Haiku",
-      apiName: "anthropic/claude-3-haiku",
+      name: "Claude 3.5 Haiku",
+      apiName: "anthropic/claude-3.5-haiku",
       capabilities: {
-        maxTokens: 2e5,
+        maxTokens: 8192,
         supportsFunctions: true,
         supportsStreaming: true
-      }
-    },
-    {
-      name: "Anthropic Claude 3 Opus",
-      apiName: "anthropic/claude-3-opus",
-      capabilities: {
-        maxTokens: 2e5,
-        supportsFunctions: true,
-        supportsStreaming: true,
-        supportsVision: true
-      }
+      },
+      inputCostPer1M: 1,
+      outputCostPer1M: 1,
+      contextWindow: 2e5
     },
     {
       name: "Anthropic Claude 3.5 Sonnet",
       apiName: "anthropic/claude-3.5-sonnet",
       capabilities: {
-        maxTokens: 2e5,
+        maxTokens: 8192,
         supportsFunctions: true,
         supportsStreaming: true,
         supportsVision: true
-      }
+      },
+      inputCostPer1M: 3,
+      outputCostPer1M: 15,
+      contextWindow: 2e5
     },
     {
       name: "Google Gemini Flash 1.5",
       apiName: "google/gemini-flash-1.5",
       capabilities: {
-        maxTokens: 32e3,
+        maxTokens: 8192,
         supportsStreaming: true
-      }
+      },
+      inputCostPer1M: 0.075,
+      outputCostPer1M: 0.3,
+      contextWindow: 1e6
     },
     {
       name: "Google Gemini Flash 1.5 8B",
       apiName: "google/gemini-flash-1.5-8b",
       capabilities: {
-        maxTokens: 32e3,
+        maxTokens: 8192,
         supportsStreaming: true
-      }
+      },
+      inputCostPer1M: 0.0375,
+      outputCostPer1M: 0.15,
+      contextWindow: 1e6
     },
     {
       name: "Google Gemini Pro 1.5",
       apiName: "google/gemini-pro-1.5",
       capabilities: {
-        maxTokens: 32e3,
+        maxTokens: 8192,
         supportsStreaming: true,
         supportsVision: true
-      }
+      },
+      inputCostPer1M: 1.25,
+      outputCostPer1M: 5,
+      contextWindow: 2e6
     },
     {
-      name: "Mistralai Mistral Large",
-      apiName: "mistralai/mistral-large",
+      name: "Mistral Large",
+      apiName: "mistralai/mistral-large-2407",
       capabilities: {
-        maxTokens: 32e3,
+        maxTokens: 128e3,
         supportsStreaming: true
-      }
+      },
+      inputCostPer1M: 2,
+      outputCostPer1M: 6,
+      contextWindow: 128e3
     },
     {
-      name: "Mistralai Mistral Nemo",
-      apiName: "mistralai/mistral-nemo",
+      name: "Ministral 8b",
+      apiName: "mistralai/ministral-8b",
       capabilities: {
-        maxTokens: 32e3,
+        maxTokens: 128e3,
         supportsStreaming: true
-      }
+      },
+      inputCostPer1M: 0.1,
+      outputCostPer1M: 0.1,
+      contextWindow: 128e3
     },
     {
       name: "OpenAI GPT 4o",
-      apiName: "openai/gpt-4o",
+      apiName: "openai/gpt-4o-2024-11-20",
       capabilities: {
-        maxTokens: 128e3,
+        maxTokens: 16e3,
         supportsFunctions: true,
         supportsStreaming: true,
         supportsVision: true
-      }
+      },
+      inputCostPer1M: 2.5,
+      outputCostPer1M: 10,
+      contextWindow: 128e3
     },
     {
       name: "OpenAI GPT 4o Mini",
       apiName: "openai/gpt-4o-mini",
       capabilities: {
-        maxTokens: 128e3,
+        maxTokens: 16e3,
         supportsFunctions: true,
         supportsStreaming: true
-      }
+      },
+      inputCostPer1M: 0.15,
+      outputCostPer1M: 0.6,
+      contextWindow: 128e3
     },
     {
       name: "OpenAI o1 Mini",
       apiName: "openai/o1-mini",
       capabilities: {
-        maxTokens: 128e3,
+        maxTokens: 66e3,
         supportsFunctions: true,
         supportsStreaming: true
-      }
+      },
+      inputCostPer1M: 3,
+      outputCostPer1M: 12,
+      contextWindow: 128e3
     },
     {
       name: "OpenAI o1 Preview",
       apiName: "openai/o1-preview",
       capabilities: {
-        maxTokens: 128e3,
+        maxTokens: 33e3,
         supportsFunctions: true,
         supportsStreaming: true
-      }
+      },
+      inputCostPer1M: 15,
+      outputCostPer1M: 60,
+      contextWindow: 128e3
+    }
+  ],
+  ["perplexity" /* Perplexity */]: [
+    {
+      name: "Perplexity Small",
+      apiName: "perplexity-small",
+      capabilities: {
+        maxTokens: 4096,
+        supportsStreaming: true
+      },
+      inputCostPer1M: 0.2,
+      outputCostPer1M: 0.2,
+      contextWindow: 128e3
+    },
+    {
+      name: "Perplexity Medium",
+      apiName: "perplexity-medium",
+      capabilities: {
+        maxTokens: 8192,
+        supportsStreaming: true
+      },
+      inputCostPer1M: 0.5,
+      outputCostPer1M: 0.5,
+      contextWindow: 128e3
+    },
+    {
+      name: "Perplexity Large",
+      apiName: "perplexity-large",
+      capabilities: {
+        maxTokens: 16384,
+        supportsStreaming: true
+      },
+      inputCostPer1M: 1,
+      outputCostPer1M: 1,
+      contextWindow: 128e3
     }
   ],
   ["lmstudio" /* LMStudio */]: [
@@ -300,6 +427,32 @@ var AIModelMap = {
     }
   ]
 };
+var AIModelUtils = {
+  /**
+   * Get a model by its API name
+   */
+  getModelByApiName(apiName) {
+    for (const models of Object.values(AIModelMap)) {
+      const model = models.find((m) => m.apiName === apiName);
+      if (model)
+        return model;
+    }
+    return void 0;
+  },
+  /**
+   * Get all models for a provider
+   */
+  getModelsForProvider(provider) {
+    return AIModelMap[provider] || [];
+  },
+  /**
+   * Check if a model supports a capability
+   */
+  modelSupportsCapability(model, capability) {
+    var _a;
+    return !!((_a = model.capabilities) == null ? void 0 : _a[capability]);
+  }
+};
 
 // src/settings/Settings.ts
 var DEFAULT_SETTINGS = {
@@ -308,7 +461,8 @@ var DEFAULT_SETTINGS = {
     apiKeys: {},
     selectedModels: {
       ["openai" /* OpenAI */]: "gpt-4o-mini"
-    }
+    },
+    modelConfigs: {}
   },
   frontMatter: {
     customProperties: [],
@@ -322,13 +476,6 @@ var DEFAULT_SETTINGS = {
     port: 1234,
     modelName: ""
   },
-  advanced: {
-    maxTokens: 4096,
-    temperature: 0.3,
-    generateWikilinks: false,
-    minWordCount: 5,
-    maxLinksPerNote: 10
-  },
   ontology: {
     lastGenerated: ""
   },
@@ -341,29 +488,32 @@ var DEFAULT_SETTINGS = {
 };
 
 // src/services/AIService.ts
-var import_obsidian9 = require("obsidian");
+var import_obsidian12 = require("obsidian");
 
 // src/adapters/OpenAIAdapter.ts
+var import_obsidian2 = require("obsidian");
+
+// src/adapters/AIAdapter.ts
 var import_obsidian = require("obsidian");
-var OpenAIAdapter = class {
+var AIAdapter = class {
   constructor(settingsService, jsonValidationService) {
     this.settingsService = settingsService;
     this.jsonValidationService = jsonValidationService;
+    this.apiKey = "";
+    this.models = [];
     const aiProviderSettings = this.settingsService.getSetting("aiProvider");
-    this.apiKey = aiProviderSettings.apiKeys["openai" /* OpenAI */] || "";
-    this.models = AIModelMap["openai" /* OpenAI */];
+    this.apiKey = aiProviderSettings.apiKeys[this.getProviderType()] || "";
+    this.models = AIModelMap[this.getProviderType()];
   }
-  /**
-   * Generate a response using the OpenAI API
-   */
+  // Shared implementation methods
   async generateResponse(prompt, modelApiName, options) {
     try {
       const apiModel = this.getApiModelName(modelApiName);
       if (!apiModel) {
         throw new Error(`No valid model found for ${this.getProviderType()}`);
       }
-      if (!this.apiKey) {
-        throw new Error("OpenAI API key is not set");
+      if (!this.apiKey && this.getProviderType() !== "lmstudio" /* LMStudio */) {
+        throw new Error(`${this.getProviderType()} API key is not set`);
       }
       const settings = this.settingsService.getSettings();
       const temperature = this.getTemperature(settings);
@@ -385,12 +535,9 @@ var OpenAIAdapter = class {
       return this.handleError(error);
     }
   }
-  /**
-   * Test connection to OpenAI API
-   */
   async testConnection(prompt, modelApiName) {
     try {
-      if (!this.apiKey) {
+      if (!this.isReady()) {
         return false;
       }
       const response = await this.generateResponse(
@@ -403,16 +550,85 @@ var OpenAIAdapter = class {
       }
       return response.data.toLowerCase().includes("ok");
     } catch (error) {
-      console.error("Error in OpenAI test connection:", error);
+      console.error(`Error in ${this.getProviderType()} test connection:`, error);
       return false;
     }
   }
-  /**
-   * Make a request to the OpenAI API
-   */
-  async makeApiRequest(params) {
+  getTemperature(settings) {
+    var _a, _b;
+    return ((_a = settings.advanced) == null ? void 0 : _a.temperature) >= 0 && ((_b = settings.advanced) == null ? void 0 : _b.temperature) <= 1 ? settings.advanced.temperature : 0.7;
+  }
+  getMaxTokens(settings) {
     var _a;
-    const response = await (0, import_obsidian.requestUrl)({
+    return ((_a = settings.advanced) == null ? void 0 : _a.maxTokens) > 0 ? settings.advanced.maxTokens : 1e3;
+  }
+  handleError(error) {
+    console.error(`Error in ${this.getProviderType()} API call:`, error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    new import_obsidian.Notice(`${this.getProviderType()} API Error: ${errorMessage}`);
+    return { success: false, error: errorMessage };
+  }
+  async validateApiKey() {
+    try {
+      if (!this.isReady()) {
+        throw new Error(`${this.getProviderType()} is not properly configured`);
+      }
+      const isValid = await this.testConnection(
+        "Return the word 'OK'.",
+        this.models[0].apiName
+      );
+      if (isValid) {
+        new import_obsidian.Notice(`${this.getProviderType()} API key validated successfully`);
+        return true;
+      } else {
+        throw new Error("Failed to validate API key");
+      }
+    } catch (error) {
+      console.error(`Error validating ${this.getProviderType()} API key:`, error);
+      new import_obsidian.Notice(`Failed to validate ${this.getProviderType()} API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
+      return false;
+    }
+  }
+  getAvailableModels() {
+    return this.models.map((model) => model.apiName);
+  }
+  setApiKey(apiKey) {
+    this.apiKey = apiKey;
+  }
+  getApiKey() {
+    return this.apiKey;
+  }
+  configure(config) {
+    if (config == null ? void 0 : config.apiKey) {
+      this.setApiKey(config.apiKey);
+    }
+  }
+  isReady() {
+    return (!!this.apiKey || this.getProviderType() === "lmstudio" /* LMStudio */) && this.models.length > 0;
+  }
+  getApiModelName(modelApiName) {
+    var _a;
+    const model = this.models.find((m) => m.apiName === modelApiName);
+    if (!model) {
+      console.warn(`Model ${modelApiName} not found for ${this.getProviderType()}. Using first available model.`);
+      return ((_a = this.models[0]) == null ? void 0 : _a.apiName) || modelApiName;
+    }
+    return model.apiName;
+  }
+};
+
+// src/adapters/OpenAIAdapter.ts
+var OpenAIAdapter = class extends AIAdapter {
+  constructor(settingsService, jsonValidationService) {
+    super(settingsService, jsonValidationService);
+    this.settingsService = settingsService;
+    this.jsonValidationService = jsonValidationService;
+    const aiProviderSettings = this.settingsService.getSetting("aiProvider");
+    this.apiKey = aiProviderSettings.apiKeys["openai" /* OpenAI */] || "";
+    this.models = AIModelMap["openai" /* OpenAI */];
+  }
+  async makeApiRequest(params) {
+    return await (0, import_obsidian2.requestUrl)({
       url: "https://api.openai.com/v1/chat/completions",
       method: "POST",
       headers: {
@@ -430,22 +646,10 @@ var OpenAIAdapter = class {
         ],
         temperature: params.temperature,
         max_tokens: params.maxTokens,
-        n: 1,
-        stream: false,
         response_format: params.rawResponse ? void 0 : { type: "json_object" }
       })
     });
-    if (response.status !== 200) {
-      const errorBody = response.json;
-      throw new Error(
-        `API request failed with status ${response.status}: ${((_a = errorBody == null ? void 0 : errorBody.error) == null ? void 0 : _a.message) || "Unknown error"}`
-      );
-    }
-    return response;
   }
-  /**
-   * Extract content from API response
-   */
   extractContentFromResponse(response) {
     var _a, _b, _c, _d;
     if (!((_d = (_c = (_b = (_a = response.json) == null ? void 0 : _a.choices) == null ? void 0 : _b[0]) == null ? void 0 : _c.message) == null ? void 0 : _d.content)) {
@@ -453,112 +657,16 @@ var OpenAIAdapter = class {
     }
     return response.json.choices[0].message.content;
   }
-  /**
-   * Get temperature setting
-   */
-  getTemperature(settings) {
-    var _a, _b;
-    return ((_a = settings.advanced) == null ? void 0 : _a.temperature) >= 0 && ((_b = settings.advanced) == null ? void 0 : _b.temperature) <= 1 ? settings.advanced.temperature : 0.7;
-  }
-  /**
-   * Get max tokens setting
-   */
-  getMaxTokens(settings) {
-    var _a;
-    return ((_a = settings.advanced) == null ? void 0 : _a.maxTokens) > 0 ? settings.advanced.maxTokens : 1e3;
-  }
-  /**
-   * Handle errors in API calls
-   */
-  handleError(error) {
-    console.error("Error in OpenAI API call:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    new import_obsidian.Notice(`OpenAI API Error: ${errorMessage}`);
-    return { success: false, error: errorMessage };
-  }
-  /**
-   * Validate API key
-   */
-  async validateApiKey() {
-    try {
-      if (!this.apiKey) {
-        throw new Error("OpenAI API key is not set");
-      }
-      if (this.models.length === 0) {
-        throw new Error("No models available for OpenAI");
-      }
-      const isValid = await this.testConnection(
-        "Return the word 'OK'.",
-        this.models[0].apiName
-      );
-      if (isValid) {
-        new import_obsidian.Notice("OpenAI API key validated successfully");
-        return true;
-      } else {
-        throw new Error("Failed to validate API key");
-      }
-    } catch (error) {
-      console.error("Error validating OpenAI API key:", error);
-      new import_obsidian.Notice(`Failed to validate OpenAI API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
-      return false;
-    }
-  }
-  /**
-   * Get available models
-   */
-  getAvailableModels() {
-    return this.models.map((model) => model.apiName);
-  }
-  /**
-   * Get provider type
-   */
   getProviderType() {
     return "openai" /* OpenAI */;
-  }
-  /**
-   * Set API key
-   */
-  setApiKey(apiKey) {
-    this.apiKey = apiKey;
-  }
-  /**
-   * Get API key
-   */
-  getApiKey() {
-    return this.apiKey;
-  }
-  /**
-   * Configure the adapter
-   */
-  configure(config) {
-    if (config == null ? void 0 : config.apiKey) {
-      this.setApiKey(config.apiKey);
-    }
-  }
-  /**
-   * Check if adapter is ready
-   */
-  isReady() {
-    return !!this.apiKey && this.models.length > 0;
-  }
-  /**
-   * Get API model name
-   */
-  getApiModelName(modelApiName) {
-    var _a;
-    const model = this.models.find((m) => m.apiName === modelApiName);
-    if (!model) {
-      console.warn(`Model ${modelApiName} not found for ${this.getProviderType()}. Using first available model.`);
-      return ((_a = this.models[0]) == null ? void 0 : _a.apiName) || modelApiName;
-    }
-    return model.apiName;
   }
 };
 
 // src/adapters/AnthropicAdapter.ts
-var import_obsidian2 = require("obsidian");
-var AnthropicAdapter = class {
+var import_obsidian3 = require("obsidian");
+var AnthropicAdapter = class extends AIAdapter {
   constructor(settingsService, jsonValidationService) {
+    super(settingsService, jsonValidationService);
     this.settingsService = settingsService;
     this.jsonValidationService = jsonValidationService;
     const aiProviderSettings = this.settingsService.getSetting("aiProvider");
@@ -577,7 +685,7 @@ var AnthropicAdapter = class {
       const settings = this.settingsService.getSettings();
       const temperature = this.getTemperature(settings);
       const maxTokens = (options == null ? void 0 : options.maxTokens) || this.getMaxTokens(settings);
-      const response = await this.makeApiRequest(apiModel, prompt, temperature, maxTokens);
+      const response = await this.makeApiRequest({ model: apiModel, prompt, temperature, maxTokens, rawResponse: options == null ? void 0 : options.rawResponse });
       const content = this.extractContentFromResponse(response);
       if (options == null ? void 0 : options.rawResponse) {
         return { success: true, data: content };
@@ -588,34 +696,14 @@ var AnthropicAdapter = class {
       return this.handleError(error);
     }
   }
-  async testConnection(prompt, modelApiName) {
-    try {
-      if (!this.apiKey) {
-        throw new Error("Anthropic API key is not set");
-      }
-      const apiModel = this.getApiModelName(modelApiName);
-      const response = await this.makeApiRequest(apiModel, prompt, 0.7, 50);
-      const content = this.extractContentFromResponse(response);
-      return content.toLowerCase().includes("ok");
-    } catch (error) {
-      console.error("Error in Anthropic test connection:", error);
-      return false;
-    }
-  }
   getTemperature(settings) {
     return settings.advanced.temperature >= 0 && settings.advanced.temperature <= 1 ? settings.advanced.temperature : 0.7;
   }
   getMaxTokens(settings) {
     return settings.advanced.maxTokens > 0 ? settings.advanced.maxTokens : 1e3;
   }
-  async makeApiRequest(apiModel, prompt, temperature, maxTokens) {
-    const requestBody = {
-      model: apiModel,
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: maxTokens,
-      temperature
-    };
-    const response = await (0, import_obsidian2.requestUrl)({
+  async makeApiRequest(params) {
+    return await (0, import_obsidian3.requestUrl)({
       url: "https://api.anthropic.com/v1/messages",
       method: "POST",
       headers: {
@@ -623,39 +711,26 @@ var AnthropicAdapter = class {
         "x-api-key": this.apiKey,
         "anthropic-version": "2023-06-01"
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify({
+        model: params.model,
+        messages: [{ role: "user", content: params.prompt }],
+        max_tokens: params.maxTokens,
+        temperature: params.temperature
+      })
     });
-    if (response.status !== 200) {
-      throw new Error(`API request failed with status ${response.status}: ${response.text}`);
-    }
-    return response;
   }
   extractContentFromResponse(response) {
+    var _a, _b, _c;
+    if (!((_c = (_b = (_a = response.json) == null ? void 0 : _a.content) == null ? void 0 : _b[0]) == null ? void 0 : _c.text)) {
+      throw new Error("Invalid response format from Anthropic API");
+    }
     return response.json.content[0].text;
   }
   handleError(error) {
     console.error("Error in Anthropic API call:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    new import_obsidian2.Notice(`Anthropic API Error: ${errorMessage}`);
+    new import_obsidian3.Notice(`Anthropic API Error: ${errorMessage}`);
     return { success: false, error: errorMessage };
-  }
-  async validateApiKey() {
-    try {
-      if (!this.apiKey) {
-        throw new Error("Anthropic API key is not set");
-      }
-      const response = await this.testConnection("Return the word 'OK'.", this.models[0].apiName);
-      if (response) {
-        new import_obsidian2.Notice("Anthropic API key validated successfully");
-        return true;
-      } else {
-        throw new Error("Failed to validate API key");
-      }
-    } catch (error) {
-      console.error("Error validating Anthropic API key:", error);
-      new import_obsidian2.Notice(`Failed to validate Anthropic API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
-      return false;
-    }
   }
   getAvailableModels() {
     return this.models.map((model) => model.apiName);
@@ -684,9 +759,10 @@ var AnthropicAdapter = class {
 };
 
 // src/adapters/GeminiAdapter.ts
-var import_obsidian3 = require("obsidian");
-var GeminiAdapter = class {
+var import_obsidian4 = require("obsidian");
+var GeminiAdapter = class extends AIAdapter {
   constructor(settingsService, jsonValidationService) {
+    super(settingsService, jsonValidationService);
     this.settingsService = settingsService;
     this.jsonValidationService = jsonValidationService;
     const aiProviderSettings = this.settingsService.getSetting("aiProvider");
@@ -733,32 +809,9 @@ var GeminiAdapter = class {
     }
   }
   /**
-   * Test connection to Gemini API
-   */
-  async testConnection(prompt, modelApiName) {
-    try {
-      if (!this.apiKey) {
-        return false;
-      }
-      const response = await this.generateResponse(
-        prompt || "Return the word 'OK'.",
-        modelApiName,
-        { rawResponse: true }
-      );
-      if (!response.success || typeof response.data !== "string") {
-        return false;
-      }
-      return response.data.toLowerCase().includes("ok");
-    } catch (error) {
-      console.error("Error in Gemini test connection:", error);
-      return false;
-    }
-  }
-  /**
    * Make a request to the Gemini API
    */
   async makeApiRequest(params) {
-    var _a;
     const systemPrompt = params.rawResponse ? "You are a helpful assistant." : "You are a helpful assistant that responds in JSON format. Your response should be valid JSON with a 'response' field containing your answer.";
     const requestBody = {
       contents: [
@@ -776,7 +829,7 @@ var GeminiAdapter = class {
         topP: 0.95
       }
     };
-    const response = await (0, import_obsidian3.requestUrl)({
+    return await (0, import_obsidian4.requestUrl)({
       url: `https://generativelanguage.googleapis.com/v1/models/${params.model}:generateContent`,
       method: "POST",
       headers: {
@@ -785,13 +838,6 @@ var GeminiAdapter = class {
       },
       body: JSON.stringify(requestBody)
     });
-    if (response.status !== 200) {
-      const errorBody = response.json;
-      throw new Error(
-        `API request failed with status ${response.status}: ${((_a = errorBody == null ? void 0 : errorBody.error) == null ? void 0 : _a.message) || response.text}`
-      );
-    }
-    return response;
   }
   /**
    * Extract content from Gemini API response
@@ -801,8 +847,7 @@ var GeminiAdapter = class {
     if (!((_f = (_e = (_d = (_c = (_b = (_a = response.json) == null ? void 0 : _a.candidates) == null ? void 0 : _b[0]) == null ? void 0 : _c.content) == null ? void 0 : _d.parts) == null ? void 0 : _e[0]) == null ? void 0 : _f.text)) {
       throw new Error("Invalid response format from Gemini API");
     }
-    const content = response.json.candidates[0].content;
-    return content.parts[0].text;
+    return response.json.candidates[0].content.parts[0].text;
   }
   /**
    * Get temperature setting
@@ -824,35 +869,8 @@ var GeminiAdapter = class {
   handleError(error) {
     console.error("Error in Gemini API call:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    new import_obsidian3.Notice(`Gemini API Error: ${errorMessage}`);
+    new import_obsidian4.Notice(`Gemini API Error: ${errorMessage}`);
     return { success: false, error: errorMessage };
-  }
-  /**
-   * Validate API key
-   */
-  async validateApiKey() {
-    try {
-      if (!this.apiKey) {
-        throw new Error("Google API key is not set");
-      }
-      if (this.models.length === 0) {
-        throw new Error("No models available for Gemini");
-      }
-      const isValid = await this.testConnection(
-        "Return the word 'OK'.",
-        this.models[0].apiName
-      );
-      if (isValid) {
-        new import_obsidian3.Notice("Gemini API key validated successfully");
-        return true;
-      } else {
-        throw new Error("Failed to validate API key");
-      }
-    } catch (error) {
-      console.error("Error validating Gemini API key:", error);
-      new import_obsidian3.Notice(`Failed to validate Gemini API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
-      return false;
-    }
   }
   /**
    * Get available models
@@ -907,9 +925,10 @@ var GeminiAdapter = class {
 };
 
 // src/adapters/GroqAdapter.ts
-var import_obsidian4 = require("obsidian");
-var GroqAdapter = class {
+var import_obsidian5 = require("obsidian");
+var GroqAdapter = class extends AIAdapter {
   constructor(settingsService, jsonValidationService) {
+    super(settingsService, jsonValidationService);
     this.settingsService = settingsService;
     this.jsonValidationService = jsonValidationService;
     const aiProviderSettings = this.settingsService.getSetting("aiProvider");
@@ -949,33 +968,11 @@ var GroqAdapter = class {
     }
   }
   /**
-   * Test connection to Groq API
-   */
-  async testConnection(prompt, modelApiName) {
-    try {
-      if (!this.apiKey) {
-        throw new Error("Groq API key is not set");
-      }
-      const response = await this.generateResponse(
-        prompt || "Return the word 'OK'.",
-        modelApiName,
-        { rawResponse: true }
-      );
-      if (!response.success || typeof response.data !== "string") {
-        return false;
-      }
-      return response.data.toLowerCase().includes("ok");
-    } catch (error) {
-      console.error("Error in Groq test connection:", error);
-      return false;
-    }
-  }
-  /**
    * Make a request to the Groq API
    */
   async makeApiRequest(params) {
     var _a;
-    const response = await (0, import_obsidian4.requestUrl)({
+    const response = await (0, import_obsidian5.requestUrl)({
       url: "https://api.groq.com/openai/v1/chat/completions",
       method: "POST",
       headers: {
@@ -1034,35 +1031,8 @@ var GroqAdapter = class {
   handleError(error) {
     console.error("Error in Groq API call:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    new import_obsidian4.Notice(`Groq API Error: ${errorMessage}`);
+    new import_obsidian5.Notice(`Groq API Error: ${errorMessage}`);
     return { success: false, error: errorMessage };
-  }
-  /**
-   * Validate API key
-   */
-  async validateApiKey() {
-    try {
-      if (!this.apiKey) {
-        throw new Error("Groq API key is not set");
-      }
-      if (this.models.length === 0) {
-        throw new Error("No models available for Groq");
-      }
-      const isValid = await this.testConnection(
-        "Return the word 'OK'.",
-        this.models[0].apiName
-      );
-      if (isValid) {
-        new import_obsidian4.Notice("Groq API key validated successfully");
-        return true;
-      } else {
-        throw new Error("Failed to validate API key");
-      }
-    } catch (error) {
-      console.error("Error validating Groq API key:", error);
-      new import_obsidian4.Notice(`Failed to validate Groq API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
-      return false;
-    }
   }
   /**
    * Get available models
@@ -1117,117 +1087,41 @@ var GroqAdapter = class {
 };
 
 // src/adapters/OpenRouterAdapter.ts
-var import_obsidian5 = require("obsidian");
-var OpenRouterAdapter = class {
+var import_obsidian6 = require("obsidian");
+var OpenRouterAdapter = class extends AIAdapter {
   constructor(settingsService, jsonValidationService) {
+    super(settingsService, jsonValidationService);
     this.settingsService = settingsService;
     this.jsonValidationService = jsonValidationService;
     const aiProviderSettings = this.settingsService.getSetting("aiProvider");
     this.apiKey = aiProviderSettings.apiKeys["openrouter" /* OpenRouter */] || "";
     this.models = AIModelMap["openrouter" /* OpenRouter */];
   }
-  /**
-   * Generate a response using the OpenRouter API
-   */
-  async generateResponse(prompt, modelApiName, options) {
-    try {
-      const apiModel = this.getApiModelName(modelApiName);
-      if (!apiModel) {
-        throw new Error(`No valid model found for ${this.getProviderType()}`);
-      }
-      if (!this.apiKey) {
-        throw new Error("OpenRouter API key is not set");
-      }
-      const settings = this.settingsService.getSettings();
-      const temperature = this.getTemperature(settings);
-      const maxTokens = (options == null ? void 0 : options.maxTokens) || this.getMaxTokens(settings);
-      console.log(`OpenRouterAdapter: Sending prompt to AI: ${prompt}`);
-      const response = await this.makeApiRequest(
-        apiModel,
-        prompt,
-        temperature,
-        maxTokens,
-        options == null ? void 0 : options.rawResponse
-      );
-      const content = this.extractContentFromResponse(response);
-      console.log(`OpenRouterAdapter: Received response from AI: ${content}`);
-      if (options == null ? void 0 : options.rawResponse) {
-        return { success: true, data: content };
-      }
-      const validatedContent = await this.jsonValidationService.validateAndCleanJson(content);
-      console.log(`OpenRouterAdapter: Validated JSON content:`, validatedContent);
-      return { success: true, data: validatedContent };
-    } catch (error) {
-      return this.handleError(error);
-    }
+  async makeApiRequest(params) {
+    return await (0, import_obsidian6.requestUrl)({
+      url: "https://openrouter.ai/api/v1/chat/completions",
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": window.location.href,
+        "X-Title": "Obsidian GraphWeaver Plugin"
+      },
+      body: JSON.stringify({
+        model: params.model,
+        messages: [
+          {
+            role: "system",
+            content: params.rawResponse ? "You are a helpful assistant." : "You are a helpful assistant that responds in JSON format."
+          },
+          { role: "user", content: params.prompt }
+        ],
+        temperature: params.temperature,
+        max_tokens: params.maxTokens,
+        response_format: params.rawResponse ? void 0 : { type: "json_object" }
+      })
+    });
   }
-  /**
-   * Test connection to OpenRouter API
-   */
-  async testConnection(prompt, modelApiName) {
-    try {
-      if (!this.apiKey) {
-        return false;
-      }
-      const response = await this.generateResponse(
-        prompt || "Return the word 'OK'.",
-        modelApiName,
-        { rawResponse: true }
-      );
-      if (!response.success || typeof response.data !== "string") {
-        return false;
-      }
-      return response.data.toLowerCase().includes("ok");
-    } catch (error) {
-      console.error("Error in OpenRouter test connection:", error);
-      return false;
-    }
-  }
-  /**
-   * Make a request to the OpenRouter API
-   */
-  async makeApiRequest(apiModel, prompt, temperature, maxTokens, rawResponse) {
-    var _a, _b, _c, _d;
-    const headers = {
-      "Authorization": `Bearer ${this.apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": window.location.href,
-      // Dynamic referrer
-      "X-Title": "Obsidian GraphWeaver Plugin"
-    };
-    try {
-      const response = await (0, import_obsidian5.requestUrl)({
-        url: "https://openrouter.ai/api/v1/chat/completions",
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          model: apiModel,
-          messages: [
-            {
-              role: "system",
-              content: rawResponse ? "You are a helpful assistant." : "You are a helpful assistant that responds in JSON format."
-            },
-            { role: "user", content: prompt }
-          ],
-          temperature,
-          max_tokens: maxTokens,
-          response_format: rawResponse ? void 0 : { type: "json_object" }
-        })
-      });
-      if (!((_d = (_c = (_b = (_a = response.json) == null ? void 0 : _a.choices) == null ? void 0 : _b[0]) == null ? void 0 : _c.message) == null ? void 0 : _d.content)) {
-        throw new Error("Invalid response format from OpenRouter API");
-      }
-      return response;
-    } catch (error) {
-      if (error.status === 401) {
-        throw new Error("OpenRouter API authentication failed. Please check your API key.");
-      }
-      throw error;
-    }
-  }
-  /**
-   * Extract content from API response
-   */
   extractContentFromResponse(response) {
     var _a, _b, _c, _d;
     if (!((_d = (_c = (_b = (_a = response.json) == null ? void 0 : _a.choices) == null ? void 0 : _b[0]) == null ? void 0 : _c.message) == null ? void 0 : _d.content)) {
@@ -1235,152 +1129,66 @@ var OpenRouterAdapter = class {
     }
     return response.json.choices[0].message.content;
   }
-  /**
-   * Get temperature setting
-   */
-  getTemperature(settings) {
-    var _a, _b;
-    return ((_a = settings.advanced) == null ? void 0 : _a.temperature) >= 0 && ((_b = settings.advanced) == null ? void 0 : _b.temperature) <= 1 ? settings.advanced.temperature : 0.7;
-  }
-  /**
-   * Get max tokens setting
-   */
-  getMaxTokens(settings) {
-    var _a;
-    return ((_a = settings.advanced) == null ? void 0 : _a.maxTokens) > 0 ? settings.advanced.maxTokens : 1e3;
-  }
-  /**
-   * Handle errors in API calls
-   */
-  handleError(error) {
-    console.error("Error in OpenRouter API call:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    new import_obsidian5.Notice(`OpenRouter API Error: ${errorMessage}`);
-    return { success: false, error: errorMessage };
-  }
-  /**
-   * Validate API key
-   */
-  async validateApiKey() {
-    try {
-      if (!this.apiKey) {
-        throw new Error("OpenRouter API key is not set");
-      }
-      if (this.models.length === 0) {
-        throw new Error("No models available for OpenRouter");
-      }
-      const isValid = await this.testConnection(
-        "Return the word 'OK'.",
-        this.models[0].apiName
-      );
-      if (isValid) {
-        new import_obsidian5.Notice("OpenRouter API key validated successfully");
-        return true;
-      } else {
-        throw new Error("Failed to validate API key");
-      }
-    } catch (error) {
-      console.error("Error validating OpenRouter API key:", error);
-      new import_obsidian5.Notice(`Failed to validate OpenRouter API key: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
-      return false;
-    }
-  }
-  /**
-   * Get available models
-   */
-  getAvailableModels() {
-    return this.models.map((model) => model.apiName);
-  }
-  /**
-   * Get provider type
-   */
   getProviderType() {
     return "openrouter" /* OpenRouter */;
-  }
-  /**
-   * Set API key
-   */
-  setApiKey(apiKey) {
-    this.apiKey = apiKey;
-  }
-  /**
-   * Get API key
-   */
-  getApiKey() {
-    return this.apiKey;
-  }
-  /**
-   * Configure the adapter
-   */
-  configure(config) {
-    if (config == null ? void 0 : config.apiKey) {
-      this.setApiKey(config.apiKey);
-    }
-  }
-  /**
-   * Check if adapter is ready
-   */
-  isReady() {
-    return !!this.apiKey && this.models.length > 0;
-  }
-  /**
-   * Get API model name
-   */
-  getApiModelName(modelApiName) {
-    var _a;
-    const model = this.models.find((m) => m.apiName === modelApiName);
-    if (!model) {
-      console.warn(`Model ${modelApiName} not found for ${this.getProviderType()}. Using first available model.`);
-      return ((_a = this.models[0]) == null ? void 0 : _a.apiName) || modelApiName;
-    }
-    return model.apiName;
   }
 };
 
 // src/adapters/LMStudioAdapter.ts
-var import_obsidian6 = require("obsidian");
-var LMStudioAdapter = class {
+var import_obsidian7 = require("obsidian");
+var LMStudioAdapter = class extends AIAdapter {
   constructor(settingsService, jsonValidationService) {
+    super(settingsService, jsonValidationService);
     this.settingsService = settingsService;
     this.jsonValidationService = jsonValidationService;
     this.updateSettings();
+  }
+  async makeApiRequest(params) {
+    return await (0, import_obsidian7.requestUrl)({
+      url: `http://localhost:${this.port}/v1/chat/completions`,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: params.model,
+        messages: [
+          {
+            role: "system",
+            content: params.rawResponse ? "You are a helpful assistant." : "You are a helpful assistant that responds in JSON format."
+          },
+          { role: "user", content: params.prompt }
+        ],
+        temperature: params.temperature,
+        max_tokens: params.maxTokens,
+        response_format: params.rawResponse ? void 0 : { type: "json_schema" },
+        stream: false
+      })
+    });
+  }
+  extractContentFromResponse(response) {
+    var _a, _b, _c, _d;
+    if (!((_d = (_c = (_b = (_a = response.json) == null ? void 0 : _a.choices) == null ? void 0 : _b[0]) == null ? void 0 : _c.message) == null ? void 0 : _d.content)) {
+      throw new Error("Invalid response format from LM Studio API");
+    }
+    return response.json.choices[0].message.content;
   }
   async generateResponse(prompt, model = "default", options) {
     try {
       if (!this.isReady()) {
         throw new Error("LM Studio settings are not properly configured");
       }
-      const response = await (0, import_obsidian6.requestUrl)({
-        url: `http://localhost:${this.port}/v1/chat/completions`,
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: this.model,
-          messages: [
-            {
-              role: "system",
-              content: (options == null ? void 0 : options.rawResponse) ? "You are a helpful assistant." : "You are a helpful assistant that responds in JSON format."
-            },
-            {
-              role: "user",
-              content: prompt
-            }
-          ],
-          response_format: (options == null ? void 0 : options.rawResponse) ? void 0 : {
-            type: "json_schema",
-            json_schema: this.createJsonSchema()
-          },
-          temperature: 0.7,
-          max_tokens: (options == null ? void 0 : options.maxTokens) || 1e3,
-          stream: false
-        })
+      const response = await this.makeApiRequest({
+        model: this.model,
+        prompt,
+        temperature: 0.7,
+        maxTokens: (options == null ? void 0 : options.maxTokens) || 1e3,
+        rawResponse: options == null ? void 0 : options.rawResponse
       });
       if (response.status !== 200) {
         throw new Error(`API request failed with status ${response.status}`);
       }
-      const content = response.json.choices[0].message.content;
+      const content = this.extractContentFromResponse(response);
       if (options == null ? void 0 : options.rawResponse) {
         return {
           success: true,
@@ -1394,7 +1202,7 @@ var LMStudioAdapter = class {
       };
     } catch (error) {
       console.error("Error in LM Studio API call:", error);
-      new import_obsidian6.Notice(`LM Studio API Error: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
+      new import_obsidian7.Notice(`LM Studio API Error: ${error instanceof Error ? error.message : "Unknown error occurred"}`);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error occurred"
@@ -1415,27 +1223,6 @@ var LMStudioAdapter = class {
         required: ["response"]
       }
     };
-  }
-  async testConnection(prompt, model = "default") {
-    try {
-      if (!this.isReady()) {
-        return false;
-      }
-      const response = await this.generateResponse("Return the word 'OK'.", model);
-      if (!response.success || !response.data) {
-        return false;
-      }
-      if (typeof response.data === "object" && response.data !== null && "response" in response.data && typeof response.data.response === "string") {
-        return response.data.response.toLowerCase().includes("ok");
-      }
-      return false;
-    } catch (error) {
-      console.error("Error in LM Studio test connection:", error);
-      return false;
-    }
-  }
-  async validateApiKey() {
-    return this.isReady();
   }
   getAvailableModels() {
     return [this.model];
@@ -1462,12 +1249,61 @@ var LMStudioAdapter = class {
     return !!this.model && !!this.port;
   }
   getApiModelName(modelName) {
-    return modelName;
+    return modelName || "default";
   }
   updateSettings() {
     const localLMStudioSettings = this.settingsService.getSetting("localLMStudio");
     this.model = localLMStudioSettings.modelName;
     this.port = localLMStudioSettings.port.toString();
+  }
+};
+
+// src/adapters/PerplexityAdapter.ts
+var import_obsidian8 = require("obsidian");
+var PerplexityAdapter = class extends AIAdapter {
+  constructor(settingsService, jsonValidationService) {
+    super(settingsService, jsonValidationService);
+    this.settingsService = settingsService;
+    this.jsonValidationService = jsonValidationService;
+    const aiProviderSettings = this.settingsService.getSetting("aiProvider");
+    this.apiKey = aiProviderSettings.apiKeys["perplexity" /* Perplexity */] || "";
+    this.models = AIModelMap["perplexity" /* Perplexity */];
+  }
+  async makeApiRequest(params) {
+    return await (0, import_obsidian8.requestUrl)({
+      url: "https://api.perplexity.ai/chat/completions",
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify({
+        model: params.model,
+        messages: [
+          {
+            role: "system",
+            content: "Be precise and concise."
+          },
+          {
+            role: "user",
+            content: params.prompt
+          }
+        ],
+        temperature: params.temperature,
+        max_tokens: params.maxTokens
+      })
+    });
+  }
+  extractContentFromResponse(response) {
+    var _a, _b, _c, _d;
+    if (!((_d = (_c = (_b = (_a = response.json) == null ? void 0 : _a.choices) == null ? void 0 : _b[0]) == null ? void 0 : _c.message) == null ? void 0 : _d.content)) {
+      throw new Error("Invalid response format from Perplexity API");
+    }
+    return response.json.choices[0].message.content;
+  }
+  getProviderType() {
+    return "perplexity" /* Perplexity */;
   }
 };
 
@@ -1503,12 +1339,14 @@ var BaseGenerator = class {
    * @returns The model identifier string
    */
   async getCurrentModel() {
+    var _a, _b;
     const settings = this.getSettings();
-    const selectedModel = this.getSelectedModel(settings);
-    if (!selectedModel) {
-      throw new Error(`No model selected for ${this.constructor.name}`);
+    const providerType = this.aiAdapter.getProviderType();
+    const modelApiName = (_b = (_a = settings.aiProvider) == null ? void 0 : _a.selectedModels) == null ? void 0 : _b[providerType];
+    if (!modelApiName) {
+      throw new Error(`No model selected for provider: ${providerType}`);
     }
-    return selectedModel;
+    return modelApiName;
   }
   /**
    * Get the selected model from settings.
@@ -1530,16 +1368,15 @@ var BaseGenerator = class {
    * @param input The input to validate
    */
   validateInput(input) {
-    return input !== null && input !== void 0;
+    return input !== null && typeof input === "object";
   }
   /**
    * Handle errors that occur during generation.
    * @param error The error that occurred
    */
   handleError(error) {
-    const errorMessage = `${this.constructor.name} error: ${error.message}`;
-    console.error(errorMessage);
-    throw new Error(errorMessage);
+    console.error(`${this.constructor.name} error: ${error.message}`, error);
+    throw error;
   }
   /**
    * Utility method to clean and format text content
@@ -1614,10 +1451,9 @@ var FrontMatterGenerator = class extends BaseGenerator {
     
     # GUIDELINES
     - You must ONLY use the properties provided in the schema
-    - Front matter fields will NOT include the note content itself
     - Prioritize using available tags, but remain flexible in choosing additional relevant tags
     - Return ONLY the formatted JSON object with front matter fields
-    - Do NOT include the content field in your response
+    - OMIT the content field in your response
     
     ## Custom Properties
     ${propertyPrompt}
@@ -1713,25 +1549,6 @@ ${frontMatter}
 ---
 
 ${content.trim()}`;
-  }
-  /**
-   * Validates input parameters
-   */
-  validateInput(input) {
-    return typeof input.content === "string" && input.content.trim().length > 0;
-  }
-  /**
-   * Gets the current AI model
-   */
-  async getCurrentModel() {
-    var _a, _b;
-    const settings = this.getSettings();
-    const providerType = this.aiAdapter.getProviderType();
-    const modelApiName = (_b = (_a = settings.aiProvider) == null ? void 0 : _a.selectedModels) == null ? void 0 : _b[providerType];
-    if (!modelApiName) {
-      throw new Error(`No model selected for provider: ${providerType}`);
-    }
-    return modelApiName;
   }
 };
 
@@ -2043,36 +1860,10 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
     return [];
   }
   /**
-   * Validates the input structure
-   */
-  validateInput(input) {
-    return typeof input.content === "string" && input.content.trim().length > 0 && Array.isArray(input.existingPages) && input.existingPages.every((page) => typeof page === "string");
-  }
-  /**
-   * Gets the current AI model
-   */
-  async getCurrentModel() {
-    var _a, _b;
-    const settings = this.getSettings();
-    const providerType = this.aiAdapter.getProviderType();
-    const selectedModel = (_b = (_a = settings.aiProvider) == null ? void 0 : _a.selectedModels) == null ? void 0 : _b[providerType];
-    if (!selectedModel) {
-      throw new Error(`No model selected for provider type: ${providerType}`);
-    }
-    return selectedModel;
-  }
-  /**
    * Escapes special regex characters in a string
    */
   escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  }
-  /**
-   * Handles errors in wikilink generation
-   */
-  handleError(error) {
-    console.error(`WikilinkGenerator: Generation error: ${error.message}`);
-    throw new Error(`Wikilink generation failed: ${error.message}`);
   }
 };
 
@@ -2113,10 +1904,10 @@ Act as an expert in Ontological Science, specializing in taking unstructured inf
 Analyze the following information about a knowledge base and synthesize an ontology.
 Based on the overall structure and content, suggest a set of tags that would create a cohesive and useful ontology for this knowledge base.
 
-**Files:**
+**File Names:**
 ${fileNames}
 
-**Folders:** 
+**Folder Names:** 
 ${folderNames}
 
 **Existing Tags:** 
@@ -2172,19 +1963,15 @@ Suggest enough tags to form a comprehensive ontology for this knowledge base.
         return {
           name: String(name).trim(),
           description: String(value.description).trim(),
-          type: value.type || "string",
+          type: value.type || "string"
           // Default to 'string' if type not provided
-          required: value.required !== void 0 ? Boolean(value.required) : false,
-          // Default to false
-          multipleValues: value.multipleValues !== void 0 ? Boolean(value.multipleValues) : false
-          // Default to false
         };
       } else {
         console.warn(`Unexpected format for tag ${name}:`, value);
         return null;
       }
     }).filter(
-      (tag) => tag !== null && typeof tag.name === "string" && tag.name.length > 0 && typeof tag.description === "string" && tag.description.length > 0 && typeof tag.type === "string" && typeof tag.required === "boolean" && typeof tag.multipleValues === "boolean"
+      (tag) => tag !== null && typeof tag.name === "string" && tag.name.length > 0 && typeof tag.description === "string" && tag.description.length > 0 && typeof tag.type === "string"
     );
     if (suggestedTags.length === 0) {
       throw new Error("No valid tags found in AI response");
@@ -2204,41 +1991,10 @@ Suggest enough tags to form a comprehensive ontology for this knowledge base.
     fixedJson = fixedJson.replace(/,\s*}$/, "}");
     return fixedJson;
   }
-  /**
-   * Validates the input parameters for ontology generation.
-   * @param input - Input parameters.
-   * @returns Boolean indicating validity.
-   */
-  validateInput(input) {
-    return Array.isArray(input.files) && Array.isArray(input.folders) && Array.isArray(input.tags);
-  }
-  /**
-   * Retrieves the current model selection for ontology generation.
-   * @returns Promise resolving to the selected model identifier.
-   */
-  async getCurrentModel() {
-    var _a, _b;
-    const settings = this.settingsService.getSettings();
-    const providerType = this.aiAdapter.getProviderType();
-    const selectedModel = (_b = (_a = settings.aiProvider) == null ? void 0 : _a.selectedModels) == null ? void 0 : _b[providerType];
-    if (!selectedModel) {
-      throw new Error(`No model selected for provider type: ${providerType}`);
-    }
-    return selectedModel;
-  }
-  /**
-   * Handles errors during ontology generation.
-   * @param error - The error encountered.
-   */
-  handleError(error) {
-    console.error(`Ontology generation error: ${error.message}`, error);
-    throw new Error(`Ontology generation failed: ${error.message}`);
-  }
 };
 
 // src/generators/BatchProcessor.ts
-var import_obsidian7 = require("obsidian");
-var import_events = require("events");
+var import_obsidian9 = require("obsidian");
 
 // src/models/ProcessingTypes.ts
 var DEFAULT_PROCESSING_OPTIONS = {
@@ -2262,7 +2018,7 @@ var BatchProcessor = class extends BaseGenerator {
     this.lastNotificationTime = 0;
     this.processStartTime = 0;
     this.processingTimeout = null;
-    this.eventEmitter = new import_events.EventEmitter();
+    this.eventEmitter = new import_obsidian9.Events();
     this.options = DEFAULT_PROCESSING_OPTIONS;
     this.currentStatus = this.getDefaultStatus();
   }
@@ -2328,7 +2084,7 @@ var BatchProcessor = class extends BaseGenerator {
    * Process a single chunk of files
    */
   async processChunk(chunk, input) {
-    const files = chunk.files.map((path) => this.app.vault.getAbstractFileByPath(path)).filter((file) => file instanceof import_obsidian7.TFile);
+    const files = chunk.files.map((path) => this.app.vault.getAbstractFileByPath(path)).filter((file) => file instanceof import_obsidian9.TFile);
     const results = await Promise.all(
       files.map((file) => this.processFile(file, input))
     );
@@ -2420,7 +2176,7 @@ var BatchProcessor = class extends BaseGenerator {
     const now = Date.now();
     if (now - this.lastNotificationTime > this.NOTIFICATION_INTERVAL) {
       const { filesProcessed, filesQueued } = this.currentStatus;
-      new import_obsidian7.Notice(
+      new import_obsidian9.Notice(
         `Processing files: ${filesProcessed}/${filesQueued} (${Math.round(filesProcessed / filesQueued * 100)}%)`
       );
       this.lastNotificationTime = now;
@@ -2480,7 +2236,7 @@ var BatchProcessor = class extends BaseGenerator {
         if (this.currentStatus.state === "running") {
           resolve();
         } else {
-          this.processingTimeout = setTimeout(check, 100);
+          this.processingTimeout = window.setTimeout(check, 100);
         }
       };
       check();
@@ -2490,7 +2246,7 @@ var BatchProcessor = class extends BaseGenerator {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
   async cleanup() {
-    if (this.processingTimeout) {
+    if (this.processingTimeout !== null) {
       clearTimeout(this.processingTimeout);
     }
     this.currentStatus.state = "idle";
@@ -2512,10 +2268,10 @@ var BatchProcessor = class extends BaseGenerator {
     }
   }
   emitEvent(type, data) {
-    this.eventEmitter.emit(type, data);
+    this.eventEmitter.trigger(type, data);
   }
   validateInput(input) {
-    return Array.isArray(input.files) && input.files.length > 0 && typeof input.generateFrontMatter === "boolean" && typeof input.generateWikilinks === "boolean";
+    return Array.isArray(input.files) && input.files.length > 0 && typeof input.generateFrontMatter === "boolean" && (typeof input.generateWikilinks === "boolean" || input.generateWikilinks === void 0);
   }
   // Required BaseGenerator methods
   preparePrompt(_input) {
@@ -2557,9 +2313,6 @@ var JsonSchemaGenerator = class {
         type: this.getJsonSchemaType(property.type),
         description: `Create ${property.description}`
       };
-      if (property.required) {
-        schema.required.push(property.name);
-      }
     });
     schema.properties.tags = {
       type: "array",
@@ -2587,7 +2340,7 @@ var JsonSchemaGenerator = class {
 };
 
 // src/generators/KnowledgeBloomGenerator.ts
-var import_obsidian8 = require("obsidian");
+var import_obsidian10 = require("obsidian");
 var KnowledgeBloomGenerator = class extends BaseGenerator {
   constructor(aiAdapter, settingsService, app, frontMatterGenerator) {
     super(aiAdapter, settingsService);
@@ -2642,7 +2395,7 @@ var KnowledgeBloomGenerator = class extends BaseGenerator {
       console.log(`KnowledgeBloomGenerator: Successfully generated note for "${link}".`);
     } catch (error) {
       console.error(`Error processing wikilink "${link}":`, error);
-      new import_obsidian8.Notice(`Failed to generate note for "${link}": ${error.message}`);
+      new import_obsidian10.Notice(`Failed to generate note for "${link}": ${error.message}`);
     }
   }
   /**
@@ -2730,9 +2483,9 @@ Act as an expert Research Assistant that specializes in writing structured notes
 
 # GUIDELINES
 - Write the note in Markdown format.
-- Do NOT include any JSON objects or front matter.
+- OMIT any JSON objects or front matter.
 - Ensure the content is well-structured and comprehensive.
-- Omit any words before or after the Markdown content.
+- OMIT any words before or after the Markdown content.
 
 # TOPIC
 Write a detailed note about "${input.currentWikilink}" in relation to "${input.currentNoteTitle}".
@@ -2747,7 +2500,7 @@ ${input.userPrompt}` : ""}
   doesNoteExist(title, folderPath) {
     const filePath = `${folderPath}/${title}.md`;
     const file = this.app.vault.getAbstractFileByPath(filePath);
-    return file instanceof import_obsidian8.TFile;
+    return file instanceof import_obsidian10.TFile;
   }
   /**
    * Get the folder path for the new note
@@ -2757,45 +2510,71 @@ ${input.userPrompt}` : ""}
     pathSegments.pop();
     return pathSegments.join("/");
   }
-  /**
-   * Validate the input parameters
-   */
-  validateInput(input) {
-    const isValid = (input == null ? void 0 : input.sourceFile) instanceof import_obsidian8.TFile;
-    console.log(`KnowledgeBloomGenerator: Input validation result: ${isValid}`);
-    return isValid;
+  formatOutput(output) {
+    return output;
   }
-  /**
-   * Get the current AI model
-   */
-  async getCurrentModel() {
-    var _a;
-    const settings = this.getSettings();
-    const selectedModel = (_a = settings.knowledgeBloom) == null ? void 0 : _a.selectedModel;
-    if (!selectedModel) {
-      throw new Error("No model selected for Knowledge Bloom.");
+};
+
+// src/services/BaseService.ts
+var import_events = require("events");
+var import_obsidian11 = require("obsidian");
+var BaseService = class {
+  constructor() {
+    this.emitter = new import_events.EventEmitter();
+  }
+  handleError(message, error) {
+    console.error(message, error);
+    new import_obsidian11.Notice(`${message} ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+  async saveData(callback, data) {
+    try {
+      if (callback && data !== void 0) {
+        await callback(data);
+        console.log("Data saved successfully");
+      }
+    } catch (error) {
+      this.handleError("Error saving data:", error);
+      throw error;
     }
-    return selectedModel;
   }
-  /**
-   * Handle generation errors
-   */
-  handleError(error) {
-    console.error(`KnowledgeBloomGenerator: Knowledge Bloom generation error: ${error.message}`, error);
-    new import_obsidian8.Notice(`Knowledge Bloom generation failed: ${error.message}`);
-    throw error;
+  deepMerge(target, source) {
+    if (!source) {
+      return target;
+    }
+    const output = { ...target };
+    Object.keys(source).forEach((key) => {
+      const targetValue = output[key];
+      const sourceValue = source[key];
+      if (Array.isArray(targetValue) && Array.isArray(sourceValue)) {
+        output[key] = sourceValue;
+      } else if (this.isObject(targetValue) && this.isObject(sourceValue)) {
+        output[key] = this.deepMerge(
+          targetValue,
+          sourceValue
+        );
+      } else if (sourceValue !== void 0) {
+        output[key] = sourceValue;
+      }
+    });
+    return output;
   }
-  /**
-   * Format output (not used in this implementation)
-   */
-  formatOutput(_aiResponse, _originalInput) {
-    throw new Error("Method not implemented - using custom generate method");
+  isObject(item) {
+    return Boolean(
+      item && typeof item === "object" && !Array.isArray(item) && !(item instanceof Date) && !(item instanceof RegExp)
+    );
+  }
+  on(event, listener) {
+    this.emitter.on(event, listener);
+  }
+  emit(event, ...args) {
+    this.emitter.emit(event, ...args);
   }
 };
 
 // src/services/AIService.ts
-var AIService = class {
+var AIService = class extends BaseService {
   constructor(app, settingsService, jsonValidationService, databaseService) {
+    super();
     this.app = app;
     this.settingsService = settingsService;
     this.jsonValidationService = jsonValidationService;
@@ -2814,7 +2593,9 @@ var AIService = class {
       ["google" /* Google */, new GeminiAdapter(this.settingsService, this.jsonValidationService)],
       ["groq" /* Groq */, new GroqAdapter(this.settingsService, this.jsonValidationService)],
       ["openrouter" /* OpenRouter */, new OpenRouterAdapter(this.settingsService, this.jsonValidationService)],
-      ["lmstudio" /* LMStudio */, new LMStudioAdapter(this.settingsService, this.jsonValidationService)]
+      ["lmstudio" /* LMStudio */, new LMStudioAdapter(this.settingsService, this.jsonValidationService)],
+      ["perplexity" /* Perplexity */, new PerplexityAdapter(this.settingsService, this.jsonValidationService)]
+      // Initialize PerplexityAdapter
     ]);
   }
   getCurrentAdapter() {
@@ -2987,8 +2768,9 @@ var AIService = class {
     return Object.entries(aiProviderSettings.apiKeys).filter(([_, apiKey]) => apiKey && apiKey.trim() !== "").map(([provider, _]) => provider);
   }
   /**
-   * Generates front matter for the given content.
+   * Generates front matter content using AI.
    * @param content - The content for which to generate front matter.
+   * @returns Promise<FrontMatterOutput> - The generated front matter result
    */
   async generateFrontMatter(content) {
     try {
@@ -2997,26 +2779,24 @@ var AIService = class {
         customProperties: this.extractCustomProperties(content),
         customTags: this.extractCustomTags(content)
       };
-      const frontMatterResult = await this.frontMatterGenerator.generate(input);
-      return frontMatterResult.content;
+      return await this.frontMatterGenerator.generate(input);
     } catch (error) {
       console.error("Error generating front matter:", error);
       throw new Error(`Failed to generate front matter: ${error.message}`);
     }
   }
   /**
-   * Generates wikilinks for the given content.
+   * Generates wikilinks for the given content using AI.
    * @param content - The content for which to generate wikilinks.
-   * @returns Updated content with wikilinks generated.
+   * @returns Promise<WikilinkOutput> - The generated wikilinks result
    */
   async generateWikilinks(content) {
     try {
       const existingPages = this.getExistingPages();
-      const wikilinkResult = await this.wikilinkGenerator.generate({
+      return await this.wikilinkGenerator.generate({
         content,
         existingPages
       });
-      return wikilinkResult.content;
     } catch (error) {
       console.error("Error generating wikilinks:", error);
       throw new Error(`Failed to generate wikilinks: ${error.message}`);
@@ -3046,12 +2826,12 @@ var AIService = class {
       const existingTagNames = new Set(settings.tags.customTags.map((tag) => tag.name));
       const newTags = suggestedTags.filter((tag) => !existingTagNames.has(tag.name));
       if (newTags.length === 0) {
-        new import_obsidian9.Notice("No new tags to add.");
+        new import_obsidian12.Notice("No new tags to add.");
         return;
       }
       settings.tags.customTags.push(...newTags);
       await this.settingsService.updateSettings({ tags: settings.tags });
-      new import_obsidian9.Notice(`Added ${newTags.length} new tags successfully!`);
+      new import_obsidian12.Notice(`Added ${newTags.length} new tags successfully!`);
     } catch (error) {
       console.error("Error updating tags:", error);
       throw new Error(`Failed to update tags: ${error.message}`);
@@ -3097,15 +2877,17 @@ var AIService = class {
     return models.find((model) => model.apiName === modelName);
   }
   /**
-   * Generates new notes based on wikilinks in the given file.
+   * Generates Knowledge Bloom content using AI.
    * @param sourceFile - The file containing wikilinks to generate notes for.
    * @param userPrompt - Optional user-provided context for note generation.
+   * @returns Promise<KnowledgeBloomOutput> - The generated notes and metadata
    */
   async generateKnowledgeBloom(sourceFile, userPrompt) {
     try {
-      const knowledgeBloomSettings = this.settingsService.getSettings().knowledgeBloom;
-      const selectedModel = knowledgeBloomSettings.selectedModel;
-      return await this.knowledgeBloomGenerator.generate({ sourceFile, userPrompt });
+      return await this.knowledgeBloomGenerator.generate({
+        sourceFile,
+        userPrompt
+      });
     } catch (error) {
       console.error("Error generating Knowledge Bloom:", error);
       throw new Error(`Knowledge Bloom generation failed: ${error.message}`);
@@ -3131,11 +2913,8 @@ var AIService = class {
   }
 };
 
-// src/services/SettingsService.ts
-var import_events2 = require("events");
-
 // src/services/JsonValidationService.ts
-var import_obsidian10 = require("obsidian");
+var import_obsidian13 = require("obsidian");
 var JsonValidationService = class {
   /**
    * Basic validation of JSON data format
@@ -3171,7 +2950,7 @@ var JsonValidationService = class {
       return parsedJson;
     } catch (error) {
       console.error("JsonValidationService: Error validating JSON:", error);
-      new import_obsidian10.Notice(`Invalid JSON format: ${error instanceof Error ? error.message : "Unknown error"}`);
+      new import_obsidian13.Notice(`Invalid JSON format: ${error instanceof Error ? error.message : "Unknown error"}`);
       throw new Error("Invalid JSON format");
     }
   }
@@ -3201,16 +2980,24 @@ var JsonValidationService = class {
 };
 
 // src/services/SettingsService.ts
-var SettingsService = class {
+var SettingsService = class extends BaseService {
   constructor(plugin, initialSettings) {
+    super();
     this.plugin = plugin;
     this.settings = initialSettings;
-    this.emitter = new import_events2.EventEmitter();
     this.jsonValidationService = new JsonValidationService();
   }
   async loadSettings() {
+    var _a;
     const data = await this.plugin.loadData();
-    this.settings = this.deepMerge(DEFAULT_SETTINGS, data);
+    const mergedSettings = this.deepMerge(DEFAULT_SETTINGS, data || {});
+    this.settings = {
+      ...mergedSettings,
+      aiProvider: {
+        ...mergedSettings.aiProvider,
+        selected: ((_a = mergedSettings.aiProvider) == null ? void 0 : _a.selected) || DEFAULT_SETTINGS.aiProvider.selected
+      }
+    };
   }
   getSettings() {
     return this.settings;
@@ -3222,7 +3009,15 @@ var SettingsService = class {
     return this.settings[key][nestedKey];
   }
   async updateSettings(newSettings) {
-    this.settings = this.deepMerge(this.settings, newSettings);
+    var _a;
+    const mergedSettings = this.deepMerge(this.settings, newSettings);
+    this.settings = {
+      ...mergedSettings,
+      aiProvider: {
+        ...mergedSettings.aiProvider,
+        selected: ((_a = mergedSettings.aiProvider) == null ? void 0 : _a.selected) || this.settings.aiProvider.selected
+      }
+    };
     await this.saveSettings();
     this.emitter.emit("settingsChanged", this.settings);
   }
@@ -3292,29 +3087,7 @@ var SettingsService = class {
     this.emitter.on("settingsReset", listener);
   }
   async saveSettings() {
-    await this.plugin.saveData(this.settings);
-  }
-  deepMerge(target, source) {
-    if (!this.isObject(target) || !this.isObject(source)) {
-      return source;
-    }
-    const output = { ...target };
-    for (const key in source) {
-      if (source.hasOwnProperty(key)) {
-        if (this.isObject(source[key]) && this.isObject(target[key])) {
-          output[key] = this.deepMerge(
-            target[key],
-            source[key]
-          );
-        } else if (source[key] !== void 0) {
-          output[key] = source[key];
-        }
-      }
-    }
-    return output;
-  }
-  isObject(item) {
-    return item !== null && typeof item === "object" && !Array.isArray(item);
+    await this.saveData(() => this.plugin.saveData(this.settings));
   }
   // Getter for JsonValidationService
   getJsonValidationService() {
@@ -3323,8 +3096,9 @@ var SettingsService = class {
 };
 
 // src/services/DatabaseService.ts
-var DatabaseService = class {
+var DatabaseService = class extends BaseService {
   constructor(saveCallback) {
+    super();
     this.saveCallback = saveCallback;
     this.MAX_HISTORY_LENGTH = 100;
     this.PRUNE_THRESHOLD = 1e3;
@@ -3335,31 +3109,13 @@ var DatabaseService = class {
    * Save data with callback and timestamp
    */
   async save() {
-    try {
-      this.data.lastUpdated = Date.now();
+    this.data.lastUpdated = Date.now();
+    await this.saveData(() => {
       if (this.saveCallback) {
-        await this.saveCallback(this.data);
+        return this.saveCallback(this.data);
       }
-      console.log("DatabaseService: Data saved successfully");
-    } catch (error) {
-      console.error("DatabaseService: Error saving data:", error);
-      throw error;
-    }
-  }
-  /**
-   * Save data with external callback
-   */
-  async saveData(callback) {
-    try {
-      this.data.lastUpdated = Date.now();
-      if (callback) {
-        await callback(this.data);
-      }
-      console.log("DatabaseService: Data saved successfully");
-    } catch (error) {
-      console.error("DatabaseService: Error saving data:", error);
-      throw error;
-    }
+      return Promise.resolve();
+    });
   }
   /**
    * Load database from persistent storage
@@ -3583,10 +3339,10 @@ var DatabaseService = class {
 };
 
 // src/services/AutoGenerateService.ts
-var import_obsidian11 = require("obsidian");
-var import_events3 = require("events");
-var AutoGenerateService = class {
-  constructor(app, vault, aiService, settingsService, databaseService) {
+var import_obsidian14 = require("obsidian");
+var AutoGenerateService = class extends BaseService {
+  constructor(app, vault, aiService, settingsService, databaseService, jsonValidationService) {
+    super();
     this.app = app;
     this.vault = vault;
     this.aiService = aiService;
@@ -3596,7 +3352,7 @@ var AutoGenerateService = class {
     this.isStartupComplete = false;
     this.options = DEFAULT_PROCESSING_OPTIONS;
     this.NOTIFICATION_TIMEOUT = 3e3;
-    this.eventEmitter = new import_events3.EventEmitter();
+    this.jsonValidationService = jsonValidationService;
     this.initializeBatchProcessor();
   }
   /**
@@ -3631,7 +3387,7 @@ var AutoGenerateService = class {
     });
     ["progress", "pause", "resume", "error"].forEach((event) => {
       this.batchProcessor.on(event, (data) => {
-        this.eventEmitter.emit(event, data);
+        this.emitter.emit(event, data);
       });
     });
   }
@@ -3735,7 +3491,7 @@ var AutoGenerateService = class {
     const result = await this.batchProcessor.generate({
       files,
       generateFrontMatter: true,
-      generateWikilinks: settings.advanced.generateWikilinks,
+      // generateWikilinks is now optional and can be omitted
       options: this.options
     });
     await this.updateDatabase(result);
@@ -3766,23 +3522,13 @@ var AutoGenerateService = class {
     this.showNotification(message);
   }
   /**
-   * Handle errors
-   */
-  handleError(message, error) {
-    console.error(message, error);
-    this.showNotification(
-      `${message} ${error instanceof Error ? error.message : "Unknown error"}`,
-      true
-    );
-  }
-  /**
    * Show notification to user
    */
   showNotification(message, isError = false) {
     if (isError) {
       console.error(message);
     }
-    new import_obsidian11.Notice(message, this.NOTIFICATION_TIMEOUT);
+    new import_obsidian14.Notice(message, this.NOTIFICATION_TIMEOUT);
   }
   /**
    * Update processing options
@@ -3794,7 +3540,7 @@ var AutoGenerateService = class {
    * Clean up resources
    */
   destroy() {
-    this.eventEmitter.removeAllListeners();
+    this.emitter.removeAllListeners();
     this.isStartupComplete = false;
     this.isProcessing = false;
   }
@@ -3805,350 +3551,37 @@ var AutoGenerateService = class {
   initializeStatusBar(_statusBarEl) {
     return;
   }
-};
-
-// src/components/status/ProcessingStatusBar.ts
-var import_obsidian13 = require("obsidian");
-
-// src/components/modals/StatusHistoryModal.ts
-var import_obsidian12 = require("obsidian");
-var StatusHistoryModal = class extends import_obsidian12.Modal {
-  constructor(app, currentStatus, recentStats) {
-    super(app);
-    this.currentStatus = currentStatus;
-    this.recentStats = recentStats;
-  }
-  onOpen() {
-    const { contentEl } = this;
-    contentEl.addClass("status-history-modal");
-    contentEl.createEl("h2", { text: "Processing Status & History" });
-    const currentStatusEl = contentEl.createDiv({ cls: "gw-accordion-content" });
-    this.renderCurrentStatus(currentStatusEl);
-    const historyEl = contentEl.createDiv({ cls: "gw-accordion-content" });
-    this.renderProcessingHistory(historyEl);
-  }
-  /**
-   * Render the current processing status
-   */
-  renderCurrentStatus(containerEl) {
-    const statusEl = containerEl.createDiv({ cls: "gw-property-editor" });
-    statusEl.createEl("h3", { text: "Current Status", cls: "gw-accordion-title" });
-    const detailsEl = statusEl.createDiv({ cls: "gw-modal-property-list" });
-    const progressPct = this.currentStatus.filesQueued > 0 ? Math.round(this.currentStatus.filesProcessed / this.currentStatus.filesQueued * 100) : 0;
-    detailsEl.createSpan({
-      text: `Status: ${this.currentStatus.state.toUpperCase()}`,
-      cls: `gw-status-badge gw-status-${this.currentStatus.state}`
-    });
-    detailsEl.createEl("p", {
-      text: `Progress: ${this.currentStatus.filesProcessed}/${this.currentStatus.filesQueued} files (${progressPct}%)`
-    });
-    if (this.currentStatus.currentFile) {
-      detailsEl.createEl("p", {
-        text: `Current File: ${this.currentStatus.currentFile}`
-      });
-    }
-    if (this.currentStatus.estimatedTimeRemaining) {
-      const minutes = Math.round(this.currentStatus.estimatedTimeRemaining / 6e4);
-      detailsEl.createEl("p", {
-        text: `Estimated Time Remaining: ${minutes} minutes`
-      });
-    }
-    if (this.currentStatus.errors.length > 0) {
-      const errorEl = statusEl.createDiv({ cls: "gw-property-editor" });
-      errorEl.createEl("h4", { text: "Recent Errors", cls: "gw-accordion-title" });
-      const errorList = errorEl.createEl("ul");
-      this.currentStatus.errors.slice(-5).forEach((error) => {
-        errorList.createEl("li", {
-          text: `${error.filePath}: ${error.error}`
-        });
-      });
-    }
-  }
-  /**
-   * Render the processing history
-   */
-  renderProcessingHistory(containerEl) {
-    containerEl.createEl("h3", { text: "Processing History", cls: "gw-accordion-title" });
-    if (this.recentStats.length === 0) {
-      containerEl.createEl("p", {
-        text: "No processing history available yet.",
-        cls: "no-history"
-      });
-      return;
-    }
-    const tableEl = containerEl.createEl("table", { cls: "gw-modal-property-table history-table" });
-    const headerRow = tableEl.createEl("tr");
-    ["Time", "Files", "Success", "Errors", "Duration", "Avg Time"].forEach((header) => {
-      headerRow.createEl("th", { text: header });
-    });
-    this.recentStats.forEach((stat) => {
-      const row = tableEl.createEl("tr");
-      row.createEl("td", {
-        text: new Date(stat.startTime).toLocaleTimeString()
-      });
-      row.createEl("td", {
-        text: `${stat.processedFiles}/${stat.totalFiles}`
-      });
-      row.createEl("td", {
-        text: `${stat.processedFiles - stat.errorFiles}`,
-        cls: "success-count"
-      });
-      row.createEl("td", {
-        text: `${stat.errorFiles}`,
-        cls: stat.errorFiles > 0 ? "error-count" : ""
-      });
-      const duration = stat.endTime ? Math.round((stat.endTime - stat.startTime) / 1e3) : 0;
-      row.createEl("td", {
-        text: `${duration}s`
-      });
-      row.createEl("td", {
-        text: `${Math.round(stat.averageProcessingTime)}ms`
-      });
-    });
-  }
-  onClose() {
-    const { contentEl } = this;
-    contentEl.empty();
-  }
-};
-
-// src/components/status/ProcessingStatusBar.ts
-var ProcessingState2 = /* @__PURE__ */ ((ProcessingState3) => {
-  ProcessingState3["IDLE"] = "idle";
-  ProcessingState3["RUNNING"] = "running";
-  ProcessingState3["ERROR"] = "error";
-  return ProcessingState3;
-})(ProcessingState2 || {});
-var ProcessingStatusBar = class {
-  constructor(app, statusBar, eventEmitter, aiService, settingsService, databaseService, config = {}) {
-    this.app = app;
-    this.statusBar = statusBar;
-    this.eventEmitter = eventEmitter;
-    this.aiService = aiService;
-    this.settingsService = settingsService;
-    this.databaseService = databaseService;
-    this.config = config;
-    this.DEFAULT_CONFIG = {
-      showTooltips: true,
-      updateInterval: 1e3,
-      animationEnabled: true
-    };
-    this.currentState = "idle" /* IDLE */;
-    this.currentStatus = this.getDefaultStatus();
-    this.statusBarItem = this.createStatusBarItem();
-    this.iconContainer = this.createIconContainer();
-    this.initialize();
-  }
-  /**
-   * Initialize the status bar component
-   */
-  initialize() {
-    this.setupEventListeners();
-    this.updateDisplay();
-    this.startPeriodicUpdates();
-  }
-  /**
-   * Create the main status bar item
-   */
-  createStatusBarItem() {
-    const item = this.statusBar.createEl("div", {
-      cls: "processing-status-bar mod-clickable"
-    });
-    if (this.getConfig().showTooltips) {
-      item.setAttribute("aria-label", "Processing Status");
-    }
-    item.addEventListener("click", this.handleClick.bind(this));
-    return item;
-  }
-  /**
-   * Create the icon container
-   */
-  createIconContainer() {
-    return this.statusBarItem.createDiv({
-      cls: "processing-status-icon",
-      attr: {
-        "aria-hidden": "true"
-      }
-    });
-  }
-  /**
-   * Set up all event listeners
-   */
-  setupEventListeners() {
-    this.eventEmitter.on("start", ({ status }) => {
-      if (status) {
-        this.updateStatus("running" /* RUNNING */, status);
-      }
-    });
-    this.eventEmitter.on("complete", async (stats) => {
-      const hasErrors = this.currentStatus.errors.length > 0;
-      this.updateStatus(
-        hasErrors ? "error" /* ERROR */ : "idle" /* IDLE */,
-        this.createCompleteStatus(stats)
-      );
-    });
-    this.eventEmitter.on("progress", (status) => {
-      if (status) {
-        this.updateStatus(this.currentState, status);
-      }
-    });
-    this.eventEmitter.on("error", () => {
-      this.updateStatus("error" /* ERROR */, this.currentStatus);
-    });
-  }
-  /**
-   * Update current status and trigger display update
-   */
-  updateStatus(state, status) {
-    this.currentState = state;
-    this.currentStatus = status;
-    this.updateDisplay();
-  }
-  /**
-   * Update the visual display of the status bar
-   */
-  updateDisplay() {
-    this.updateStateClasses();
-    this.updateIcon();
-    if (this.getConfig().showTooltips) {
-      this.updateTooltip();
-    }
-  }
-  /**
-   * Update the status bar state classes
-   */
-  updateStateClasses() {
-    Object.values(ProcessingState2).forEach((state) => {
-      this.statusBarItem.removeClass(`status-${state}`);
-    });
-    this.statusBarItem.addClass(`status-${this.currentState}`);
-  }
-  /**
-   * Update the status icon
-   */
-  updateIcon() {
-    this.iconContainer.empty();
-    (0, import_obsidian13.setIcon)(this.iconContainer, "loader-2");
-    this.iconContainer.toggleClass(
-      "animated",
-      this.getConfig().animationEnabled && this.currentState === "running" /* RUNNING */
-    );
-  }
-  /**
-   * Update the tooltip text
-   */
-  updateTooltip() {
-    const tooltipText = this.getTooltipText();
-    this.statusBarItem.setAttribute("aria-label", tooltipText);
-    this.statusBarItem.dataset.tooltip = tooltipText;
-  }
-  /**
-   * Get the current tooltip text based on state and status
-   */
-  getTooltipText() {
-    const { filesProcessed, filesQueued } = this.currentStatus;
-    switch (this.currentState) {
-      case "running" /* RUNNING */:
-        return `Processing: ${filesProcessed}/${filesQueued} files`;
-      case "error" /* ERROR */:
-        return `Error: ${this.currentStatus.errors.length} errors occurred`;
-      case "idle" /* IDLE */:
-        return filesProcessed > 0 ? `Complete: ${filesProcessed} files processed` : "Ready";
-      default:
-        return "Unknown status";
-    }
-  }
-  /**
-   * Handle status bar click
-   */
-  async handleClick() {
-    const recentStats = await this.databaseService.getProcessingStats();
-    new StatusHistoryModal(
-      this.app,
-      this.getSafeStatus(),
-      recentStats
-    ).open();
-  }
-  /**
-   * Start periodic status updates
-   */
-  startPeriodicUpdates() {
-    if (this.updateInterval) {
-      clearInterval(this.updateInterval);
-    }
-    this.updateInterval = setInterval(() => {
-      if (this.currentState === "running" /* RUNNING */) {
-        this.updateDisplay();
-      }
-    }, this.getConfig().updateInterval);
-  }
-  /**
-   * Get merged configuration with defaults
-   */
-  getConfig() {
-    return { ...this.DEFAULT_CONFIG, ...this.config };
-  }
-  /**
-   * Get default status object
-   */
-  getDefaultStatus() {
-    return {
-      state: "idle",
-      filesQueued: 0,
-      filesProcessed: 0,
-      filesRemaining: 0,
-      errors: []
-    };
-  }
-  /**
-   * Create status object for completion
-   */
-  createCompleteStatus(stats) {
-    return {
-      state: "idle",
-      filesQueued: stats.totalFiles,
-      filesProcessed: stats.processedFiles,
-      filesRemaining: 0,
-      errors: this.currentStatus.errors || []
-    };
-  }
-  /**
-   * Get safe status object with default values
-   */
-  getSafeStatus() {
-    return {
-      ...this.currentStatus,
-      errors: this.currentStatus.errors || [],
-      filesQueued: this.currentStatus.filesQueued || 0,
-      filesProcessed: this.currentStatus.filesProcessed || 0,
-      filesRemaining: this.currentStatus.filesRemaining || 0,
-      state: this.currentStatus.state || "idle"
-    };
-  }
-  /**
-   * Clean up resources
-   */
-  destroy() {
-    if (this.updateInterval) {
-      clearInterval(this.updateInterval);
-    }
-    this.eventEmitter.removeAllListeners();
-    this.statusBarItem.remove();
+  initializeAdapters() {
+    this.adapters = /* @__PURE__ */ new Map([
+      ["openai" /* OpenAI */, new OpenAIAdapter(this.settingsService, this.jsonValidationService)],
+      ["anthropic" /* Anthropic */, new AnthropicAdapter(this.settingsService, this.jsonValidationService)],
+      ["google" /* Google */, new GeminiAdapter(this.settingsService, this.jsonValidationService)],
+      ["groq" /* Groq */, new GroqAdapter(this.settingsService, this.jsonValidationService)],
+      ["openrouter" /* OpenRouter */, new OpenRouterAdapter(this.settingsService, this.jsonValidationService)],
+      ["lmstudio" /* LMStudio */, new LMStudioAdapter(this.settingsService, this.jsonValidationService)],
+      ["perplexity" /* Perplexity */, new PerplexityAdapter(this.settingsService, this.jsonValidationService)]
+    ]);
   }
 };
 
 // src/settings/GraphWeaverSettingTab.ts
-var import_obsidian26 = require("obsidian");
+var import_obsidian25 = require("obsidian");
 
 // src/components/accordions/ModelHookupAccordion.ts
-var import_obsidian15 = require("obsidian");
+var import_obsidian16 = require("obsidian");
 
 // src/components/accordions/BaseAccordion.ts
-var import_obsidian14 = require("obsidian");
+var import_obsidian15 = require("obsidian");
+var import_events2 = require("events");
 var BaseAccordion = class {
-  constructor(containerEl) {
+  constructor(app, parentEl, settingsService, aiService) {
+    this.app = app;
+    this.parentEl = parentEl;
+    this.settingsService = settingsService;
+    this.aiService = aiService;
     this.isOpen = false;
-    this.containerEl = containerEl;
+    this.eventEmitter = new import_events2.EventEmitter();
+    this.containerEl = parentEl;
   }
   createAccordion(title, description) {
     this.accordionEl = this.containerEl.createDiv({ cls: "gw-accordion" });
@@ -4176,18 +3609,69 @@ var BaseAccordion = class {
     this.toggleIcon.appendChild(iconText);
   }
   createSettingItem(name, desc) {
-    const setting = new import_obsidian14.Setting(this.contentEl);
+    const setting = new import_obsidian15.Setting(this.contentEl);
     setting.setName(name).setDesc(desc);
     setting.settingEl.classList.add("gw-setting-item");
     return setting;
+  }
+  // Add utility methods for creating common setting types
+  createToggleSetting(name, desc, currentValue, onChangePath) {
+    new import_obsidian15.Setting(this.contentEl).setName(name).setDesc(desc).addToggle((toggle) => toggle.setValue(currentValue).onChange(async (value) => {
+      await this.settingsService.updateNestedSetting(
+        onChangePath.section,
+        onChangePath.key,
+        value
+      );
+    }));
+  }
+  createTextSetting(name, desc, placeholder, currentValue, onChangePath) {
+    let textComponent;
+    new import_obsidian15.Setting(this.contentEl).setName(name).setDesc(desc).addText((text) => {
+      textComponent = text;
+      text.setPlaceholder(placeholder).setValue(currentValue).onChange(async (value) => {
+        await this.settingsService.updateNestedSetting(
+          onChangePath.section,
+          onChangePath.key,
+          value
+        );
+      });
+    });
+    return textComponent;
+  }
+  createTextAreaSetting(name, desc, placeholder, currentValue, rows = 4) {
+    let textAreaComponent;
+    new import_obsidian15.Setting(this.contentEl).setName(name).setDesc(desc).addTextArea((text) => {
+      textAreaComponent = text;
+      text.setPlaceholder(placeholder).setValue(currentValue);
+      text.inputEl.rows = rows;
+    });
+    return textAreaComponent;
+  }
+  createButton(name, desc, buttonText, onClick, setCta = false) {
+    let buttonComponent;
+    new import_obsidian15.Setting(this.contentEl).setName(name).setDesc(desc).addButton((button) => {
+      buttonComponent = button;
+      button.setButtonText(buttonText);
+      if (setCta)
+        button.setCta();
+      button.onClick(onClick);
+    });
+    return buttonComponent;
+  }
+  showNotice(message) {
+    new import_obsidian15.Notice(message);
+  }
+  emitEvent(type, data) {
+    this.eventEmitter.emit(type, data);
   }
 };
 
 // src/components/accordions/ModelHookupAccordion.ts
 var ModelHookupAccordion = class extends BaseAccordion {
   constructor(app, containerEl, settingsService, aiService) {
-    super(containerEl);
+    super(app, containerEl, settingsService, aiService);
     this.app = app;
+    this.containerEl = containerEl;
     this.settingsService = settingsService;
     this.aiService = aiService;
   }
@@ -4202,7 +3686,7 @@ var ModelHookupAccordion = class extends BaseAccordion {
   }
   createProviderDropdown(containerEl) {
     const settings = this.settingsService.getSettings();
-    new import_obsidian15.Setting(containerEl).setName("AI Provider").setDesc("Select the AI provider to use").addDropdown((dropdown) => {
+    new import_obsidian16.Setting(containerEl).setName("AI Provider").setDesc("Select the AI provider to use").addDropdown((dropdown) => {
       this.providerDropdown = dropdown;
       Object.values(AIProvider).forEach((provider) => {
         dropdown.addOption(provider, this.getFormattedProviderName(provider));
@@ -4235,18 +3719,19 @@ var ModelHookupAccordion = class extends BaseAccordion {
   }
   createApiKeyInput(containerEl, provider) {
     const settings = this.settingsService.getSettings();
-    new import_obsidian15.Setting(containerEl).setName("API Key").setDesc(`Enter your API key for ${this.getFormattedProviderName(provider)}`).addText((text) => {
+    new import_obsidian16.Setting(containerEl).setName("API Key").setDesc(`Enter your API key for ${this.getFormattedProviderName(provider)}`).addText((text) => {
       text.setPlaceholder("Enter API Key").setValue(settings.aiProvider.apiKeys[provider] || "").onChange(async (value) => {
         const currentApiKeys = this.settingsService.getNestedSetting("aiProvider", "apiKeys");
         const updatedApiKeys = { ...currentApiKeys, [provider]: value };
         await this.settingsService.updateNestedSetting("aiProvider", "apiKeys", updatedApiKeys);
         this.aiService.reinitialize();
       });
+      text.inputEl.type = "password";
     });
   }
   createPortInput(containerEl) {
     const settings = this.settingsService.getSettings();
-    new import_obsidian15.Setting(containerEl).setName("LM Studio Port").setDesc("Enter the port number for your local LM Studio instance").addText((text) => {
+    new import_obsidian16.Setting(containerEl).setName("LM Studio Port").setDesc("Enter the port number for your local LM Studio instance").addText((text) => {
       text.setPlaceholder("Enter port number").setValue(settings.localLMStudio.port.toString()).onChange(async (value) => {
         const port = parseInt(value, 10);
         if (!isNaN(port)) {
@@ -4258,7 +3743,7 @@ var ModelHookupAccordion = class extends BaseAccordion {
   }
   createModelNameInput(containerEl) {
     const settings = this.settingsService.getSettings();
-    new import_obsidian15.Setting(containerEl).setName("Model Name").setDesc("Enter the name of the local model you want to use").addText((text) => {
+    new import_obsidian16.Setting(containerEl).setName("Model Name").setDesc("Enter the name of the local model you want to use").addText((text) => {
       text.setPlaceholder("Enter model name").setValue(settings.localLMStudio.modelName).onChange(async (value) => {
         await this.settingsService.updateNestedSetting("localLMStudio", "modelName", value);
         await this.settingsService.updateNestedSetting("aiProvider", "selectedModels", {
@@ -4272,7 +3757,7 @@ var ModelHookupAccordion = class extends BaseAccordion {
   createModelDropdown(containerEl, provider) {
     const settings = this.settingsService.getSettings();
     const models = AIModelMap[provider];
-    new import_obsidian15.Setting(containerEl).setName("Model").setDesc(`Select the AI model for ${this.getFormattedProviderName(provider)}`).addDropdown((dropdown) => {
+    new import_obsidian16.Setting(containerEl).setName("Model").setDesc(`Select the AI model for ${this.getFormattedProviderName(provider)}`).addDropdown((dropdown) => {
       var _a;
       models.forEach((model) => {
         dropdown.addOption(model.apiName, model.name);
@@ -4282,11 +3767,57 @@ var ModelHookupAccordion = class extends BaseAccordion {
         const currentSelectedModels = this.settingsService.getNestedSetting("aiProvider", "selectedModels");
         const updatedSelectedModels = { ...currentSelectedModels, [provider]: value };
         await this.settingsService.updateNestedSetting("aiProvider", "selectedModels", updatedSelectedModels);
+        this.renderModelSettings(containerEl, value);
+      });
+      this.renderModelSettings(containerEl, currentModel);
+    });
+  }
+  renderModelSettings(containerEl, modelApiName) {
+    var _a, _b;
+    const settings = this.settingsService.getSettings();
+    const model = AIModelUtils.getModelByApiName(modelApiName);
+    const modelConfigs = settings.aiProvider.modelConfigs;
+    const modelConfig = (modelConfigs || {})[modelApiName] || {
+      temperature: 0.7,
+      maxTokens: ((_a = model == null ? void 0 : model.capabilities) == null ? void 0 : _a.maxTokens) || 4096
+    };
+    new import_obsidian16.Setting(containerEl).setName("Temperature").setDesc("Controls randomness in responses (0.0-1.0)").addSlider((slider) => {
+      slider.setLimits(0, 1, 0.1).setValue(modelConfig.temperature).onChange(async (value) => {
+        await this.updateModelConfig(modelApiName, "temperature", value);
+      });
+    }).addText((text) => {
+      text.setPlaceholder("0.0-1.0").setValue(modelConfig.temperature.toString()).onChange(async (value) => {
+        const temp = parseFloat(value);
+        if (!isNaN(temp) && temp >= 0 && temp <= 1) {
+          await this.updateModelConfig(modelApiName, "temperature", temp);
+        }
+      });
+    });
+    new import_obsidian16.Setting(containerEl).setName("Max Tokens").setDesc(`Maximum response length (max: ${((_b = model == null ? void 0 : model.capabilities) == null ? void 0 : _b.maxTokens) || "unknown"})`).addText((text) => {
+      text.setPlaceholder("Enter max tokens").setValue(modelConfig.maxTokens.toString()).onChange(async (value) => {
+        const tokens = parseInt(value);
+        if (!isNaN(tokens) && tokens > 0) {
+          await this.updateModelConfig(modelApiName, "maxTokens", tokens);
+        }
       });
     });
   }
+  async updateModelConfig(modelApiName, key, value) {
+    const settings = this.settingsService.getSettings();
+    const modelConfigs = settings.aiProvider.modelConfigs;
+    const currentConfigs = modelConfigs || {};
+    const modelConfig = currentConfigs[modelApiName] || { temperature: 0.7, maxTokens: 4096 };
+    const updatedConfigs = {
+      ...currentConfigs,
+      [modelApiName]: {
+        ...modelConfig,
+        [key]: value
+      }
+    };
+    await this.settingsService.updateNestedSetting("aiProvider", "modelConfigs", updatedConfigs);
+  }
   createTestButton(containerEl, provider) {
-    new import_obsidian15.Setting(containerEl).addButton((button) => {
+    new import_obsidian16.Setting(containerEl).addButton((button) => {
       button.setButtonText("Test Connection").onClick(async () => {
         button.setDisabled(true);
         button.setButtonText("Testing...");
@@ -4294,9 +3825,9 @@ var ModelHookupAccordion = class extends BaseAccordion {
         button.setDisabled(false);
         button.setButtonText("Test Connection");
         if (result) {
-          new import_obsidian15.Notice(`Successfully connected to ${this.getFormattedProviderName(provider)}`);
+          new import_obsidian16.Notice(`Successfully connected to ${this.getFormattedProviderName(provider)}`);
         } else {
-          new import_obsidian15.Notice(`Failed to connect to ${this.getFormattedProviderName(provider)}. Please check your settings and try again.`);
+          new import_obsidian16.Notice(`Failed to connect to ${this.getFormattedProviderName(provider)}. Please check your settings and try again.`);
         }
       });
     });
@@ -4322,7 +3853,9 @@ var ModelHookupAccordion = class extends BaseAccordion {
       ["google" /* Google */]: "https://aistudio.google.com/apikey",
       ["groq" /* Groq */]: "https://console.groq.com/keys",
       ["openrouter" /* OpenRouter */]: "https://openrouter.ai/settings/keys",
-      ["lmstudio" /* LMStudio */]: "https://lmstudio.ai/docs/basics/server"
+      ["lmstudio" /* LMStudio */]: "https://lmstudio.ai/docs/basics/server",
+      ["perplexity" /* Perplexity */]: "https://docs.perplexity.ai/guides/getting-started"
+      // Add Perplexity link
     };
     return websiteMap[provider] || "#";
   }
@@ -4333,18 +3866,19 @@ var ModelHookupAccordion = class extends BaseAccordion {
       ["google" /* Google */]: "Google Gemini",
       ["groq" /* Groq */]: "Groq",
       ["openrouter" /* OpenRouter */]: "OpenRouter",
-      ["lmstudio" /* LMStudio */]: "LM Studio"
+      ["lmstudio" /* LMStudio */]: "LM Studio",
+      ["perplexity" /* Perplexity */]: "Perplexity"
     };
     return formattedNames[provider] || provider;
   }
 };
 
 // src/components/accordions/PropertyManagerAccordion.ts
-var import_obsidian17 = require("obsidian");
+var import_obsidian18 = require("obsidian");
 
 // src/components/modals/EditPropertiesModal.ts
-var import_obsidian16 = require("obsidian");
-var EditPropertiesModal = class extends import_obsidian16.Modal {
+var import_obsidian17 = require("obsidian");
+var EditPropertiesModal = class extends import_obsidian17.Modal {
   constructor(app, properties, onSubmit) {
     super(app);
     this.properties = [...properties];
@@ -4358,7 +3892,7 @@ var EditPropertiesModal = class extends import_obsidian16.Modal {
     this.propertyListEl = contentEl.createDiv({ cls: "gw-modal-property-list" });
     this.renderPropertyList();
     const buttonContainer = contentEl.createDiv({ cls: "gw-modal-button-container" });
-    new import_obsidian16.Setting(buttonContainer).addButton((btn) => btn.setButtonText("Delete Selected").setWarning().onClick(() => this.deleteSelectedProperties())).addButton((btn) => btn.setButtonText("Save").setCta().onClick(() => {
+    new import_obsidian17.Setting(buttonContainer).addButton((btn) => btn.setButtonText("Delete Selected").setWarning().onClick(() => this.deleteSelectedProperties())).addButton((btn) => btn.setButtonText("Save").setCta().onClick(() => {
       this.onSubmit(this.properties);
       this.close();
     })).addButton((btn) => btn.setButtonText("Cancel").onClick(() => this.close()));
@@ -4405,14 +3939,14 @@ var EditPropertiesModal = class extends import_obsidian16.Modal {
   }
   createEditableCell(row, property, field, index) {
     const cell = row.createEl("td");
-    const input = new import_obsidian16.TextComponent(cell);
+    const input = new import_obsidian17.TextComponent(cell);
     input.setValue(property[field]).onChange((value) => {
       this.properties[index][field] = value;
     });
   }
   createTypeDropdown(row, property, index) {
     const cell = row.createEl("td");
-    const dropdown = new import_obsidian16.DropdownComponent(cell);
+    const dropdown = new import_obsidian17.DropdownComponent(cell);
     const types = ["string", "number", "boolean", "array", "date"];
     types.forEach((type) => {
       dropdown.addOption(type, type);
@@ -4458,8 +3992,9 @@ var EditPropertiesModal = class extends import_obsidian16.Modal {
 // src/components/accordions/PropertyManagerAccordion.ts
 var PropertyManagerAccordion = class extends BaseAccordion {
   constructor(app, containerEl, settingsService, aiService) {
-    super(containerEl);
+    super(app, containerEl, settingsService, aiService);
     this.app = app;
+    this.containerEl = containerEl;
     this.settingsService = settingsService;
     this.aiService = aiService;
   }
@@ -4472,47 +4007,67 @@ var PropertyManagerAccordion = class extends BaseAccordion {
     this.createButtonRow(contentEl);
   }
   createPropertyEditor(containerEl) {
-    const editorContainer = containerEl.createDiv({ cls: "gw-property-editor" });
-    new import_obsidian17.Setting(editorContainer).setName("Property Name").addText((text) => {
-      this.nameInput = text;
-      text.setPlaceholder("Enter property name");
-    });
-    new import_obsidian17.Setting(editorContainer).setName("Property Description").addTextArea((textarea) => {
-      this.descriptionInput = textarea;
-      textarea.setPlaceholder("Enter property description");
-    });
-    new import_obsidian17.Setting(editorContainer).setName("Property Type").addDropdown((dropdown) => {
+    const settings = this.settingsService.getSettings();
+    this.nameInput = this.createTextSetting(
+      "Property Name",
+      "Enter a unique name for this property",
+      "Enter property name",
+      "",
+      {
+        section: "frontMatter",
+        key: "customProperties",
+        value: settings.frontMatter.customProperties
+      }
+    );
+    this.descriptionInput = this.createTextAreaSetting(
+      "Property Description",
+      "Describe the purpose of this property",
+      "Enter property description",
+      ""
+    );
+    new import_obsidian18.Setting(containerEl).setName("Property Type").setDesc("Select the data type for this property").addDropdown((dropdown) => {
       this.typeDropdown = dropdown;
       dropdown.addOption("string", "String").addOption("number", "Number").addOption("boolean", "Boolean").addOption("array", "Array").addOption("date", "Date").setValue("string");
     });
   }
   createButtonRow(containerEl) {
-    const buttonContainer = containerEl.createDiv({ cls: "gw-button-container" });
-    new import_obsidian17.Setting(buttonContainer).addButton((button) => button.setButtonText("Edit Properties").onClick(() => this.openEditModal())).addButton((button) => button.setButtonText("Add Property").setCta().onClick(() => this.addProperty()));
+    this.createButton(
+      "Add Property",
+      "Create a new property",
+      "Add Property",
+      () => this.addProperty(),
+      true
+    );
+    this.createButton(
+      "Edit Properties",
+      "Modify or delete existing properties",
+      "Edit Properties",
+      () => this.openEditModal(),
+      false
+    );
   }
   addProperty() {
+    var _a;
     const name = this.nameInput.getValue().trim();
-    const description = this.descriptionInput.getValue().trim();
+    const description = ((_a = this.descriptionInput.getValue()) == null ? void 0 : _a.trim()) || "";
     const type = this.typeDropdown.getValue();
     if (!name) {
-      new import_obsidian17.Notice("Property name cannot be empty.");
+      this.showNotice("Property name cannot be empty.");
       return;
     }
-    if (!description) {
-      new import_obsidian17.Notice("Property description cannot be empty.");
+    const settings = this.settingsService.getSettings();
+    if (settings.frontMatter.customProperties.some((p) => p.name === name)) {
+      this.showNotice("A property with this name already exists.");
       return;
     }
     const newProperty = {
       name,
       description,
-      type,
-      required: false,
-      multipleValues: false
+      type
     };
-    const settings = this.settingsService.getSettings();
     settings.frontMatter.customProperties.push(newProperty);
     this.settingsService.updateSettings(settings);
-    new import_obsidian17.Notice(`Property "${name}" has been added.`);
+    new import_obsidian18.Notice(`Property "${name}" has been added.`);
     this.nameInput.setValue("");
     this.descriptionInput.setValue("");
     this.typeDropdown.setValue("string");
@@ -4532,11 +4087,11 @@ var PropertyManagerAccordion = class extends BaseAccordion {
 };
 
 // src/components/accordions/TagManagerAccordion.ts
-var import_obsidian19 = require("obsidian");
+var import_obsidian20 = require("obsidian");
 
 // src/components/modals/EditTagsModal.ts
-var import_obsidian18 = require("obsidian");
-var EditTagsModal = class extends import_obsidian18.Modal {
+var import_obsidian19 = require("obsidian");
+var EditTagsModal = class extends import_obsidian19.Modal {
   constructor(app, tags, onSubmit) {
     super(app);
     this.tags = [...tags];
@@ -4550,7 +4105,7 @@ var EditTagsModal = class extends import_obsidian18.Modal {
     this.tagListEl = contentEl.createDiv({ cls: "gw-modal-tag-list" });
     this.renderTagList();
     const buttonContainer = contentEl.createDiv({ cls: "gw-modal-button-container" });
-    new import_obsidian18.Setting(buttonContainer).addButton((btn) => btn.setButtonText("Delete Selected").setWarning().onClick(() => this.deleteSelectedTags())).addButton((btn) => btn.setButtonText("Save").setCta().onClick(() => {
+    new import_obsidian19.Setting(buttonContainer).addButton((btn) => btn.setButtonText("Delete Selected").setWarning().onClick(() => this.deleteSelectedTags())).addButton((btn) => btn.setButtonText("Save").setCta().onClick(() => {
       this.onSubmit(this.tags);
       this.close();
     })).addButton((btn) => btn.setButtonText("Cancel").onClick(() => this.close()));
@@ -4590,7 +4145,7 @@ var EditTagsModal = class extends import_obsidian18.Modal {
   }
   createEditableCell(row, tag, field, index) {
     const cell = row.createEl("td");
-    const input = field === "name" ? new import_obsidian18.TextComponent(cell) : new import_obsidian18.TextAreaComponent(cell);
+    const input = field === "name" ? new import_obsidian19.TextComponent(cell) : new import_obsidian19.TextAreaComponent(cell);
     input.setValue(tag[field]).onChange((value) => {
       this.tags[index][field] = value;
     });
@@ -4613,8 +4168,9 @@ var EditTagsModal = class extends import_obsidian18.Modal {
 // src/components/accordions/TagManagerAccordion.ts
 var TagManagerAccordion = class extends BaseAccordion {
   constructor(app, containerEl, settingsService, aiService) {
-    super(containerEl);
+    super(app, containerEl, settingsService, aiService);
     this.app = app;
+    this.containerEl = containerEl;
     this.settingsService = settingsService;
     this.aiService = aiService;
   }
@@ -4627,38 +4183,62 @@ var TagManagerAccordion = class extends BaseAccordion {
     this.createButtonRow(contentEl);
   }
   createTagEditor(containerEl) {
-    const editorContainer = containerEl.createDiv({ cls: "gw-tag-editor" });
-    new import_obsidian19.Setting(editorContainer).setName("Tag Name").addText((text) => {
-      this.nameInput = text;
-      text.setPlaceholder("Enter tag name");
-    });
-    new import_obsidian19.Setting(editorContainer).setName("Tag Description").addTextArea((textarea) => {
-      this.descriptionInput = textarea;
-      textarea.setPlaceholder("Enter tag description");
-    });
+    const settings = this.settingsService.getSettings();
+    this.nameInput = this.createTextSetting(
+      "Tag Name",
+      "Enter a unique name for this tag",
+      "Enter tag name",
+      "",
+      {
+        section: "tags",
+        key: "customTags",
+        value: settings.tags.customTags
+      }
+    );
+    this.descriptionInput = this.createTextAreaSetting(
+      "Tag Description",
+      "Describe the purpose of this tag",
+      "Enter tag description",
+      ""
+    );
   }
   createButtonRow(containerEl) {
-    const buttonContainer = containerEl.createDiv({ cls: "gw-button-container" });
-    new import_obsidian19.Setting(buttonContainer).addButton((button) => button.setButtonText("Edit Tags").onClick(() => this.openEditModal())).addButton((button) => button.setButtonText("Add Tag").setCta().onClick(() => this.addTag()));
+    this.createButton(
+      "Add Tag",
+      "Create a new tag",
+      "Add Tag",
+      () => this.addTag(),
+      true
+    );
+    this.createButton(
+      "Edit Tags",
+      "Modify or delete existing tags",
+      "Edit Tags",
+      () => this.openEditModal(),
+      false
+    );
   }
   addTag() {
+    var _a;
     const name = this.nameInput.getValue().trim();
-    const description = this.descriptionInput.getValue().trim();
+    const description = ((_a = this.descriptionInput.getValue()) == null ? void 0 : _a.trim()) || "";
     if (!name) {
-      new import_obsidian19.Notice("Tag name cannot be empty.");
+      this.showNotice("Tag name cannot be empty.");
+      return;
+    }
+    const settings = this.settingsService.getSettings();
+    if (settings.tags.customTags.some((t) => t.name === name)) {
+      this.showNotice("A tag with this name already exists.");
       return;
     }
     const newTag = {
       name,
       description,
-      type: "string",
-      required: false,
-      multipleValues: false
+      type: "string"
     };
-    const settings = this.settingsService.getSettings();
     settings.tags.customTags.push(newTag);
     this.settingsService.updateSettings(settings);
-    new import_obsidian19.Notice(`Tag "${name}" has been added.`);
+    new import_obsidian20.Notice(`Tag "${name}" has been added.`);
     this.nameInput.setValue("");
     this.descriptionInput.setValue("");
   }
@@ -4677,11 +4257,11 @@ var TagManagerAccordion = class extends BaseAccordion {
 };
 
 // src/components/accordions/OntologyGenerationAccordion.ts
-var import_obsidian21 = require("obsidian");
+var import_obsidian22 = require("obsidian");
 
 // src/components/modals/OntologyGeneratorModal.ts
-var import_obsidian20 = require("obsidian");
-var OntologyGeneratorModal = class extends import_obsidian20.Modal {
+var import_obsidian21 = require("obsidian");
+var OntologyGeneratorModal = class extends import_obsidian21.Modal {
   constructor(app, aiService, onGenerate) {
     super(app);
     this.aiService = aiService;
@@ -4705,7 +4285,7 @@ var OntologyGeneratorModal = class extends import_obsidian20.Modal {
   }
   async loadVaultStats() {
     this.vaultStats.files = this.app.vault.getMarkdownFiles();
-    this.vaultStats.folders = this.app.vault.getAllLoadedFiles().filter((file) => file instanceof import_obsidian20.TFolder);
+    this.vaultStats.folders = this.app.vault.getAllLoadedFiles().filter((file) => file instanceof import_obsidian21.TFolder);
     this.vaultStats.tags = await this.getAllTags(this.vaultStats.files);
   }
   async getAllTags(files) {
@@ -4738,7 +4318,7 @@ var OntologyGeneratorModal = class extends import_obsidian20.Modal {
     listEl.createEl("li", { text: `Tags: ${this.vaultStats.tags.length}` });
   }
   renderModelSelection() {
-    const modelSetting = new import_obsidian20.Setting(this.contentEl).setName("AI Model").setDesc("Select the AI model to use for ontology generation");
+    const modelSetting = new import_obsidian21.Setting(this.contentEl).setName("AI Model").setDesc("Select the AI model to use for ontology generation");
     if (this.availableModels.length === 0) {
       modelSetting.setDesc("No AI models available. Please add API keys in the API Integration settings.");
       return;
@@ -4756,7 +4336,7 @@ var OntologyGeneratorModal = class extends import_obsidian20.Modal {
     });
   }
   renderUserContextInput() {
-    const contextSetting = new import_obsidian20.Setting(this.contentEl).setName("Additional Context").setDesc("Provide any additional context or information about your knowledge base that might help in generating a more accurate ontology.").addTextArea((text) => {
+    const contextSetting = new import_obsidian21.Setting(this.contentEl).setName("Additional Context").setDesc("Provide any additional context or information about your knowledge base that might help in generating a more accurate ontology.").addTextArea((text) => {
       this.userContextInput = text;
       text.inputEl.rows = 4;
       text.inputEl.cols = 50;
@@ -4778,18 +4358,18 @@ var OntologyGeneratorModal = class extends import_obsidian20.Modal {
   }
   renderButtons() {
     const buttonContainer = this.contentEl.createDiv("button-container");
-    this.generateButton = new import_obsidian20.ButtonComponent(buttonContainer).setButtonText("Generate Ontology").setCta().setDisabled(this.availableModels.length === 0).onClick(() => this.generateOntology());
-    new import_obsidian20.ButtonComponent(buttonContainer).setButtonText("Cancel").onClick(() => this.close());
+    this.generateButton = new import_obsidian21.ButtonComponent(buttonContainer).setButtonText("Generate Ontology").setCta().setDisabled(this.availableModels.length === 0).onClick(() => this.handleOntologyGeneration());
+    new import_obsidian21.ButtonComponent(buttonContainer).setButtonText("Cancel").onClick(() => this.close());
   }
-  async generateOntology() {
+  async handleOntologyGeneration() {
     const modelValue = this.modelSelect.getValue();
     if (!modelValue) {
-      new import_obsidian20.Notice("Please select an AI model first.");
+      new import_obsidian21.Notice("Please select an AI model first.");
       return;
     }
     const [provider, modelApiName] = modelValue.split(":");
     this.generateButton.setDisabled(true);
-    const loadingNotice = new import_obsidian20.Notice("Generating ontology...", 0);
+    const loadingNotice = new import_obsidian21.Notice("Generating ontology...", 0);
     try {
       const input = {
         ...this.vaultStats,
@@ -4800,13 +4380,13 @@ var OntologyGeneratorModal = class extends import_obsidian20.Modal {
       const ontology = await this.aiService.generateOntology(input);
       await this.aiService.updateTags(ontology.suggestedTags);
       loadingNotice.hide();
-      new import_obsidian20.Notice("Ontology generated and tags updated successfully!", 3e3);
+      new import_obsidian21.Notice("Ontology generated and tags updated successfully!", 3e3);
       this.onGenerate(ontology);
       this.close();
     } catch (error) {
       console.error("Error generating ontology:", error);
       loadingNotice.hide();
-      new import_obsidian20.Notice(`Failed to generate ontology: ${error.message}`, 5e3);
+      new import_obsidian21.Notice(`Failed to generate ontology: ${error.message}`, 5e3);
     } finally {
       this.generateButton.setDisabled(false);
     }
@@ -4824,10 +4404,7 @@ var OntologyGeneratorModal = class extends import_obsidian20.Modal {
 // src/components/accordions/OntologyGenerationAccordion.ts
 var OntologyGenerationAccordion = class extends BaseAccordion {
   constructor(app, containerEl, settingsService, aiService) {
-    super(containerEl);
-    this.app = app;
-    this.settingsService = settingsService;
-    this.aiService = aiService;
+    super(app, containerEl, settingsService, aiService);
   }
   render() {
     const contentEl = this.createAccordion(
@@ -4851,10 +4428,13 @@ var OntologyGenerationAccordion = class extends BaseAccordion {
     });
   }
   createGenerateButton(containerEl) {
-    new import_obsidian21.Setting(containerEl).addButton((button) => this.setupGenerateButton(button));
-  }
-  setupGenerateButton(button) {
-    button.setButtonText("Generate Ontology").setCta().onClick(() => this.openGeneratorModal());
+    this.createButton(
+      "",
+      "",
+      "Generate Ontology",
+      () => this.openGeneratorModal(),
+      true
+    );
   }
   openGeneratorModal() {
     new OntologyGeneratorModal(
@@ -4874,16 +4454,13 @@ var OntologyGenerationAccordion = class extends BaseAccordion {
       }
     };
     await this.settingsService.updateSettings(updatedSettings);
-    new import_obsidian21.Notice("Ontology has been successfully generated and saved to your settings.");
+    new import_obsidian22.Notice("Ontology has been successfully generated and saved to your settings.");
   }
 };
 
-// src/components/accordions/BatchProcessorAccordion.ts
-var import_obsidian23 = require("obsidian");
-
 // src/components/modals/BatchProcessorModal.ts
-var import_obsidian22 = require("obsidian");
-var BatchProcessorModal = class extends import_obsidian22.Modal {
+var import_obsidian23 = require("obsidian");
+var BatchProcessorModal = class extends import_obsidian23.Modal {
   constructor(app, aiService, settingsService) {
     super(app);
     this.aiService = aiService;
@@ -4906,9 +4483,9 @@ var BatchProcessorModal = class extends import_obsidian22.Modal {
   renderVaultStructure(containerEl) {
     const rootFolder = this.app.vault.getRoot();
     rootFolder.children.forEach((child) => {
-      if (child instanceof import_obsidian22.TFolder) {
+      if (child instanceof import_obsidian23.TFolder) {
         this.renderFolder(containerEl, child);
-      } else if (child instanceof import_obsidian22.TFile) {
+      } else if (child instanceof import_obsidian23.TFile) {
         containerEl.appendChild(this.createFileElement(child));
       }
     });
@@ -4918,17 +4495,19 @@ var BatchProcessorModal = class extends import_obsidian22.Modal {
     containerEl.appendChild(folderEl);
     const contentEl = folderEl.querySelector(".folder-content");
     folder.children.forEach((child) => {
-      if (child instanceof import_obsidian22.TFolder) {
+      if (child instanceof import_obsidian23.TFolder) {
         this.renderFolder(contentEl, child);
-      } else if (child instanceof import_obsidian22.TFile) {
+      } else if (child instanceof import_obsidian23.TFile) {
         contentEl.appendChild(this.createFileElement(child));
       }
     });
   }
   createFolderElement(folder) {
     const folderEl = document.createElement("div");
-    folderEl.className = "folder";
+    folderEl.className = "folder collapsed";
     const nameEl = folderEl.createDiv({ cls: "folder-name" });
+    const arrowIcon = nameEl.createSpan({ cls: "collapse-icon" });
+    arrowIcon.innerHTML = "\u25B8";
     nameEl.createSpan({ cls: "icon folder-icon", text: "\u{1F4C1}" });
     const checkbox = nameEl.createEl("input", { type: "checkbox" });
     checkbox.className = "folder-checkbox";
@@ -4937,10 +4516,19 @@ var BatchProcessorModal = class extends import_obsidian22.Modal {
     folderEl.setAttribute("data-path", folder.path);
     nameEl.addEventListener("click", (e) => {
       if (e.target !== checkbox) {
-        folderEl.classList.toggle("open");
+        folderEl.classList.toggle("collapsed");
+        arrowIcon.innerHTML = folderEl.classList.contains("collapsed") ? "\u25B8" : "\u25BE";
       }
     });
-    checkbox.addEventListener("change", () => this.handleFolderCheckboxChange(checkbox));
+    checkbox.addEventListener("change", () => {
+      this.handleFolderCheckboxChange(checkbox);
+      const isChecked = checkbox.checked;
+      const childCheckboxes = contentEl.querySelectorAll("input[type='checkbox']");
+      childCheckboxes.forEach((childBox) => {
+        childBox.checked = isChecked;
+        childBox.indeterminate = false;
+      });
+    });
     return folderEl;
   }
   createFileElement(file) {
@@ -4989,7 +4577,7 @@ var BatchProcessorModal = class extends import_obsidian22.Modal {
   async confirmUpdate() {
     const selectedPaths = this.getSelectedPaths();
     if (selectedPaths.length === 0) {
-      new import_obsidian22.Notice("No files selected for processing. Please select files or folders to update.");
+      new import_obsidian23.Notice("No files selected for processing. Please select files or folders to update.");
       return;
     }
     this.close();
@@ -5013,11 +4601,11 @@ var BatchProcessorModal = class extends import_obsidian22.Modal {
     const totalFiles = selectedPaths.length;
     let updatedCount = 0;
     let errorCount = 0;
-    const progressNotice = new import_obsidian22.Notice(`Processing 0/${totalFiles} files...`, 0);
+    const progressNotice = new import_obsidian23.Notice(`Processing 0/${totalFiles} files...`, 0);
     for (const path of selectedPaths) {
       try {
         const file = this.app.vault.getAbstractFileByPath(path);
-        if (file instanceof import_obsidian22.TFile) {
+        if (file instanceof import_obsidian23.TFile) {
           await this.updateFile(file);
           updatedCount++;
           progressNotice.setMessage(`Processing ${updatedCount}/${totalFiles} files...`);
@@ -5032,7 +4620,7 @@ var BatchProcessorModal = class extends import_obsidian22.Modal {
     if (errorCount > 0) {
       message += ` Encountered errors in ${errorCount} file${errorCount !== 1 ? "s" : ""}.`;
     }
-    new import_obsidian22.Notice(message, 5e3);
+    new import_obsidian23.Notice(message, 5e3);
   }
   async updateFile(file) {
     const content = await this.app.vault.read(file);
@@ -5043,13 +4631,11 @@ var BatchProcessorModal = class extends import_obsidian22.Modal {
     console.log("BatchProcessorModal: Starting content processing");
     let processedContent = content;
     console.log("BatchProcessorModal: Generating front matter");
-    const frontMatter = await this.aiService.generateFrontMatter(processedContent);
-    processedContent = this.addOrUpdateFrontMatter(processedContent, frontMatter);
-    const settings = this.settingsService.getSettings();
-    if (settings.advanced.generateWikilinks) {
-      console.log("BatchProcessorModal: Generating wikilinks");
-      processedContent = await this.aiService.generateWikilinks(processedContent);
+    const frontMatterOutput = await this.aiService.generateFrontMatter(processedContent);
+    if (frontMatterOutput.success && frontMatterOutput.frontMatter) {
+      processedContent = this.addOrUpdateFrontMatter(processedContent, frontMatterOutput.frontMatter);
     }
+    const settings = this.settingsService.getSettings();
     return processedContent;
   }
   addOrUpdateFrontMatter(content, newFrontMatter) {
@@ -5069,10 +4655,7 @@ ${content}`;
 // src/components/accordions/BatchProcessorAccordion.ts
 var BatchProcessorAccordion = class extends BaseAccordion {
   constructor(app, containerEl, settingsService, aiService) {
-    super(containerEl);
-    this.app = app;
-    this.settingsService = settingsService;
-    this.aiService = aiService;
+    super(app, containerEl, settingsService, aiService);
   }
   render() {
     const contentEl = this.createAccordion(
@@ -5083,80 +4666,37 @@ var BatchProcessorAccordion = class extends BaseAccordion {
     this.createRunBatchProcessorButton(contentEl);
   }
   createAutoGenerateToggle(containerEl) {
-    new import_obsidian23.Setting(containerEl).setName("Auto-generate Front Matter").setDesc("Automatically generate front matter for new or unprocessed notes when you open your vault.").addToggle((toggle) => this.setupAutoGenerateToggle(toggle));
-  }
-  setupAutoGenerateToggle(toggle) {
     const settings = this.settingsService.getSettings();
-    toggle.setValue(settings.frontMatter.autoGenerate).onChange(async (value) => {
-      await this.settingsService.updateNestedSetting("frontMatter", "autoGenerate", value);
-    });
+    this.createToggleSetting(
+      "Auto-generate Front Matter",
+      "Automatically generate front matter for new or unprocessed notes when you open your vault.",
+      settings.frontMatter.autoGenerate,
+      {
+        section: "frontMatter",
+        key: "autoGenerate",
+        value: settings.frontMatter.autoGenerate
+      }
+    );
   }
   createRunBatchProcessorButton(containerEl) {
-    new import_obsidian23.Setting(containerEl).setName("Run Batch Processor").setDesc("Manually process multiple files to generate front matter and wikilinks.").addButton((button) => this.setupRunBatchProcessorButton(button));
-  }
-  setupRunBatchProcessorButton(button) {
-    button.setButtonText("Run Batch Processor").setCta().onClick(() => {
-      const modal = new BatchProcessorModal(this.app, this.aiService, this.settingsService);
-      modal.open();
-    });
-  }
-};
-
-// src/components/accordions/AdvancedAccordion.ts
-var import_obsidian24 = require("obsidian");
-var AdvancedAccordion = class extends BaseAccordion {
-  constructor(app, containerEl, settingsService, aiService) {
-    super(containerEl);
-    this.app = app;
-    this.settingsService = settingsService;
-    this.aiService = aiService;
-  }
-  render() {
-    const contentEl = this.createAccordion(
-      "\u2699\uFE0F Advanced",
-      "Configuration options for the plugin."
+    this.createButton(
+      "Run Batch Processor",
+      "Manually process multiple files to generate front matter and wikilinks.",
+      "Run Batch Processor",
+      () => {
+        const modal = new BatchProcessorModal(this.app, this.aiService, this.settingsService);
+        modal.open();
+      },
+      true
     );
-    this.createWikilinksToggle(contentEl);
-    this.createAIParameterOverrides(contentEl);
-  }
-  createWikilinksToggle(containerEl) {
-    new import_obsidian24.Setting(containerEl).setName("Generate Wikilinks").addToggle((toggle) => this.setupWikilinksToggle(toggle));
-  }
-  createAIParameterOverrides(containerEl) {
-    new import_obsidian24.Setting(containerEl).setName("Temperature").addText((text) => this.setupTemperatureOverride(text));
-    new import_obsidian24.Setting(containerEl).setName("Max Tokens").addText((text) => this.setupMaxTokensOverride(text));
-  }
-  setupWikilinksToggle(toggle) {
-    const settings = this.settingsService.getSettings();
-    toggle.setValue(settings.advanced.generateWikilinks).onChange(async (value) => {
-      await this.settingsService.updateNestedSetting("advanced", "generateWikilinks", value);
-    });
-  }
-  setupTemperatureOverride(text) {
-    const settings = this.settingsService.getSettings();
-    text.setPlaceholder("0.0 - 1.0").setValue(settings.advanced.temperature.toString()).onChange(async (value) => {
-      const temp = parseFloat(value);
-      if (!isNaN(temp) && temp >= 0 && temp <= 1) {
-        await this.settingsService.updateNestedSetting("advanced", "temperature", temp);
-      }
-    });
-  }
-  setupMaxTokensOverride(text) {
-    const settings = this.settingsService.getSettings();
-    text.setPlaceholder("Enter max tokens").setValue(settings.advanced.maxTokens.toString()).onChange(async (value) => {
-      const tokens = parseInt(value);
-      if (!isNaN(tokens) && tokens > 0) {
-        await this.settingsService.updateNestedSetting("advanced", "maxTokens", tokens);
-      }
-    });
   }
 };
 
 // src/components/accordions/KnowledgeBloomAccordion.ts
-var import_obsidian25 = require("obsidian");
+var import_obsidian24 = require("obsidian");
 var KnowledgeBloomAccordion = class extends BaseAccordion {
   constructor(app, containerEl, settingsService, aiService) {
-    super(containerEl);
+    super(app, containerEl, settingsService, aiService);
     this.app = app;
     this.settingsService = settingsService;
     this.aiService = aiService;
@@ -5187,7 +4727,7 @@ var KnowledgeBloomAccordion = class extends BaseAccordion {
   }
   createModelSelector(containerEl) {
     const selectorEl = containerEl.createDiv({ cls: "knowledge-bloom-model-selector" });
-    new import_obsidian25.Setting(selectorEl).setName("AI Model").setDesc("Select the AI model to use for Knowledge Bloom").addDropdown((dropdown) => {
+    new import_obsidian24.Setting(selectorEl).setName("AI Model").setDesc("Select the AI model to use for Knowledge Bloom").addDropdown((dropdown) => {
       this.modelSelector = dropdown;
       this.updateModelOptions();
       dropdown.onChange(async (value) => {
@@ -5213,7 +4753,7 @@ var KnowledgeBloomAccordion = class extends BaseAccordion {
   }
   createUserPromptInput(containerEl) {
     const promptEl = containerEl.createDiv({ cls: "knowledge-bloom-prompt" });
-    new import_obsidian25.Setting(promptEl).setName("Additional Context").setDesc("Provide any additional context or instructions for note generation (optional)").addTextArea((text) => {
+    new import_obsidian24.Setting(promptEl).setName("Additional Context").setDesc("Provide any additional context or instructions for note generation (optional)").addTextArea((text) => {
       this.userPromptInput = text;
       text.inputEl.rows = 4;
       text.inputEl.cols = 50;
@@ -5222,14 +4762,14 @@ var KnowledgeBloomAccordion = class extends BaseAccordion {
   }
   createGenerateButton(containerEl) {
     const buttonEl = containerEl.createDiv({ cls: "knowledge-bloom-generate-button" });
-    new import_obsidian25.Setting(buttonEl).addButton((button) => {
+    new import_obsidian24.Setting(buttonEl).addButton((button) => {
       button.setButtonText("Generate Knowledge Bloom").setCta().onClick(() => this.handleGenerateKnowledgeBloom(button));
     });
   }
   async handleGenerateKnowledgeBloom(button) {
     const activeFile = this.app.workspace.getActiveFile();
     if (!activeFile) {
-      new import_obsidian25.Notice("No active file. Please open a file to generate Knowledge Bloom.");
+      new import_obsidian24.Notice("No active file. Please open a file to generate Knowledge Bloom.");
       return;
     }
     button.setDisabled(true);
@@ -5241,19 +4781,19 @@ var KnowledgeBloomAccordion = class extends BaseAccordion {
         for (const note of result.generatedNotes) {
           const filePath = `${note.title}.md`;
           const existingFile = this.app.vault.getAbstractFileByPath(filePath);
-          if (existingFile && existingFile instanceof import_obsidian25.TFile) {
+          if (existingFile && existingFile instanceof import_obsidian24.TFile) {
             await this.app.vault.modify(existingFile, note.content);
           } else {
             await this.app.vault.create(filePath, note.content);
           }
         }
-        new import_obsidian25.Notice(`Generated ${result.generatedNotes.length} new notes!`);
+        new import_obsidian24.Notice(`Generated ${result.generatedNotes.length} new notes!`);
       } else {
-        new import_obsidian25.Notice("No new notes were generated.");
+        new import_obsidian24.Notice("No new notes were generated.");
       }
     } catch (error) {
       console.error("Error generating Knowledge Bloom:", error);
-      new import_obsidian25.Notice(`Failed to generate Knowledge Bloom: ${error.message}`);
+      new import_obsidian24.Notice(`Failed to generate Knowledge Bloom: ${error.message}`);
     } finally {
       button.setDisabled(false);
       button.setButtonText("Generate Knowledge Bloom");
@@ -5262,7 +4802,7 @@ var KnowledgeBloomAccordion = class extends BaseAccordion {
 };
 
 // src/settings/GraphWeaverSettingTab.ts
-var GraphWeaverSettingTab = class extends import_obsidian26.PluginSettingTab {
+var GraphWeaverSettingTab = class extends import_obsidian25.PluginSettingTab {
   // Replace with your actual plugin type
   constructor(app, plugin) {
     super(app, plugin);
@@ -5271,7 +4811,7 @@ var GraphWeaverSettingTab = class extends import_obsidian26.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: "GraphWeaver Settings" });
+    containerEl.createEl("h2", { text: "GraphWeaver" });
     const modelHookupContainer = containerEl.createDiv();
     new ModelHookupAccordion(
       this.app,
@@ -5300,20 +4840,6 @@ var GraphWeaverSettingTab = class extends import_obsidian26.PluginSettingTab {
       this.plugin.settingsService,
       this.plugin.aiService
     ).render();
-    const batchProcessorContainer = containerEl.createDiv();
-    new BatchProcessorAccordion(
-      this.app,
-      batchProcessorContainer,
-      this.plugin.settingsService,
-      this.plugin.aiService
-    ).render();
-    const advancedContainer = containerEl.createDiv();
-    new AdvancedAccordion(
-      this.app,
-      advancedContainer,
-      this.plugin.settingsService,
-      this.plugin.aiService
-    ).render();
     const knowledgeBloomContainer = containerEl.createDiv();
     new KnowledgeBloomAccordion(
       this.app,
@@ -5321,29 +4847,31 @@ var GraphWeaverSettingTab = class extends import_obsidian26.PluginSettingTab {
       this.plugin.settingsService,
       this.plugin.aiService
     ).render();
+    const batchProcessorContainer = containerEl.createDiv();
+    new BatchProcessorAccordion(
+      this.app,
+      batchProcessorContainer,
+      this.plugin.settingsService,
+      this.plugin.aiService
+    ).render();
   }
 };
 
 // main.ts
-var GraphWeaverPlugin = class extends import_obsidian27.Plugin {
+var GraphWeaverPlugin = class extends import_obsidian26.Plugin {
   constructor() {
     super(...arguments);
-    this.statusBar = null;
     this.hasProcessedVaultStartup = false;
   }
   /**
    * Initialize plugin on load
    */
   async onload() {
-    console.log("Loading GraphWeaver plugin");
     try {
       await this.initializeServices();
-      await this.initializeUI();
       this.addPluginFunctionality();
-      console.log("GraphWeaver plugin loaded successfully");
     } catch (error) {
-      console.error("Error loading GraphWeaver plugin:", error);
-      new import_obsidian27.Notice("Error loading GraphWeaver plugin. Check console for details.");
+      new import_obsidian26.Notice("Error loading GraphWeaver plugin. Check console for details.");
     }
   }
   /**
@@ -5374,22 +4902,8 @@ var GraphWeaverPlugin = class extends import_obsidian27.Plugin {
       this.app.vault,
       this.aiService,
       this.settingsService,
-      this.databaseService
-    );
-  }
-  /**
-   * Initialize plugin UI components
-   */
-  async initializeUI() {
-    const statusBarEl = this.addStatusBarItem();
-    this.statusBar = new ProcessingStatusBar(
-      this.app,
-      statusBarEl,
-      this.batchProcessor.eventEmitter,
-      this.aiService,
-      this.settingsService,
-      this.databaseService
-      // Add DatabaseService
+      this.databaseService,
+      this.jsonValidationService
     );
   }
   /**
@@ -5428,11 +4942,6 @@ var GraphWeaverPlugin = class extends import_obsidian27.Plugin {
       name: "Generate Knowledge Bloom",
       callback: this.generateKnowledgeBloom.bind(this)
     });
-    this.addCommand({
-      id: "toggle-auto-generate",
-      name: "Toggle Auto-Generate",
-      callback: this.toggleAutoGenerate.bind(this)
-    });
   }
   /**
    * Handle layout changes - only triggers vault startup processing once
@@ -5459,27 +4968,11 @@ var GraphWeaverPlugin = class extends import_obsidian27.Plugin {
    * Show plugin menu
    */
   showPluginMenu(evt) {
-    const menu = new import_obsidian27.Menu();
+    const menu = new import_obsidian26.Menu();
     menu.addItem((item) => item.setTitle("Generate Frontmatter").setIcon("file-plus").onClick(this.generateFrontmatter.bind(this)));
     menu.addItem((item) => item.setTitle("Generate Wikilinks").setIcon("link").onClick(this.generateWikilinks.bind(this)));
     menu.addItem((item) => item.setTitle("Generate Knowledge Bloom").setIcon("flower").onClick(this.generateKnowledgeBloom.bind(this)));
-    menu.addSeparator();
-    menu.addItem((item) => item.setTitle(this.settings.frontMatter.autoGenerate ? "Disable Auto-Generate" : "Enable Auto-Generate").setIcon(this.settings.frontMatter.autoGenerate ? "toggle-right" : "toggle-left").onClick(this.toggleAutoGenerate.bind(this)));
     menu.showAtMouseEvent(evt);
-  }
-  /**
-   * Toggle auto-generate functionality
-   */
-  async toggleAutoGenerate() {
-    this.settings.frontMatter.autoGenerate = !this.settings.frontMatter.autoGenerate;
-    await this.saveSettings();
-    new import_obsidian27.Notice(
-      this.settings.frontMatter.autoGenerate ? "Auto-generate enabled" : "Auto-generate disabled"
-    );
-    if (this.settings.frontMatter.autoGenerate && !this.hasProcessedVaultStartup) {
-      await this.autoGenerateService.runAutoGenerate();
-      this.hasProcessedVaultStartup = true;
-    }
   }
   /**
    * Process a single file
@@ -5494,67 +4987,84 @@ var GraphWeaverPlugin = class extends import_obsidian27.Plugin {
   }
   /**
    * Generate front matter for active file
+   * Handles UI interaction and coordinates between services
    */
   async generateFrontmatter() {
     const activeFile = this.app.workspace.getActiveFile();
     if (!activeFile) {
-      new import_obsidian27.Notice("No active file. Please open a file to generate frontmatter.");
+      new import_obsidian26.Notice("No active file. Please open a file to generate frontmatter.");
       return;
     }
     try {
-      new import_obsidian27.Notice("Generating frontmatter...");
-      const result = await this.processFile(activeFile, true, false);
-      if (result.success) {
-        new import_obsidian27.Notice("Frontmatter generated successfully!");
-      } else if (result.error) {
-        new import_obsidian27.Notice(`Error: ${result.error}`);
+      new import_obsidian26.Notice("Generating frontmatter...");
+      const result = await this.batchProcessor.generate({
+        files: [activeFile],
+        generateFrontMatter: true,
+        generateWikilinks: false
+      });
+      if (result.fileResults[0].success) {
+        new import_obsidian26.Notice("Frontmatter generated successfully!");
+      } else if (result.fileResults[0].error) {
+        new import_obsidian26.Notice(`Error: ${result.fileResults[0].error}`);
       }
     } catch (error) {
       console.error("Error generating frontmatter:", error);
-      new import_obsidian27.Notice("Error generating frontmatter. Check console for details.");
+      new import_obsidian26.Notice("Error generating frontmatter. Check console for details.");
     }
   }
   /**
    * Generate wikilinks for active file
+   * Handles UI interaction and coordinates between services
    */
   async generateWikilinks() {
     const activeFile = this.app.workspace.getActiveFile();
     if (!activeFile) {
-      new import_obsidian27.Notice("No active file. Please open a file to generate wikilinks.");
+      new import_obsidian26.Notice("No active file. Please open a file to generate wikilinks.");
       return;
     }
     try {
-      new import_obsidian27.Notice("Generating wikilinks...");
-      const result = await this.processFile(activeFile, false, true);
-      if (result.success) {
-        new import_obsidian27.Notice("Wikilinks generated successfully!");
-      } else if (result.error) {
-        new import_obsidian27.Notice(`Error: ${result.error}`);
+      new import_obsidian26.Notice("Generating wikilinks...");
+      const result = await this.batchProcessor.generate({
+        files: [activeFile],
+        generateFrontMatter: false,
+        generateWikilinks: true
+      });
+      if (result.fileResults[0].success) {
+        new import_obsidian26.Notice("Wikilinks generated successfully!");
+      } else if (result.fileResults[0].error) {
+        new import_obsidian26.Notice(`Error: ${result.fileResults[0].error}`);
       }
     } catch (error) {
       console.error("Error generating wikilinks:", error);
-      new import_obsidian27.Notice("Error generating wikilinks. Check console for details.");
+      new import_obsidian26.Notice("Error generating wikilinks. Check console for details.");
     }
   }
   /**
    * Generate knowledge bloom for active file
+   * Handles UI interaction and file operations
    */
   async generateKnowledgeBloom() {
     const activeFile = this.app.workspace.getActiveFile();
     if (!activeFile) {
-      new import_obsidian27.Notice("No active file. Please open a file to generate Knowledge Bloom.");
+      new import_obsidian26.Notice("No active file. Please open a file to generate Knowledge Bloom.");
       return;
     }
     try {
-      new import_obsidian27.Notice("Generating Knowledge Bloom...");
+      new import_obsidian26.Notice("Generating Knowledge Bloom...");
       const result = await this.aiService.generateKnowledgeBloom(activeFile);
+      let createdCount = 0;
       for (const note of result.generatedNotes) {
-        await this.createOrUpdateNote(note.title, note.content);
+        try {
+          await this.createOrUpdateNote(note.title, note.content);
+          createdCount++;
+        } catch (error) {
+          console.error(`Failed to create note ${note.title}:`, error);
+        }
       }
-      new import_obsidian27.Notice(`Generated ${result.generatedNotes.length} new notes!`);
+      new import_obsidian26.Notice(`Successfully generated ${createdCount} of ${result.generatedNotes.length} notes!`);
     } catch (error) {
       console.error("Error generating Knowledge Bloom:", error);
-      new import_obsidian27.Notice("Error generating Knowledge Bloom. Check console for details.");
+      new import_obsidian26.Notice("Error generating Knowledge Bloom. Check console for details.");
     }
   }
   /**
@@ -5563,7 +5073,7 @@ var GraphWeaverPlugin = class extends import_obsidian27.Plugin {
   async createOrUpdateNote(title, content) {
     const filePath = `${title}.md`;
     const file = this.app.vault.getAbstractFileByPath(filePath);
-    if (file instanceof import_obsidian27.TFile) {
+    if (file instanceof import_obsidian26.TFile) {
       await this.app.vault.modify(file, content);
     } else {
       await this.app.vault.create(filePath, content);
@@ -5591,9 +5101,6 @@ var GraphWeaverPlugin = class extends import_obsidian27.Plugin {
     await this.databaseService.saveData(this.saveData.bind(this));
     if (this.autoGenerateService) {
       this.autoGenerateService.destroy();
-    }
-    if (this.statusBar) {
-      this.statusBar.destroy();
     }
     this.hasProcessedVaultStartup = false;
   }

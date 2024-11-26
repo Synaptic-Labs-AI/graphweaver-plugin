@@ -13,6 +13,10 @@ export interface PluginSettings {
         selected: AIProvider;
         apiKeys: Partial<Record<AIProvider, string>>;
         selectedModels: Partial<Record<AIProvider, string>>;
+        modelConfigs: Record<string, {
+            temperature: number;
+            maxTokens: number;
+        }>;
     };
     frontMatter: {
         customProperties: PropertyTag[];
@@ -26,13 +30,6 @@ export interface PluginSettings {
         port: number;
         modelName: string;
     };
-    advanced: {
-        maxTokens: number;
-        temperature: number;
-        generateWikilinks: boolean;
-        minWordCount: number;
-        maxLinksPerNote: number;
-    };
     ontology: {
         lastGenerated: string;
     };
@@ -45,7 +42,8 @@ export const DEFAULT_SETTINGS: PluginSettings = {
         apiKeys: {},
         selectedModels: {
             [AIProvider.OpenAI]: 'gpt-4o-mini'
-        }
+        },
+        modelConfigs: {}
     },
     frontMatter: {
         customProperties: [],
@@ -58,13 +56,6 @@ export const DEFAULT_SETTINGS: PluginSettings = {
         enabled: false,
         port: 1234,
         modelName: ''
-    },
-    advanced: {
-        maxTokens: 4096,
-        temperature: 0.3,
-        generateWikilinks: false,
-        minWordCount: 5,
-        maxLinksPerNote: 10
     },
     ontology: {
         lastGenerated: ''

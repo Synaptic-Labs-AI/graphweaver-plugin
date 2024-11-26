@@ -1,4 +1,4 @@
-import { App, Setting, TextComponent, TextAreaComponent, ButtonComponent, Notice } from "obsidian";
+import { App, Notice, TextComponent, TextAreaComponent } from "obsidian";
 import { Tag } from "../../models/PropertyTag";
 import { EditTagsModal } from "../modals/EditTagsModal";
 import { BaseAccordion } from "./BaseAccordion";
@@ -6,16 +6,16 @@ import { SettingsService } from "../../services/SettingsService";
 import { AIService } from "../../services/AIService";
 
 export class TagManagerAccordion extends BaseAccordion {
-    public nameInput: TextComponent;
-    public descriptionInput: TextAreaComponent;
+    private nameInput: TextComponent;
+    private descriptionInput: TextAreaComponent;
 
     constructor(
-        public app: App,
-        containerEl: HTMLElement,
-        public settingsService: SettingsService,
-        public aiService: AIService
+        protected app: App,
+        protected containerEl: HTMLElement,
+        protected settingsService: SettingsService,
+        protected aiService: AIService
     ) {
-        super(containerEl);
+        super(app, containerEl, settingsService, aiService);
     }
 
     public render(): void {
@@ -27,43 +27,59 @@ export class TagManagerAccordion extends BaseAccordion {
         this.createButtonRow(contentEl);
     }
 
-    public createTagEditor(containerEl: HTMLElement): void {
-        const editorContainer = containerEl.createDiv({ cls: "gw-tag-editor" });
+    private createTagEditor(containerEl: HTMLElement): void {
+        const settings = this.settingsService.getSettings();
 
-        new Setting(editorContainer)
-            .setName("Tag Name")
-            .addText(text => {
-                this.nameInput = text;
-                text.setPlaceholder("Enter tag name");
-            });
+        this.nameInput = this.createTextSetting(
+            "Tag Name",
+            "Enter a unique name for this tag",
+            "Enter tag name",
+            "",
+            { 
+                section: "tags", 
+                key: "customTags",
+                value: settings.tags.customTags
+            }
+        );
 
-        new Setting(editorContainer)
-            .setName("Tag Description")
-            .addTextArea(textarea => {
-                this.descriptionInput = textarea;
-                textarea.setPlaceholder("Enter tag description");
-            });
+        this.descriptionInput = this.createTextAreaSetting(
+            "Tag Description",
+            "Describe the purpose of this tag",
+            "Enter tag description",
+            ""
+        );
     }
 
-    public createButtonRow(containerEl: HTMLElement): void {
-        const buttonContainer = containerEl.createDiv({ cls: "gw-button-container" });
+    private createButtonRow(containerEl: HTMLElement): void {
+        this.createButton(
+            "Add Tag",
+            "Create a new tag",
+            "Add Tag",
+            () => this.addTag(),
+            true
+        );
 
-        new Setting(buttonContainer)
-            .addButton(button => button
-                .setButtonText("Edit Tags")
-                .onClick(() => this.openEditModal()))
-            .addButton(button => button
-                .setButtonText("Add Tag")
-                .setCta()
-                .onClick(() => this.addTag()));
+        this.createButton(
+            "Edit Tags",
+            "Modify or delete existing tags",
+            "Edit Tags",
+            () => this.openEditModal(),
+            false
+        );
     }
 
     public addTag(): void {
         const name = this.nameInput.getValue().trim();
-        const description = this.descriptionInput.getValue().trim();
+        const description = this.descriptionInput.getValue()?.trim() || "";
 
         if (!name) {
-            new Notice("Tag name cannot be empty.");
+            this.showNotice("Tag name cannot be empty.");
+            return;
+        }
+
+        const settings = this.settingsService.getSettings();
+        if (settings.tags.customTags.some(t => t.name === name)) {
+            this.showNotice("A tag with this name already exists.");
             return;
         }
 
@@ -71,11 +87,8 @@ export class TagManagerAccordion extends BaseAccordion {
             name,
             description,
             type: "string",
-            required: false,
-            multipleValues: false
         };
 
-        const settings = this.settingsService.getSettings();
         settings.tags.customTags.push(newTag);
         this.settingsService.updateSettings(settings);
 

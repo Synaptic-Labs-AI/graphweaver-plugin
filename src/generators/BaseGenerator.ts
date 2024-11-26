@@ -84,13 +84,14 @@ export abstract class BaseGenerator<TInput extends BaseGeneratorInput = BaseGene
      */
     protected async getCurrentModel(): Promise<string> {
         const settings = this.getSettings();
-        const selectedModel = this.getSelectedModel(settings);
+        const providerType = this.aiAdapter.getProviderType();
+        const modelApiName = settings.aiProvider?.selectedModels?.[providerType];
 
-        if (!selectedModel) {
-            throw new Error(`No model selected for ${this.constructor.name}`);
+        if (!modelApiName) {
+            throw new Error(`No model selected for provider: ${providerType}`);
         }
 
-        return selectedModel;
+        return modelApiName;
     }
 
     /**
@@ -114,7 +115,7 @@ export abstract class BaseGenerator<TInput extends BaseGeneratorInput = BaseGene
      * @param input The input to validate
      */
     protected validateInput(input: TInput): boolean {
-        return input !== null && input !== undefined;
+        return input !== null && typeof input === 'object';
     }
 
     /**
@@ -122,9 +123,8 @@ export abstract class BaseGenerator<TInput extends BaseGeneratorInput = BaseGene
      * @param error The error that occurred
      */
     protected handleError(error: Error): never {
-        const errorMessage = `${this.constructor.name} error: ${error.message}`;
-        console.error(errorMessage);
-        throw new Error(errorMessage);
+        console.error(`${this.constructor.name} error: ${error.message}`, error);
+        throw error;
     }
 
     /**

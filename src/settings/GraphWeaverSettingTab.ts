@@ -9,7 +9,6 @@ import { PropertyManagerAccordion } from '../components/accordions/PropertyManag
 import { TagManagerAccordion } from '../components/accordions/TagManagerAccordion';
 import { OntologyGenerationAccordion } from '../components/accordions/OntologyGenerationAccordion';
 import { BatchProcessorAccordion } from '../components/accordions/BatchProcessorAccordion';
-import { AdvancedAccordion } from '../components/accordions/AdvancedAccordion';
 import { KnowledgeBloomAccordion } from '../components/accordions/KnowledgeBloomAccordion';
 
 export class GraphWeaverSettingTab extends PluginSettingTab {
@@ -25,7 +24,7 @@ export class GraphWeaverSettingTab extends PluginSettingTab {
 
         containerEl.empty();
 
-        containerEl.createEl('h2', { text: 'GraphWeaver Settings' });
+        containerEl.createEl('h2', { text: 'GraphWeaver' });
 
         // Instantiate and render each accordion with required arguments
         const modelHookupContainer = containerEl.createDiv();
@@ -60,26 +59,18 @@ export class GraphWeaverSettingTab extends PluginSettingTab {
             this.plugin.aiService
         ).render();
 
-        const batchProcessorContainer = containerEl.createDiv();
-        new BatchProcessorAccordion(
-            this.app,
-            batchProcessorContainer,
-            this.plugin.settingsService,
-            this.plugin.aiService
-        ).render();
-
-        const advancedContainer = containerEl.createDiv();
-        new AdvancedAccordion(
-            this.app,
-            advancedContainer,
-            this.plugin.settingsService,
-            this.plugin.aiService
-        ).render();
-
         const knowledgeBloomContainer = containerEl.createDiv();
         new KnowledgeBloomAccordion(
             this.app,
             knowledgeBloomContainer,
+            this.plugin.settingsService,
+            this.plugin.aiService
+        ).render();
+        
+        const batchProcessorContainer = containerEl.createDiv();
+        new BatchProcessorAccordion(
+            this.app,
+            batchProcessorContainer,
             this.plugin.settingsService,
             this.plugin.aiService
         ).render();

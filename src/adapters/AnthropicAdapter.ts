@@ -1,9 +1,10 @@
 import { Notice, requestUrl, RequestUrlResponse } from 'obsidian';
-import { AIProvider, AIResponse, AIAdapter, AIModel, AIModelMap } from '../models/AIModels';
+import { AIProvider, AIResponse, AIModel, AIModelMap } from '../models/AIModels';
 import { SettingsService } from '../services/SettingsService';
 import { JsonValidationService } from '../services/JsonValidationService';
+import { AIAdapter } from './AIAdapter';
 
-export class AnthropicAdapter implements AIAdapter {
+export class AnthropicAdapter extends AIAdapter {
     public apiKey: string;
     public models: AIModel[];
 
@@ -11,6 +12,7 @@ export class AnthropicAdapter implements AIAdapter {
         public settingsService: SettingsService,
         public jsonValidationService: JsonValidationService
     ) {
+        super(settingsService, jsonValidationService);
         const aiProviderSettings = this.settingsService.getSetting('aiProvider');
         this.apiKey = aiProviderSettings.apiKeys[AIProvider.Anthropic] || '';
         this.models = AIModelMap[AIProvider.Anthropic];
@@ -34,7 +36,7 @@ export class AnthropicAdapter implements AIAdapter {
             const temperature = this.getTemperature(settings);
             const maxTokens = options?.maxTokens || this.getMaxTokens(settings);
     
-            const response = await this.makeApiRequest(apiModel, prompt, temperature, maxTokens);
+            const response = await this.makeApiRequest({ model: apiModel, prompt, temperature, maxTokens, rawResponse: options?.rawResponse });
             const content = this.extractContentFromResponse(response);
     
             // If rawResponse is true, skip JSON validation
@@ -49,22 +51,6 @@ export class AnthropicAdapter implements AIAdapter {
         }
     }
 
-    public async testConnection(prompt: string, modelApiName: string): Promise<boolean> {
-        try {
-            if (!this.apiKey) {
-                throw new Error('Anthropic API key is not set');
-            }
-
-            const apiModel = this.getApiModelName(modelApiName);
-            const response = await this.makeApiRequest(apiModel, prompt, 0.7, 50);
-            const content = this.extractContentFromResponse(response);
-            return content.toLowerCase().includes('ok');
-        } catch (error) {
-            console.error('Error in Anthropic test connection:', error);
-            return false;
-        }
-    }
-
     public getTemperature(settings: any): number {
         return (settings.advanced.temperature >= 0 && settings.advanced.temperature <= 1) 
             ? settings.advanced.temperature 
@@ -75,15 +61,14 @@ export class AnthropicAdapter implements AIAdapter {
         return (settings.advanced.maxTokens > 0) ? settings.advanced.maxTokens : 1000;
     }
 
-    public async makeApiRequest(apiModel: string, prompt: string, temperature: number, maxTokens: number): Promise<RequestUrlResponse> {
-        const requestBody = {
-            model: apiModel,
-            messages: [{ role: "user", content: prompt }],
-            max_tokens: maxTokens,
-            temperature: temperature
-        };
-
-        const response = await requestUrl({
+    protected async makeApiRequest(params: {
+        model: string;
+        prompt: string;
+        temperature: number;
+        maxTokens: number;
+        rawResponse?: boolean;
+    }): Promise<RequestUrlResponse> {
+        return await requestUrl({
             url: 'https://api.anthropic.com/v1/messages',
             method: 'POST',
             headers: {
@@ -91,17 +76,19 @@ export class AnthropicAdapter implements AIAdapter {
                 'x-api-key': this.apiKey,
                 'anthropic-version': '2023-06-01'
             },
-            body: JSON.stringify(requestBody)
+            body: JSON.stringify({
+                model: params.model,
+                messages: [{ role: 'user', content: params.prompt }],
+                max_tokens: params.maxTokens,
+                temperature: params.temperature
+            })
         });
-
-        if (response.status !== 200) {
-            throw new Error(`API request failed with status ${response.status}: ${response.text}`);
-        }
-
-        return response;
     }
 
-    public extractContentFromResponse(response: RequestUrlResponse): string {
+    protected extractContentFromResponse(response: RequestUrlResponse): string {
+        if (!response.json?.content?.[0]?.text) {
+            throw new Error('Invalid response format from Anthropic API');
+        }
         return response.json.content[0].text;
     }
 
@@ -110,26 +97,6 @@ export class AnthropicAdapter implements AIAdapter {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         new Notice(`Anthropic API Error: ${errorMessage}`);
         return { success: false, error: errorMessage };
-    }
-
-    public async validateApiKey(): Promise<boolean> {
-        try {
-            if (!this.apiKey) {
-                throw new Error('Anthropic API key is not set');
-            }
-
-            const response = await this.testConnection("Return the word 'OK'.", this.models[0].apiName);
-            if (response) {
-                new Notice('Anthropic API key validated successfully');
-                return true;
-            } else {
-                throw new Error('Failed to validate API key');
-            }
-        } catch (error) {
-            console.error('Error validating Anthropic API key:', error);
-            new Notice(`Failed to validate Anthropic API key: ${error instanceof Error ? error.message : 'Unknown error occurred'}`);
-            return false;
-        }
     }
 
     public getAvailableModels(): string[] {

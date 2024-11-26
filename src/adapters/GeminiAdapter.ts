@@ -1,21 +1,20 @@
 import { Notice, requestUrl, RequestUrlResponse } from 'obsidian';
-import { AIProvider, AIResponse, AIAdapter, AIModel, AIModelMap, AIResponseOptions } from '../models/AIModels';
+import { AIProvider, AIResponse, AIModel, AIModelMap, AIResponseOptions } from '../models/AIModels';
 import { SettingsService } from '../services/SettingsService';
 import { JsonValidationService } from '../services/JsonValidationService';
+import { AIAdapter } from './AIAdapter';
 
 /**
  * Gemini service adapter implementation
  * Handles communication with Google's Gemini API
  * Note: Gemini has a different API structure from other providers
  */
-export class GeminiAdapter implements AIAdapter {
-    private apiKey: string;
-    private models: AIModel[];
-
+export class GeminiAdapter extends AIAdapter {
     constructor(
-        private settingsService: SettingsService,
-        private jsonValidationService: JsonValidationService
+        protected settingsService: SettingsService,
+        protected jsonValidationService: JsonValidationService
     ) {
+        super(settingsService, jsonValidationService);
         const aiProviderSettings = this.settingsService.getSetting('aiProvider');
         this.apiKey = aiProviderSettings.apiKeys[AIProvider.Google] || '';
         this.models = AIModelMap[AIProvider.Google];
@@ -75,47 +74,19 @@ export class GeminiAdapter implements AIAdapter {
     }
 
     /**
-     * Test connection to Gemini API
-     */
-    public async testConnection(prompt: string, modelApiName: string): Promise<boolean> {
-        try {
-            if (!this.apiKey) {
-                return false;
-            }
-
-            const response = await this.generateResponse(
-                prompt || "Return the word 'OK'.",
-                modelApiName,
-                { rawResponse: true }
-            );
-
-            if (!response.success || typeof response.data !== 'string') {
-                return false;
-            }
-
-            return response.data.toLowerCase().includes('ok');
-        } catch (error) {
-            console.error('Error in Gemini test connection:', error);
-            return false;
-        }
-    }
-
-    /**
      * Make a request to the Gemini API
      */
-    private async makeApiRequest(params: {
+    protected async makeApiRequest(params: {
         model: string;
         prompt: string;
         temperature: number;
         maxTokens: number;
         rawResponse?: boolean;
     }): Promise<RequestUrlResponse> {
-        // Build the system prompt based on response type
         const systemPrompt = params.rawResponse
-            ? "You are a helpful assistant."
+            ? 'You are a helpful assistant.'
             : "You are a helpful assistant that responds in JSON format. Your response should be valid JSON with a 'response' field containing your answer.";
 
-        // Gemini uses a different request format
         const requestBody = {
             contents: [
                 {
@@ -133,7 +104,7 @@ export class GeminiAdapter implements AIAdapter {
             }
         };
 
-        const response = await requestUrl({
+        return await requestUrl({
             url: `https://generativelanguage.googleapis.com/v1/models/${params.model}:generateContent`,
             method: 'POST',
             headers: {
@@ -142,34 +113,22 @@ export class GeminiAdapter implements AIAdapter {
             },
             body: JSON.stringify(requestBody)
         });
-
-        if (response.status !== 200) {
-            const errorBody = response.json;
-            throw new Error(
-                `API request failed with status ${response.status}: ${
-                    errorBody?.error?.message || response.text
-                }`
-            );
-        }
-
-        return response;
     }
 
     /**
      * Extract content from Gemini API response
      */
-    private extractContentFromResponse(response: RequestUrlResponse): string {
+    protected extractContentFromResponse(response: RequestUrlResponse): string {
         if (!response.json?.candidates?.[0]?.content?.parts?.[0]?.text) {
             throw new Error('Invalid response format from Gemini API');
         }
-        const content = response.json.candidates[0].content;
-        return content.parts[0].text;
+        return response.json.candidates[0].content.parts[0].text;
     }
 
     /**
      * Get temperature setting
      */
-    private getTemperature(settings: any): number {
+    protected getTemperature(settings: any): number {
         return (settings.advanced?.temperature >= 0 && settings.advanced?.temperature <= 1)
             ? settings.advanced.temperature
             : 0.7;
@@ -178,49 +137,18 @@ export class GeminiAdapter implements AIAdapter {
     /**
      * Get max tokens setting
      */
-    private getMaxTokens(settings: any): number {
+    protected getMaxTokens(settings: any): number {
         return (settings.advanced?.maxTokens > 0) ? settings.advanced.maxTokens : 1000;
     }
 
     /**
      * Handle errors in API calls
      */
-    private handleError(error: unknown): AIResponse {
+    protected handleError(error: unknown): AIResponse {
         console.error('Error in Gemini API call:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         new Notice(`Gemini API Error: ${errorMessage}`);
         return { success: false, error: errorMessage };
-    }
-
-    /**
-     * Validate API key
-     */
-    public async validateApiKey(): Promise<boolean> {
-        try {
-            if (!this.apiKey) {
-                throw new Error('Google API key is not set');
-            }
-
-            if (this.models.length === 0) {
-                throw new Error('No models available for Gemini');
-            }
-
-            const isValid = await this.testConnection(
-                "Return the word 'OK'.",
-                this.models[0].apiName
-            );
-
-            if (isValid) {
-                new Notice('Gemini API key validated successfully');
-                return true;
-            } else {
-                throw new Error('Failed to validate API key');
-            }
-        } catch (error) {
-            console.error('Error validating Gemini API key:', error);
-            new Notice(`Failed to validate Gemini API key: ${error instanceof Error ? error.message : 'Unknown error occurred'}`);
-            return false;
-        }
     }
 
     /**

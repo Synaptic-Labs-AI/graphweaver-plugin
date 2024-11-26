@@ -3,15 +3,11 @@ import { BaseAccordion } from "./BaseAccordion";
 import { AIService } from "../../services/AIService";
 import { SettingsService } from "../../services/SettingsService";
 import { BatchProcessorModal } from "../modals/BatchProcessorModal";
+import { PluginSettings } from "../../settings/Settings";
 
 export class BatchProcessorAccordion extends BaseAccordion {
-    constructor(
-        public app: App,
-        containerEl: HTMLElement,
-        public settingsService: SettingsService,
-        public aiService: AIService
-    ) {
-        super(containerEl);
+    constructor(app: App, containerEl: HTMLElement, settingsService: SettingsService, aiService: AIService) {
+        super(app, containerEl, settingsService, aiService);
     }
 
     public render(): void {
@@ -23,36 +19,30 @@ export class BatchProcessorAccordion extends BaseAccordion {
         this.createRunBatchProcessorButton(contentEl);
     }
 
-    public createAutoGenerateToggle(containerEl: HTMLElement): void {
-        new Setting(containerEl)
-            .setName("Auto-generate Front Matter")
-            .setDesc("Automatically generate front matter for new or unprocessed notes when you open your vault.")
-            .addToggle(toggle => this.setupAutoGenerateToggle(toggle));
-    }
-
-    public setupAutoGenerateToggle(toggle: ToggleComponent): void {
+    private createAutoGenerateToggle(containerEl: HTMLElement): void {
         const settings = this.settingsService.getSettings();
-        toggle
-            .setValue(settings.frontMatter.autoGenerate)
-            .onChange(async (value: boolean) => {
-                await this.settingsService.updateNestedSetting('frontMatter', 'autoGenerate', value);
-            });
+        this.createToggleSetting<'frontMatter', 'autoGenerate'>(
+            "Auto-generate Front Matter",
+            "Automatically generate front matter for new or unprocessed notes when you open your vault.",
+            settings.frontMatter.autoGenerate,
+            { 
+                section: 'frontMatter', 
+                key: 'autoGenerate',
+                value: settings.frontMatter.autoGenerate
+            }
+        );
     }
 
-    public createRunBatchProcessorButton(containerEl: HTMLElement): void {
-        new Setting(containerEl)
-            .setName("Run Batch Processor")
-            .setDesc("Manually process multiple files to generate front matter and wikilinks.")
-            .addButton(button => this.setupRunBatchProcessorButton(button));
-    }
-
-    public setupRunBatchProcessorButton(button: ButtonComponent): void {
-        button
-            .setButtonText("Run Batch Processor")
-            .setCta()
-            .onClick(() => {
+    private createRunBatchProcessorButton(containerEl: HTMLElement): void {
+        this.createButton(
+            "Run Batch Processor",
+            "Manually process multiple files to generate front matter and wikilinks.",
+            "Run Batch Processor",
+            () => {
                 const modal = new BatchProcessorModal(this.app, this.aiService, this.settingsService);
                 modal.open();
-            });
+            },
+            true
+        );
     }
 }

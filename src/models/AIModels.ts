@@ -7,6 +7,7 @@ export enum AIProvider {
     Google = 'google',
     Groq = 'groq',
     OpenRouter = 'openrouter',
+    Perplexity = 'perplexity',
     LMStudio = 'lmstudio'
 }
 
@@ -74,72 +75,6 @@ export interface AIModelConfig {
     temperature?: number;
     /** Model-specific configuration */
     modelSpecific?: Record<string, unknown>;
-}
-
-/**
- * Core AI adapter interface
- */
-export interface AIAdapter {
-    /**
-     * Generate a response from the AI model
-     * @param prompt The input prompt
-     * @param model The model to use
-     * @param options Generation options
-     */
-    generateResponse(
-        prompt: string,
-        model: string,
-        options?: AIResponseOptions
-    ): Promise<AIResponse>;
-
-    /**
-     * Test connection to the AI provider
-     * @param prompt Test prompt
-     * @param model Model to test
-     */
-    testConnection(prompt: string, model: string): Promise<boolean>;
-
-    /**
-     * Validate the API key
-     */
-    validateApiKey(): Promise<boolean>;
-
-    /**
-     * Get available models for this provider
-     */
-    getAvailableModels(): string[];
-
-    /**
-     * Get the provider type
-     */
-    getProviderType(): AIProvider;
-
-    /**
-     * Set the API key
-     */
-    setApiKey(apiKey: string): void;
-
-    /**
-     * Get the current API key
-     */
-    getApiKey(): string;
-
-    /**
-     * Configure the adapter
-     * @param config Configuration options
-     */
-    configure(config: AIModelConfig): void;
-
-    /**
-     * Check if the adapter is ready
-     */
-    isReady(): boolean;
-
-    /**
-     * Get the API name for a model
-     * @param modelName Model name to look up
-     */
-    getApiModelName(modelName: string): string | undefined;
 }
 
 /**
@@ -484,6 +419,41 @@ export const AIModelMap: Record<AIProvider, AIModel[]> = {
             },
             inputCostPer1M: 15.00,
             outputCostPer1M: 60.00,
+            contextWindow: 128000
+        }
+    ],
+    [AIProvider.Perplexity]: [
+        {
+            name: 'Perplexity Small',
+            apiName: 'perplexity-small',
+            capabilities: {
+                maxTokens: 4096,
+                supportsStreaming: true
+            },
+            inputCostPer1M: 0.20,
+            outputCostPer1M: 0.20,
+            contextWindow: 128000
+        },
+        {
+            name: 'Perplexity Medium',
+            apiName: 'perplexity-medium',
+            capabilities: {
+                maxTokens: 8192,
+                supportsStreaming: true
+            },
+            inputCostPer1M: 0.50,
+            outputCostPer1M: 0.50,
+            contextWindow: 128000
+        },
+        {
+            name: 'Perplexity Large',
+            apiName: 'perplexity-large',
+            capabilities: {
+                maxTokens: 16384,
+                supportsStreaming: true
+            },
+            inputCostPer1M: 1.00,
+            outputCostPer1M: 1.00,
             contextWindow: 128000
         }
     ],

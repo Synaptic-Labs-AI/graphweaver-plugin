@@ -1,5 +1,4 @@
-import { App, TFile, Notice } from 'obsidian';
-import { EventEmitter } from 'events';
+import { App, TFile, Notice, Events } from 'obsidian';
 import { BaseGenerator, BaseGeneratorInput, BaseGeneratorOutput } from './BaseGenerator';
 import { AIAdapter } from '../adapters/AIAdapter';
 import { SettingsService } from '../services/SettingsService';
@@ -8,7 +7,6 @@ import { FrontMatterGenerator } from './FrontMatterGenerator';
 import { WikilinkGenerator } from './WikilinkGenerator';
 import {
     ProcessingStatus,
-    ProcessingState,
     ProcessingEvent,
     ProcessingStats,
     FileProcessingResult,
@@ -24,7 +22,7 @@ import {
 interface BatchProcessorInput extends BaseGeneratorInput {
     files: TFile[];
     generateFrontMatter: boolean;
-    generateWikilinks: boolean;
+    generateWikilinks?: boolean; // Make generateWikilinks optional
     options?: Partial<ProcessingOptions>;
 }
 
@@ -40,10 +38,10 @@ export class BatchProcessor extends BaseGenerator<BatchProcessorInput, BatchProc
     private readonly NOTIFICATION_INTERVAL = 2000;
     private lastNotificationTime = 0;
     private processStartTime: number = 0;
-    public eventEmitter: EventEmitter;
+    public eventEmitter: Events;
     private currentStatus: ProcessingStatus;
     private options: ProcessingOptions;
-    private processingTimeout: NodeJS.Timeout | null = null;
+    private processingTimeout: number | null = null;
 
     constructor(
         aiAdapter: AIAdapter,
@@ -54,7 +52,7 @@ export class BatchProcessor extends BaseGenerator<BatchProcessorInput, BatchProc
         private app: App
     ) {
         super(aiAdapter, settingsService);
-        this.eventEmitter = new EventEmitter();
+        this.eventEmitter = new Events();
         this.options = DEFAULT_PROCESSING_OPTIONS;
         this.currentStatus = this.getDefaultStatus();
     }
@@ -322,7 +320,7 @@ export class BatchProcessor extends BaseGenerator<BatchProcessorInput, BatchProc
                 if (this.currentStatus.state === 'running') {
                     resolve();
                 } else {
-                    this.processingTimeout = setTimeout(check, 100);
+                    this.processingTimeout = window.setTimeout(check, 100);
                 }
             };
             check();
@@ -334,7 +332,7 @@ export class BatchProcessor extends BaseGenerator<BatchProcessorInput, BatchProc
     }
 
     private async cleanup(): Promise<void> {
-        if (this.processingTimeout) {
+        if (this.processingTimeout !== null) {
             clearTimeout(this.processingTimeout);
         }
         this.currentStatus.state = 'idle';
@@ -360,14 +358,14 @@ export class BatchProcessor extends BaseGenerator<BatchProcessorInput, BatchProc
     }
 
     private emitEvent(type: keyof ProcessingEvent, data: any): void {
-        this.eventEmitter.emit(type, data);
+        this.eventEmitter.trigger(type, data);
     }
 
     protected validateInput(input: BatchProcessorInput): boolean {
         return Array.isArray(input.files) && 
                input.files.length > 0 && 
                typeof input.generateFrontMatter === 'boolean' &&
-               typeof input.generateWikilinks === 'boolean';
+               (typeof input.generateWikilinks === 'boolean' || input.generateWikilinks === undefined);
     }
 
     // Required BaseGenerator methods

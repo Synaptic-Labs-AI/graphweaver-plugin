@@ -8,12 +8,12 @@ export class KnowledgeBloomAccordion extends BaseAccordion {
     public modelSelector: DropdownComponent;
 
     constructor(
-        public app: App,
+        protected app: App,
         containerEl: HTMLElement,
-        public settingsService: SettingsService,
-        public aiService: AIService
+        protected settingsService: SettingsService,
+        protected aiService: AIService
     ) {
-        super(containerEl);
+        super(app, containerEl, settingsService, aiService);
     }
 
     public render(): void {

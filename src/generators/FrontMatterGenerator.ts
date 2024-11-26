@@ -10,16 +10,16 @@ import { PropertyTag } from '../models/PropertyTag';
  * Input interface for front matter generation
  */
 export interface FrontMatterInput extends BaseGeneratorInput {
-    content: string;                   // The note content to generate front matter for
-    customProperties?: PropertyTag[];  // Optional custom properties
-    customTags?: string[];             // Optional custom tags
+    content: string;                   
+    customProperties?: PropertyTag[];  
+    customTags?: string[];             
 }
 
 /**
  * Output interface for front matter generation
  */
 export interface FrontMatterOutput extends BaseGeneratorOutput {
-    content: string;                   // The content with generated front matter
+    content: string;                   
 }
 
 /**
@@ -68,13 +68,13 @@ export class FrontMatterGenerator extends BaseGenerator<FrontMatterInput, FrontM
 
             if (!aiResponse.success || !aiResponse.data) {
                 console.error('FrontMatterGenerator: AI response was unsuccessful or empty');
-                return { content: input.content }; // Return original content if AI generation fails
+                return { content: input.content };
             }
 
             return this.formatOutput(aiResponse.data, completeInput);
         } catch (error) {
             console.error('FrontMatterGenerator: Error during generation:', error);
-            return { content: input.content }; // Return original content on error
+            return { content: input.content };
         }
     }
 
@@ -97,10 +97,9 @@ export class FrontMatterGenerator extends BaseGenerator<FrontMatterInput, FrontM
     
     # GUIDELINES
     - You must ONLY use the properties provided in the schema
-    - Front matter fields will NOT include the note content itself
     - Prioritize using available tags, but remain flexible in choosing additional relevant tags
     - Return ONLY the formatted JSON object with front matter fields
-    - Do NOT include the content field in your response
+    - OMIT the content field in your response
     
     ## Custom Properties
     ${propertyPrompt}
@@ -201,27 +200,5 @@ export class FrontMatterGenerator extends BaseGenerator<FrontMatterInput, FrontM
         }
 
         return `---\n${frontMatter}\n---\n\n${content.trim()}`;
-    }
-
-    /**
-     * Validates input parameters
-     */
-    protected validateInput(input: FrontMatterInput): boolean {
-        return typeof input.content === 'string' && input.content.trim().length > 0;
-    }
-
-    /**
-     * Gets the current AI model
-     */
-    protected async getCurrentModel(): Promise<string> {
-        const settings = this.getSettings();
-        const providerType = this.aiAdapter.getProviderType();
-        const modelApiName = settings.aiProvider?.selectedModels?.[providerType];
-        
-        if (!modelApiName) {
-            throw new Error(`No model selected for provider: ${providerType}`);
-        }
-        
-        return modelApiName;
     }
 }

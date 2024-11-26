@@ -1,4 +1,4 @@
-import { App, Setting, TextComponent, TextAreaComponent, DropdownComponent, ButtonComponent, Notice } from "obsidian";
+import { App, TextComponent, TextAreaComponent, DropdownComponent, Setting, Notice } from "obsidian";
 import { PropertyTag, PropertyType } from "../../models/PropertyTag";
 import { EditPropertiesModal } from "../modals/EditPropertiesModal";
 import { BaseAccordion } from "./BaseAccordion";
@@ -6,17 +6,17 @@ import { SettingsService } from "../../services/SettingsService";
 import { AIService } from "../../services/AIService";
 
 export class PropertyManagerAccordion extends BaseAccordion {
-    public nameInput: TextComponent;
-    public descriptionInput: TextAreaComponent;
-    public typeDropdown: DropdownComponent;
+    private nameInput: TextComponent;
+    private descriptionInput: TextAreaComponent;
+    private typeDropdown: DropdownComponent;
 
     constructor(
-        public app: App,
-        containerEl: HTMLElement,
-        public settingsService: SettingsService,
-        public aiService: AIService
+        protected app: App,
+        protected containerEl: HTMLElement,
+        protected settingsService: SettingsService,
+        protected aiService: AIService
     ) {
-        super(containerEl);
+        super(app, containerEl, settingsService, aiService);
     }
 
     public render(): void {
@@ -28,25 +28,31 @@ export class PropertyManagerAccordion extends BaseAccordion {
         this.createButtonRow(contentEl);
     }
 
-    public createPropertyEditor(containerEl: HTMLElement): void {
-        const editorContainer = containerEl.createDiv({ cls: "gw-property-editor" });
+    private createPropertyEditor(containerEl: HTMLElement): void {
+        const settings = this.settingsService.getSettings();
+        
+        this.nameInput = this.createTextSetting(
+            "Property Name",
+            "Enter a unique name for this property",
+            "Enter property name",
+            "",
+            { 
+                section: "frontMatter", 
+                key: "customProperties",
+                value: settings.frontMatter.customProperties
+            }
+        );
 
-        new Setting(editorContainer)
-            .setName("Property Name")
-            .addText(text => {
-                this.nameInput = text;
-                text.setPlaceholder("Enter property name");
-            });
+        this.descriptionInput = this.createTextAreaSetting(
+            "Property Description",
+            "Describe the purpose of this property",
+            "Enter property description",
+            ""
+        );
 
-        new Setting(editorContainer)
-            .setName("Property Description")
-            .addTextArea(textarea => {
-                this.descriptionInput = textarea;
-                textarea.setPlaceholder("Enter property description");
-            });
-
-        new Setting(editorContainer)
+        new Setting(containerEl)
             .setName("Property Type")
+            .setDesc("Select the data type for this property")
             .addDropdown(dropdown => {
                 this.typeDropdown = dropdown;
                 dropdown.addOption("string", "String")
@@ -58,43 +64,46 @@ export class PropertyManagerAccordion extends BaseAccordion {
             });
     }
 
-    public createButtonRow(containerEl: HTMLElement): void {
-        const buttonContainer = containerEl.createDiv({ cls: "gw-button-container" });
+    private createButtonRow(containerEl: HTMLElement): void {
+        this.createButton(
+            "Add Property",
+            "Create a new property",
+            "Add Property",
+            () => this.addProperty(),
+            true
+        );
 
-        new Setting(buttonContainer)
-            .addButton(button => button
-                .setButtonText("Edit Properties")
-                .onClick(() => this.openEditModal()))
-            .addButton(button => button
-                .setButtonText("Add Property")
-                .setCta()
-                .onClick(() => this.addProperty()));
+        this.createButton(
+            "Edit Properties",
+            "Modify or delete existing properties",
+            "Edit Properties",
+            () => this.openEditModal(),
+            false
+        );
     }
 
     public addProperty(): void {
         const name = this.nameInput.getValue().trim();
-        const description = this.descriptionInput.getValue().trim();
+        const description = this.descriptionInput.getValue()?.trim() || "";
         const type = this.typeDropdown.getValue() as PropertyType;
 
         if (!name) {
-            new Notice("Property name cannot be empty.");
+            this.showNotice("Property name cannot be empty.");
             return;
         }
 
-        if (!description) {
-            new Notice("Property description cannot be empty.");
+        const settings = this.settingsService.getSettings();
+        if (settings.frontMatter.customProperties.some(p => p.name === name)) {
+            this.showNotice("A property with this name already exists.");
             return;
         }
 
         const newProperty: PropertyTag = {
             name,
             description,
-            type,
-            required: false,
-            multipleValues: false
+            type
         };
 
-        const settings = this.settingsService.getSettings();
         settings.frontMatter.customProperties.push(newProperty);
         this.settingsService.updateSettings(settings);
 

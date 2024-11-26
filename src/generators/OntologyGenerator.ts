@@ -16,7 +16,7 @@ export interface OntologyInput {
     tags: string[];
     provider: AIProvider;
     modelApiName: string;
-    userContext?: string; // Optional field based on OntologyGeneratorModal.ts
+    userContext?: string;
 }
 
 /**
@@ -69,10 +69,10 @@ Act as an expert in Ontological Science, specializing in taking unstructured inf
 Analyze the following information about a knowledge base and synthesize an ontology.
 Based on the overall structure and content, suggest a set of tags that would create a cohesive and useful ontology for this knowledge base.
 
-**Files:**
+**File Names:**
 ${fileNames}
 
-**Folders:** 
+**Folder Names:** 
 ${folderNames}
 
 **Existing Tags:** 
@@ -136,8 +136,6 @@ Suggest enough tags to form a comprehensive ontology for this knowledge base.
                         name: String(name).trim(),
                         description: String((value as any).description).trim(),
                         type: (value as any).type || 'string', // Default to 'string' if type not provided
-                        required: (value as any).required !== undefined ? Boolean((value as any).required) : false, // Default to false
-                        multipleValues: (value as any).multipleValues !== undefined ? Boolean((value as any).multipleValues) : false // Default to false
                     };
                 } else {
                     console.warn(`Unexpected format for tag ${name}:`, value);
@@ -147,9 +145,7 @@ Suggest enough tags to form a comprehensive ontology for this knowledge base.
             .filter((tag): tag is Tag => 
                 tag !== null && typeof tag.name === 'string' && tag.name.length > 0 && 
                 typeof tag.description === 'string' && tag.description.length > 0 &&
-                typeof tag.type === 'string' &&
-                typeof tag.required === 'boolean' &&
-                typeof tag.multipleValues === 'boolean'
+                typeof tag.type === 'string'
             );
 
         if (suggestedTags.length === 0) {
@@ -177,41 +173,5 @@ Suggest enough tags to form a comprehensive ontology for this knowledge base.
         fixedJson = fixedJson.replace(/,\s*}$/, '}');
 
         return fixedJson;
-    }
-
-    /**
-     * Validates the input parameters for ontology generation.
-     * @param input - Input parameters.
-     * @returns Boolean indicating validity.
-     */
-    protected validateInput(input: OntologyInput): boolean {
-        return Array.isArray(input.files) && 
-               Array.isArray(input.folders) && 
-               Array.isArray(input.tags);
-    }
-
-    /**
-     * Retrieves the current model selection for ontology generation.
-     * @returns Promise resolving to the selected model identifier.
-     */
-    protected async getCurrentModel(): Promise<string> {
-        const settings = this.settingsService.getSettings();
-        const providerType = this.aiAdapter.getProviderType();
-        const selectedModel = settings.aiProvider?.selectedModels?.[providerType];
-
-        if (!selectedModel) {
-            throw new Error(`No model selected for provider type: ${providerType}`);
-        }
-
-        return selectedModel;
-    }
-
-    /**
-     * Handles errors during ontology generation.
-     * @param error - The error encountered.
-     */
-    protected handleError(error: Error): never {
-        console.error(`Ontology generation error: ${error.message}`, error);
-        throw new Error(`Ontology generation failed: ${error.message}`);
     }
 }

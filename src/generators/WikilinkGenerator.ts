@@ -8,15 +8,15 @@ import { SettingsService } from '../services/SettingsService';
  * Input interface for wikilink generation
  */
 interface WikilinkInput extends BaseGeneratorInput {
-    content: string;           // Content to process
-    existingPages: string[];   // List of existing page names
+    content: string;           
+    existingPages: string[];   
 }
 
 /**
  * Output interface for wikilink generation
  */
 export interface WikilinkOutput extends BaseGeneratorOutput {
-    content: string;          // Processed content with wikilinks
+    content: string;          
 }
 
 /**
@@ -408,42 +408,9 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
     }
 
     /**
-     * Validates the input structure
-     */
-    protected validateInput(input: WikilinkInput): boolean {
-        return typeof input.content === 'string' && 
-               input.content.trim().length > 0 && 
-               Array.isArray(input.existingPages) &&
-               input.existingPages.every(page => typeof page === 'string');
-    }
-
-    /**
-     * Gets the current AI model
-     */
-    protected async getCurrentModel(): Promise<string> {
-        const settings = this.getSettings();
-        const providerType = this.aiAdapter.getProviderType();
-        const selectedModel = settings.aiProvider?.selectedModels?.[providerType];
-
-        if (!selectedModel) {
-            throw new Error(`No model selected for provider type: ${providerType}`);
-        }
-
-        return selectedModel;
-    }
-
-    /**
      * Escapes special regex characters in a string
      */
     public escapeRegExp(string: string): string {
         return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    }
-
-    /**
-     * Handles errors in wikilink generation
-     */
-    protected handleError(error: Error): never {
-        console.error(`WikilinkGenerator: Generation error: ${error.message}`);
-        throw new Error(`Wikilink generation failed: ${error.message}`);
     }
 }
