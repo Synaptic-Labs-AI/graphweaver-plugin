@@ -473,7 +473,7 @@ export const AIModelMap: Record<AIProvider, AIModel[]> = {
             name: 'Mistral Large',
             apiName: 'mistral-large-latest',
             capabilities: {
-                maxTokens: 128000,
+                maxTokens: 8192,
                 supportsStreaming: true
             },
             inputCostPer1M: 0,

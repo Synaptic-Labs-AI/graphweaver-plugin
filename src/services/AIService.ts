@@ -9,14 +9,17 @@ import {
 } from '../models/AIModels';
 
 // Import Adapters
-import { AIAdapter } from "../adapters/AIAdapter";
-import { OpenAIAdapter } from "../adapters/OpenAIAdapter";
-import { AnthropicAdapter } from "../adapters/AnthropicAdapter";
-import { GeminiAdapter } from "../adapters/GeminiAdapter";
-import { GroqAdapter } from "../adapters/GroqAdapter";
-import { OpenRouterAdapter } from "../adapters/OpenRouterAdapter";
-import { LMStudioAdapter } from "../adapters/LMStudioAdapter";
-import { PerplexityAdapter } from '../adapters/PerplexityAdapter'; // Add this import
+import { AIAdapter } from "../adapters";
+import { 
+    OpenAIAdapter, 
+    AnthropicAdapter, 
+    GeminiAdapter, 
+    GroqAdapter, 
+    OpenRouterAdapter, 
+    LMStudioAdapter, 
+    PerplexityAdapter, 
+    MistralAdapter 
+} from '../adapters';
 
 // Import Services
 import { SettingsService } from "./SettingsService";
@@ -184,11 +187,26 @@ export class AIService extends BaseService {
      * @param provider - The AI provider.
      */
     public getAdapterForProvider(provider: AIProvider): AIAdapter {
-        const adapter = this.adapters.get(provider);
-        if (!adapter) {
-            throw new Error(`No adapter found for provider: ${provider}`);
+        switch(provider) {
+            case AIProvider.OpenAI:
+                return new OpenAIAdapter(this.settingsService, this.jsonValidationService);
+            case AIProvider.Anthropic:
+                return new AnthropicAdapter(this.settingsService, this.jsonValidationService);
+            case AIProvider.Google:
+                return new GeminiAdapter(this.settingsService, this.jsonValidationService);
+            case AIProvider.Groq:
+                return new GroqAdapter(this.settingsService, this.jsonValidationService);
+            case AIProvider.OpenRouter:
+                return new OpenRouterAdapter(this.settingsService, this.jsonValidationService);
+            case AIProvider.LMStudio:
+                return new LMStudioAdapter(this.settingsService, this.jsonValidationService);
+            case AIProvider.Perplexity:
+                return new PerplexityAdapter(this.settingsService, this.jsonValidationService);
+            case AIProvider.Mistral:
+                return new MistralAdapter(this.settingsService, this.jsonValidationService);
+            default:
+                throw new Error(`No adapter found for provider: ${provider}`);
         }
-        return adapter;
     }
 
     /**
