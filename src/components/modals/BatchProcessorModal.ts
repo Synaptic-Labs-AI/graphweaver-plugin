@@ -270,11 +270,9 @@ export class BatchProcessorModal extends BaseModal<void> {
     }
 
     public async processContent(content: string): Promise<string> {
-        console.log('BatchProcessorModal: Starting content processing');
         let processedContent = content;
 
         // Always generate front matter in manual process
-        console.log('BatchProcessorModal: Generating front matter');
         const frontMatterOutput = await this.aiService.generateFrontMatter(processedContent);
         if (frontMatterOutput.success && frontMatterOutput.frontMatter) {
             processedContent = this.addOrUpdateFrontMatter(processedContent, frontMatterOutput.frontMatter);

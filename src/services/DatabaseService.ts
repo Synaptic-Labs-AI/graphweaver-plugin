@@ -77,7 +77,6 @@ export class DatabaseService extends BaseService {
                 this.data = this.migrateDataIfNeeded(savedData);
                 await this.pruneOldRecordsIfNeeded();
             }
-            console.log('DatabaseService: Data loaded successfully');
         } catch (error) {
             console.error('DatabaseService: Error loading data:', error);
             this.data = this.getDefaultData();

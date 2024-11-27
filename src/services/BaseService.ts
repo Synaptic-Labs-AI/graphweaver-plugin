@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import { Notice } from 'obsidian';
+import { ErrorHandler } from '../utils/ErrorHandler';
 
 export type DeepPartial<T> = T extends object ? {
     [P in keyof T]?: T[P] extends object 
@@ -9,7 +10,7 @@ export type DeepPartial<T> = T extends object ? {
         : T[P];
 } : T;
 
-export class BaseService {
+export abstract class BaseService {
     protected emitter: EventEmitter;
 
     constructor() {
@@ -25,7 +26,6 @@ export class BaseService {
         try {
             if (callback && data !== undefined) {
                 await callback(data);
-                console.log('Data saved successfully');
             }
         } catch (error) {
             this.handleError('Error saving data:', error);
@@ -77,5 +77,13 @@ export class BaseService {
 
     protected emit(event: string | symbol, ...args: any[]): void {
         this.emitter.emit(event, ...args);
+    }
+
+    protected async executeWithHandling<T>(operation: () => Promise<T>): Promise<T> {
+        try {
+            return await operation();
+        } catch (error) {
+            return ErrorHandler.handleError(error as Error, this.constructor.name);
+        }
     }
 }

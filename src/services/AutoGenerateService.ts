@@ -25,6 +25,8 @@ import {
     MistralAdapter 
 } from '../adapters';
 
+// If ErrorHandler is not used, remove the import above.
+
 /**
  * Enhanced service for automatic content generation during vault startup
  * Handles processing of unprocessed files when vault is first opened
@@ -106,7 +108,6 @@ export class AutoGenerateService extends BaseService {
             const unprocessedFiles = await this.getUnprocessedFiles();
             
             if (unprocessedFiles.length === 0) {
-                console.log('AutoGenerateService: No files need processing');
                 this.completeStartup();
                 return;
             }
@@ -125,18 +126,15 @@ export class AutoGenerateService extends BaseService {
      */
     public shouldRunAutoGenerate(): boolean {
         if (this.isStartupComplete) {
-            console.log('AutoGenerateService: Startup already completed');
             return false;
         }
 
         if (this.isProcessing) {
-            console.log('AutoGenerateService: Already processing files');
             return false;
         }
 
         const settings = this.settingsService.getSettings();
         if (!settings.frontMatter.autoGenerate) {
-            console.log('AutoGenerateService: Auto-generate is disabled');
             this.completeStartup();
             return false;
         }
@@ -302,5 +300,11 @@ export class AutoGenerateService extends BaseService {
             [AIProvider.Perplexity, new PerplexityAdapter(this.settingsService, this.jsonValidationService)],
             [AIProvider.Mistral, new MistralAdapter(this.settingsService, this.jsonValidationService)],
         ]);
+    }
+
+    public async someMethod(): Promise<void> {
+        await this.executeWithHandling(async () => {
+            // ...existing method logic...
+        });
     }
 }

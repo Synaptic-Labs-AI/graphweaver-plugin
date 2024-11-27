@@ -124,7 +124,6 @@ export class KnowledgeBloomModal extends BaseModal<void> {
                 new Notice("No new notes were generated.");
             }
         } catch (error) {
-            console.error("Error generating notes:", error);
             new Notice(`Failed to generate notes: ${(error as Error).message}`);
         } finally {
             this.generateButton.setDisabled(false);

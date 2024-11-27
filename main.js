@@ -1395,6 +1395,14 @@ var MistralAdapter = class extends AIAdapter {
   }
 };
 
+// src/utils/ErrorHandler.ts
+var ErrorHandler = class {
+  static handleError(error, context) {
+    console.error(`${context} error: ${error.message}`, error);
+    throw error;
+  }
+};
+
 // src/generators/BaseGenerator.ts
 var BaseGenerator = class {
   constructor(aiAdapter, settingsService) {
@@ -1419,7 +1427,7 @@ var BaseGenerator = class {
       }
       return this.formatOutput(aiResponse.data, input);
     } catch (error) {
-      return this.handleError(error);
+      return ErrorHandler.handleError(error, this.constructor.name);
     }
   }
   /**
@@ -1497,29 +1505,19 @@ var FrontMatterGenerator = class extends BaseGenerator {
    * @returns Promise resolving to content with front matter
    */
   async generate(input) {
-    console.log("FrontMatterGenerator: Starting generation");
-    try {
-      const settings = this.getSettings();
-      const completeInput = {
-        ...input,
-        customProperties: input.customProperties || settings.frontMatter.customProperties,
-        customTags: input.customTags || settings.tags.customTags.map((tag) => tag.name)
-      };
-      console.log("FrontMatterGenerator: Complete input prepared:", completeInput);
-      const prompt = this.preparePrompt(completeInput);
-      const model = await this.getCurrentModel();
-      console.log("FrontMatterGenerator: Sending request to AI");
-      const aiResponse = await this.aiAdapter.generateResponse(prompt, model);
-      console.log("FrontMatterGenerator: AI response received:", aiResponse);
-      if (!aiResponse.success || !aiResponse.data) {
-        console.error("FrontMatterGenerator: AI response was unsuccessful or empty");
-        return { content: input.content };
-      }
-      return this.formatOutput(aiResponse.data, completeInput);
-    } catch (error) {
-      console.error("FrontMatterGenerator: Error during generation:", error);
+    const settings = this.getSettings();
+    const completeInput = {
+      ...input,
+      customProperties: input.customProperties || settings.frontMatter.customProperties,
+      customTags: input.customTags || settings.tags.customTags.map((tag) => tag.name)
+    };
+    const prompt = this.preparePrompt(completeInput);
+    const model = await this.getCurrentModel();
+    const aiResponse = await this.aiAdapter.generateResponse(prompt, model);
+    if (!aiResponse.success || !aiResponse.data) {
       return { content: input.content };
     }
+    return this.formatOutput(aiResponse.data, completeInput);
   }
   /**
    * Prepares the AI prompt with schema and context
@@ -1565,10 +1563,8 @@ var FrontMatterGenerator = class extends BaseGenerator {
    * @returns Formatted output with front matter
    */
   formatOutput(aiResponse, originalInput) {
-    console.log("FrontMatterGenerator: Formatting AI response into front matter");
     const parsedResponse = this.parseAIResponse(aiResponse);
     if (!parsedResponse) {
-      console.error("FrontMatterGenerator: Failed to parse AI response");
       return { content: originalInput.content };
     }
     if ("content" in parsedResponse) {
@@ -1576,7 +1572,6 @@ var FrontMatterGenerator = class extends BaseGenerator {
     }
     const frontMatter = this.convertToFrontMatter(parsedResponse);
     const finalContent = this.mergeFrontMatter(originalInput.content, frontMatter);
-    console.log("FrontMatterGenerator: Front matter generated successfully");
     return { content: finalContent };
   }
   /**
@@ -1671,21 +1666,13 @@ var WikilinkGenerator = class extends BaseGenerator {
    * @returns Promise<WikilinkOutput> with processed content
    */
   async generate(input) {
-    console.log("WikilinkGenerator: Starting generation");
     if (!this.validateInput(input)) {
       throw new Error("Invalid input for wikilink generation");
     }
-    try {
-      const prompt = this.preparePrompt(input);
-      const model = await this.getCurrentModel();
-      console.log("WikilinkGenerator: Sending request to AI with prompt:", prompt);
-      const aiResponse = await this.aiAdapter.generateResponse(prompt, model);
-      console.log("WikilinkGenerator: AI response received:", aiResponse);
-      return this.formatOutput(aiResponse.data, input);
-    } catch (error) {
-      console.error("WikilinkGenerator: Error during generation:", error);
-      return this.handleError(error);
-    }
+    const prompt = this.preparePrompt(input);
+    const model = await this.getCurrentModel();
+    const aiResponse = await this.aiAdapter.generateResponse(prompt, model);
+    return this.formatOutput(aiResponse.data, input);
   }
   /**
    * Prepares the AI prompt for generating wikilink suggestions
@@ -1695,14 +1682,18 @@ var WikilinkGenerator = class extends BaseGenerator {
     const customTags = settings.tags.customTags.map((tag) => tag.name).join(", ") || "";
     return `
 # MISSION
-Act as an expert in recommending wikilinks for potential future research notes.
-Analyze the following content and suggest key phrases, proper nouns, people, places, events, and concepts that would make for a relevant and practical note.
-Consider the existing pages in the vault and prioritize linking to them. Ignore all tags and front matter when generating.
+Act as an expert in recommending wikilinks for potential future research notes related to the current CONTENT for an Obsidian Vault.
+
+# INSTRUCTIONS
+1. Analyze the CONTENT of the note and the EXISTING NOTES in the vault.
+2. Suggest key phrases, proper nouns, people, places, events, and concepts that would make for a relevant and practical note.
+3. Consider the existing pages in the vault and prioritize linking to them. 
+4. Ignore all tags and front matter when generating.
 
 # CONTENT
 ${input.content}
 
-# EXISTING PAGES
+# EXISTING NOTES
 ${input.existingPages.join(", ")}
 
 Provide your suggestions as a JSON array of strings, omitting all characters before or after, including backticks.
@@ -1712,13 +1703,10 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
    * Format the AI response into wikilink output
    */
   formatOutput(aiResponse, originalInput) {
-    console.log("WikilinkGenerator: Formatting AI response into wikilinks");
     const suggestedLinks = this.parseSuggestedLinks(aiResponse);
-    console.log("WikilinkGenerator: Suggested links:", suggestedLinks);
     let processedContent = originalInput.content;
     processedContent = this.addNewWikilinks(processedContent, suggestedLinks);
     processedContent = this.cleanNestedWikilinks(processedContent);
-    console.log("WikilinkGenerator: Wikilinks generated successfully");
     return { content: processedContent };
   }
   /**
@@ -1742,14 +1730,12 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
         });
       }
     });
-    console.log("WikilinkGenerator: New wikilinks added");
     return this.restoreCodeBlocks(processedContent, codeBlocks);
   }
   /**
    * Cleans up nested wikilinks while preserving valid structure
    */
   cleanNestedWikilinks(content) {
-    console.log("WikilinkGenerator: Cleaning nested wikilinks");
     const processedWikilinks = /* @__PURE__ */ new Set();
     let result = content;
     const matches = Array.from(content.matchAll(this.PATTERNS.WIKILINK_REGEX)).map((match) => ({
@@ -2000,13 +1986,9 @@ var OntologyGenerator = class extends BaseGenerator {
     if (!this.validateInput(input)) {
       throw new Error("Invalid input for ontology generation");
     }
-    try {
-      const prompt = this.preparePrompt(input);
-      const aiResponse = await this.aiAdapter.generateResponse(prompt, input.modelApiName);
-      return this.formatOutput(aiResponse.data);
-    } catch (error) {
-      this.handleError(error);
-    }
+    const prompt = this.preparePrompt(input);
+    const aiResponse = await this.aiAdapter.generateResponse(prompt, input.modelApiName);
+    return this.formatOutput(aiResponse.data);
   }
   /**
    * Prepares the AI prompt based on the input.
@@ -2473,29 +2455,20 @@ var KnowledgeBloomGenerator = class extends BaseGenerator {
    * @returns Promise resolving to generated notes
    */
   async generate(input) {
-    this.currentInput = input;
-    console.log("KnowledgeBloomGenerator: Starting generation process");
-    try {
-      if (!this.validateInput(input)) {
-        throw new Error("Invalid input for Knowledge Bloom generation");
-      }
-      const wikilinks = await this.extractWikilinks(input.sourceFile);
-      console.log(`KnowledgeBloomGenerator: Found ${wikilinks.length} unique wikilinks`);
-      if (wikilinks.length === 0) {
-        throw new Error("No wikilinks found in the source file.");
-      }
-      const folderPath = this.getFolderPath(input.sourceFile);
-      const output = { generatedNotes: [] };
-      const generationPromises = wikilinks.map(
-        (link) => this.processWikilink(link, folderPath, input, output)
-      );
-      await Promise.allSettled(generationPromises);
-      return output;
-    } catch (error) {
-      return this.handleError(error);
-    } finally {
-      this.currentInput = null;
+    if (!this.validateInput(input)) {
+      throw new Error("Invalid input for Knowledge Bloom generation");
     }
+    const wikilinks = await this.extractWikilinks(input.sourceFile);
+    if (wikilinks.length === 0) {
+      throw new Error("No wikilinks found in the source file.");
+    }
+    const folderPath = this.getFolderPath(input.sourceFile);
+    const output = { generatedNotes: [] };
+    const generationPromises = wikilinks.map(
+      (link) => this.processWikilink(link, folderPath, input, output)
+    );
+    await Promise.allSettled(generationPromises);
+    return output;
   }
   /**
    * Capitalize each word in a title
@@ -2518,7 +2491,6 @@ var KnowledgeBloomGenerator = class extends BaseGenerator {
       const newFilePath = `${folderPath}/${capitalizedLink}.md`;
       await this.app.vault.create(newFilePath, finalContent);
       output.generatedNotes.push({ title: capitalizedLink, content: finalContent });
-      console.log(`KnowledgeBloomGenerator: Successfully generated note for "${capitalizedLink}".`);
     } catch (error) {
       console.error(`Error processing wikilink "${link}":`, error);
       new import_obsidian11.Notice(`Failed to generate note for "${link}": ${error.message}`);
@@ -2661,7 +2633,6 @@ var BaseService = class {
     try {
       if (callback && data !== void 0) {
         await callback(data);
-        console.log("Data saved successfully");
       }
     } catch (error) {
       this.handleError("Error saving data:", error);
@@ -2699,6 +2670,13 @@ var BaseService = class {
   }
   emit(event, ...args) {
     this.emitter.emit(event, ...args);
+  }
+  async executeWithHandling(operation) {
+    try {
+      return await operation();
+    } catch (error) {
+      return ErrorHandler.handleError(error, this.constructor.name);
+    }
   }
 };
 
@@ -2896,15 +2874,12 @@ var AIService = class extends BaseService {
    * @param prompt - The input prompt for the AI.
    */
   async generateResponse(prompt) {
-    const provider = this.getCurrentProvider();
-    const modelApiName = this.getCurrentModel(provider);
-    const adapter = this.getAdapterForProvider(provider);
-    try {
+    return this.executeWithHandling(async () => {
+      const provider = this.getCurrentProvider();
+      const modelApiName = this.getCurrentModel(provider);
+      const adapter = this.getAdapterForProvider(provider);
       return await adapter.generateResponse(prompt, modelApiName);
-    } catch (error) {
-      console.error("Error generating response:", error);
-      throw new Error(`Failed to generate response: ${error.message}`);
-    }
+    });
   }
   /**
    * Retrieves a list of AI providers that have valid API keys set.
@@ -3089,7 +3064,6 @@ var JsonValidationService = class {
       jsonString = jsonString.trim();
       jsonString = jsonString.replace(/^```json?\s*|\s*```$/g, "");
       const parsedJson = JSON.parse(jsonString);
-      console.log("JsonValidationService: Successfully parsed JSON:", parsedJson);
       return parsedJson;
     } catch (error) {
       console.error("JsonValidationService: Error validating JSON:", error);
@@ -3106,7 +3080,6 @@ var JsonValidationService = class {
     try {
       return JSON.parse(str);
     } catch (e) {
-      console.error("JsonValidationService: Initial JSON parse failed:", e);
       try {
         str = str.replace(/(\w+)(?=\s*:)/g, '"$1"');
         str = str.replace(/'/g, '"');
@@ -3305,7 +3278,6 @@ var DatabaseService = class extends BaseService {
         this.data = this.migrateDataIfNeeded(savedData);
         await this.pruneOldRecordsIfNeeded();
       }
-      console.log("DatabaseService: Data loaded successfully");
     } catch (error) {
       console.error("DatabaseService: Error loading data:", error);
       this.data = this.getDefaultData();
@@ -3580,7 +3552,6 @@ var AutoGenerateService = class extends BaseService {
     try {
       const unprocessedFiles = await this.getUnprocessedFiles();
       if (unprocessedFiles.length === 0) {
-        console.log("AutoGenerateService: No files need processing");
         this.completeStartup();
         return;
       }
@@ -3596,16 +3567,13 @@ var AutoGenerateService = class extends BaseService {
    */
   shouldRunAutoGenerate() {
     if (this.isStartupComplete) {
-      console.log("AutoGenerateService: Startup already completed");
       return false;
     }
     if (this.isProcessing) {
-      console.log("AutoGenerateService: Already processing files");
       return false;
     }
     const settings = this.settingsService.getSettings();
     if (!settings.frontMatter.autoGenerate) {
-      console.log("AutoGenerateService: Auto-generate is disabled");
       this.completeStartup();
       return false;
     }
@@ -3740,6 +3708,10 @@ var AutoGenerateService = class extends BaseService {
       ["perplexity" /* Perplexity */, new PerplexityAdapter(this.settingsService, this.jsonValidationService)],
       ["mistral" /* Mistral */, new MistralAdapter(this.settingsService, this.jsonValidationService)]
     ]);
+  }
+  async someMethod() {
+    await this.executeWithHandling(async () => {
+    });
   }
 };
 
@@ -4626,7 +4598,6 @@ var OntologyGeneratorModal = class extends BaseModal {
       this.onGenerate(ontology);
       this.close();
     } catch (error) {
-      console.error("Error generating ontology:", error);
       loadingNotice.hide();
       new import_obsidian23.Notice(`Failed to generate ontology: ${error.message}`, 5e3);
     } finally {
@@ -4684,7 +4655,6 @@ var OntologyGenerationAccordion = class extends BaseAccordion {
     ).open();
   }
   async handleGeneratedOntology(generatedOntology) {
-    console.log("Ontology generated:", generatedOntology);
     const currentSettings = this.settingsService.getSettings();
     const updatedSettings = {
       ...currentSettings,
@@ -4884,9 +4854,7 @@ var BatchProcessorModal = class extends BaseModal {
     await this.app.vault.modify(file, updatedContent);
   }
   async processContent(content) {
-    console.log("BatchProcessorModal: Starting content processing");
     let processedContent = content;
-    console.log("BatchProcessorModal: Generating front matter");
     const frontMatterOutput = await this.aiService.generateFrontMatter(processedContent);
     if (frontMatterOutput.success && frontMatterOutput.frontMatter) {
       processedContent = this.addOrUpdateFrontMatter(processedContent, frontMatterOutput.frontMatter);
@@ -5150,7 +5118,6 @@ var KnowledgeBloomModal = class extends BaseModal {
         new import_obsidian28.Notice("No new notes were generated.");
       }
     } catch (error) {
-      console.error("Error generating notes:", error);
       new import_obsidian28.Notice(`Failed to generate notes: ${error.message}`);
     } finally {
       this.generateButton.setDisabled(false);
@@ -5261,7 +5228,6 @@ var GraphWeaverPlugin = class extends import_obsidian29.Plugin {
       return;
     }
     if (this.settings.frontMatter.autoGenerate) {
-      console.log("Processing vault on startup");
       await this.autoGenerateService.runAutoGenerate();
       this.hasProcessedVaultStartup = true;
     }
@@ -5389,7 +5355,6 @@ var GraphWeaverPlugin = class extends import_obsidian29.Plugin {
    * Clean up on plugin unload
    */
   async onunload() {
-    console.log("Unloading GraphWeaver plugin");
     await this.databaseService.saveData(this.saveData.bind(this));
     if (this.autoGenerateService) {
       this.autoGenerateService.destroy();

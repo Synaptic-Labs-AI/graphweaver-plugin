@@ -1,4 +1,4 @@
-import { App, Setting, TextComponent, Notice, DropdownComponent } from "obsidian";
+import { App, Setting, TextComponent, DropdownComponent } from "obsidian";
 import { BaseAccordion } from "./BaseAccordion";
 import { SettingsService } from "../../services/SettingsService";
 import { AIService } from "../../services/AIService";

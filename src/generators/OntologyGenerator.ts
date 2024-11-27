@@ -44,13 +44,9 @@ export class OntologyGenerator extends BaseGenerator<OntologyInput, OntologyResu
             throw new Error('Invalid input for ontology generation');
         }
 
-        try {
-            const prompt = this.preparePrompt(input);
-            const aiResponse = await this.aiAdapter.generateResponse(prompt, input.modelApiName);
-            return this.formatOutput(aiResponse.data);
-        } catch (error) {
-            this.handleError(error as Error);
-        }
+        const prompt = this.preparePrompt(input);
+        const aiResponse = await this.aiAdapter.generateResponse(prompt, input.modelApiName);
+        return this.formatOutput(aiResponse.data);
     }
 
     /**

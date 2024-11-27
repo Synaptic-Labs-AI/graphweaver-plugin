@@ -51,36 +51,26 @@ export class KnowledgeBloomGenerator extends BaseGenerator<KnowledgeBloomInput, 
      * @returns Promise resolving to generated notes
      */
     public async generate(input: KnowledgeBloomInput): Promise<KnowledgeBloomOutput> {
-        this.currentInput = input;
-        console.log('KnowledgeBloomGenerator: Starting generation process');
-        
-        try {
-            if (!this.validateInput(input)) {
-                throw new Error('Invalid input for Knowledge Bloom generation');
-            }
-
-            const wikilinks = await this.extractWikilinks(input.sourceFile);
-            console.log(`KnowledgeBloomGenerator: Found ${wikilinks.length} unique wikilinks`);
-
-            if (wikilinks.length === 0) {
-                throw new Error('No wikilinks found in the source file.');
-            }
-
-            const folderPath = this.getFolderPath(input.sourceFile);
-            const output: KnowledgeBloomOutput = { generatedNotes: [] };
-
-            const generationPromises = wikilinks.map(link => 
-                this.processWikilink(link, folderPath, input, output)
-            );
-
-            await Promise.allSettled(generationPromises);
-            return output;
-            
-        } catch (error) {
-            return this.handleError(error as Error);
-        } finally {
-            this.currentInput = null;
+        // Remove try-catch; BaseGenerator handles errors
+        if (!this.validateInput(input)) {
+            throw new Error('Invalid input for Knowledge Bloom generation');
         }
+
+        const wikilinks = await this.extractWikilinks(input.sourceFile);
+
+        if (wikilinks.length === 0) {
+            throw new Error('No wikilinks found in the source file.');
+        }
+
+        const folderPath = this.getFolderPath(input.sourceFile);
+        const output: KnowledgeBloomOutput = { generatedNotes: [] };
+
+        const generationPromises = wikilinks.map(link => 
+            this.processWikilink(link, folderPath, input, output)
+        );
+
+        await Promise.allSettled(generationPromises);
+        return output;
     }
 
     /**
@@ -119,7 +109,6 @@ export class KnowledgeBloomGenerator extends BaseGenerator<KnowledgeBloomInput, 
             await this.app.vault.create(newFilePath, finalContent);
 
             output.generatedNotes.push({ title: capitalizedLink, content: finalContent });
-            console.log(`KnowledgeBloomGenerator: Successfully generated note for "${capitalizedLink}".`);
         } catch (error) {
             console.error(`Error processing wikilink "${link}":`, error);
             new Notice(`Failed to generate note for "${link}": ${(error as Error).message}`);

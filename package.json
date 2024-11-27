@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@clack/prompts": "^0.8.2",
+    "@line/ts-remove-unused": "^0.10.1",
     "ajv": "^8.17.1",
     "dotenv": "^16.4.5"
   }

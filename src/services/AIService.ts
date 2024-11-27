@@ -268,15 +268,12 @@ export class AIService extends BaseService {
      * @param prompt - The input prompt for the AI.
      */
     public async generateResponse(prompt: string): Promise<AIResponse> {
-        const provider = this.getCurrentProvider();
-        const modelApiName = this.getCurrentModel(provider);
-        const adapter = this.getAdapterForProvider(provider);
-        try {
+        return this.executeWithHandling(async () => {
+            const provider = this.getCurrentProvider();
+            const modelApiName = this.getCurrentModel(provider);
+            const adapter = this.getAdapterForProvider(provider);
             return await adapter.generateResponse(prompt, modelApiName);
-        } catch (error) {
-            console.error("Error generating response:", error);
-            throw new Error(`Failed to generate response: ${(error as Error).message}`);
-        }
+        });
     }
 
     /**

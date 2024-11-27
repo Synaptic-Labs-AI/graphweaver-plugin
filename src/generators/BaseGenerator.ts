@@ -1,6 +1,7 @@
 import { AIAdapter } from '../adapters/AIAdapter';
 import { SettingsService } from '../services/SettingsService';
 import { PluginSettings } from '../settings/Settings';
+import { ErrorHandler } from '../utils/ErrorHandler';
 
 /**
  * Base interface for all generator inputs
@@ -61,7 +62,7 @@ export abstract class BaseGenerator<TInput extends BaseGeneratorInput = BaseGene
 
             return this.formatOutput(aiResponse.data, input);
         } catch (error) {
-            return this.handleError(error as Error);
+            return ErrorHandler.handleError(error as Error, this.constructor.name);
         }
     }
 

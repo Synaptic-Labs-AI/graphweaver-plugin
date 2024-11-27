@@ -1,4 +1,4 @@
-import { App, Setting, ToggleComponent, ButtonComponent } from "obsidian";
+import { App } from "obsidian";
 import { BaseAccordion } from "./BaseAccordion";
 import { AIService } from "../../services/AIService";
 import { SettingsService } from "../../services/SettingsService";

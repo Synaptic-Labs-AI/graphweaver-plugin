@@ -135,7 +135,6 @@ export default class GraphWeaverPlugin extends Plugin {
         }
 
         if (this.settings.frontMatter.autoGenerate) {
-            console.log('Processing vault on startup');
             await this.autoGenerateService.runAutoGenerate();
             this.hasProcessedVaultStartup = true;
         }
@@ -296,7 +295,6 @@ export default class GraphWeaverPlugin extends Plugin {
      * Clean up on plugin unload
      */
     async onunload(): Promise<void> {
-        console.log('Unloading GraphWeaver plugin');
         
         await this.databaseService.saveData(this.saveData.bind(this));
         

@@ -176,7 +176,6 @@ export class OntologyGeneratorModal extends BaseModal<OntologyResult> {
             this.onGenerate(ontology);
             this.close();
         } catch (error) {
-            console.error("Error generating ontology:", error);
             loadingNotice.hide();
             new Notice(`Failed to generate ontology: ${(error as Error).message}`, 5000);
         } finally {

@@ -56,23 +56,14 @@ export class WikilinkGenerator extends BaseGenerator<WikilinkInput, WikilinkOutp
      * @returns Promise<WikilinkOutput> with processed content
      */
     public async generate(input: WikilinkInput): Promise<WikilinkOutput> {
-        console.log('WikilinkGenerator: Starting generation');
-
         if (!this.validateInput(input)) {
             throw new Error('Invalid input for wikilink generation');
         }
 
-        try {
-            const prompt = this.preparePrompt(input);
-            const model = await this.getCurrentModel();
-            console.log('WikilinkGenerator: Sending request to AI with prompt:', prompt);
-            const aiResponse = await this.aiAdapter.generateResponse(prompt, model);
-            console.log('WikilinkGenerator: AI response received:', aiResponse);
-            return this.formatOutput(aiResponse.data, input);
-        } catch (error) {
-            console.error('WikilinkGenerator: Error during generation:', error);
-            return this.handleError(error);
-        }
+        const prompt = this.preparePrompt(input);
+        const model = await this.getCurrentModel();
+        const aiResponse = await this.aiAdapter.generateResponse(prompt, model);
+        return this.formatOutput(aiResponse.data, input);
     }
 
     /**
@@ -86,14 +77,18 @@ export class WikilinkGenerator extends BaseGenerator<WikilinkInput, WikilinkOutp
 
         return `
 # MISSION
-Act as an expert in recommending wikilinks for potential future research notes.
-Analyze the following content and suggest key phrases, proper nouns, people, places, events, and concepts that would make for a relevant and practical note.
-Consider the existing pages in the vault and prioritize linking to them. Ignore all tags and front matter when generating.
+Act as an expert in recommending wikilinks for potential future research notes related to the current CONTENT for an Obsidian Vault.
+
+# INSTRUCTIONS
+1. Analyze the CONTENT of the note and the EXISTING NOTES in the vault.
+2. Suggest key phrases, proper nouns, people, places, events, and concepts that would make for a relevant and practical note.
+3. Consider the existing pages in the vault and prioritize linking to them. 
+4. Ignore all tags and front matter when generating.
 
 # CONTENT
 ${input.content}
 
-# EXISTING PAGES
+# EXISTING NOTES
 ${input.existingPages.join(', ')}
 
 Provide your suggestions as a JSON array of strings, omitting all characters before or after, including backticks.
@@ -104,17 +99,13 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
      * Format the AI response into wikilink output
      */
     protected formatOutput(aiResponse: any, originalInput: WikilinkInput): WikilinkOutput {
-        console.log('WikilinkGenerator: Formatting AI response into wikilinks');
 
         const suggestedLinks = this.parseSuggestedLinks(aiResponse);
-        console.log('WikilinkGenerator: Suggested links:', suggestedLinks);
 
         let processedContent = originalInput.content;
         
         processedContent = this.addNewWikilinks(processedContent, suggestedLinks);
         processedContent = this.cleanNestedWikilinks(processedContent);
-        
-        console.log('WikilinkGenerator: Wikilinks generated successfully');
 
         return { content: processedContent };
     }
@@ -148,8 +139,6 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
                 }
             });
 
-        console.log('WikilinkGenerator: New wikilinks added');
-
         return this.restoreCodeBlocks(processedContent, codeBlocks);
     }    
 
@@ -157,7 +146,6 @@ Provide your suggestions as a JSON array of strings, omitting all characters bef
      * Cleans up nested wikilinks while preserving valid structure
      */
     public cleanNestedWikilinks(content: string): string {
-        console.log('WikilinkGenerator: Cleaning nested wikilinks');
 
         const processedWikilinks = new Set<string>();
         let result = content;

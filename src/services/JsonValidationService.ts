@@ -47,7 +47,6 @@ export class JsonValidationService {
 
             // Parse and return the JSON
             const parsedJson = JSON.parse(jsonString);
-            console.log('JsonValidationService: Successfully parsed JSON:', parsedJson);
             return parsedJson;
         } catch (error) {
             console.error('JsonValidationService: Error validating JSON:', error);
@@ -65,7 +64,6 @@ export class JsonValidationService {
         try {
             return JSON.parse(str);
         } catch (e) {
-            console.error('JsonValidationService: Initial JSON parse failed:', e);
             // Try to fix common JSON issues
             try {
                 // Fix unquoted keys

@@ -55,7 +55,6 @@ export class OntologyGenerationAccordion extends BaseAccordion {
     }
 
     public async handleGeneratedOntology(generatedOntology: OntologyResult): Promise<void> {
-        console.log("Ontology generated:", generatedOntology);
         
         const currentSettings = this.settingsService.getSettings();
         const updatedSettings = {
