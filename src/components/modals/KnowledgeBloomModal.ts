@@ -1,8 +1,9 @@
-import { App, Modal, Setting, DropdownComponent, TextAreaComponent, ButtonComponent, TFile, Notice } from "obsidian";
+import { App, Setting, DropdownComponent, TextAreaComponent, ButtonComponent, TFile, Notice } from "obsidian";
 import { SettingsService } from "../../services/SettingsService";
 import { AIService } from "../../services/AIService";
+import { BaseModal } from "./BaseModal";
 
-export class KnowledgeBloomModal extends Modal {
+export class KnowledgeBloomModal extends BaseModal<void> {
     private templateSelect: DropdownComponent;
     private contextInput: TextAreaComponent;
     private generateButton: ButtonComponent;
@@ -15,6 +16,10 @@ export class KnowledgeBloomModal extends Modal {
         private aiService: AIService
     ) {
         super(app);
+    }
+
+    protected getTitle(): string {
+        return "Knowledge Bloom Generator";
     }
 
     async onOpen() {
@@ -47,7 +52,7 @@ export class KnowledgeBloomModal extends Modal {
         }
     }
 
-    private renderContent() {
+    protected renderContent(): void {
         const { contentEl } = this;
 
         // Template Selection
@@ -87,6 +92,10 @@ export class KnowledgeBloomModal extends Modal {
                     .setButtonText("Cancel")
                     .onClick(() => this.close())
             );
+    }
+
+    protected async handleSubmit(): Promise<void> {
+        this.close();
     }
 
     private async handleGenerate() {

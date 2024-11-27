@@ -1,6 +1,5 @@
 import { TFile } from 'obsidian';
 import { 
-    ProcessingState,
     ProcessingStats,
     ProcessingError,
     FileProcessingResult,

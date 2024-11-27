@@ -1,7 +1,7 @@
 import { PluginSettings, DEFAULT_SETTINGS, KnowledgeBloomSettings } from "../settings/Settings";
 import { Plugin } from "obsidian";
 import { AIProvider } from "../models/AIModels";
-import { Tag } from "../models/PropertyTag";
+import { Tag, PropertyTag } from "../models/PropertyTag";
 import { JsonValidationService } from "./JsonValidationService";
 import { BaseService, DeepPartial } from './BaseService'; 
 
@@ -50,7 +50,14 @@ export class SettingsService extends BaseService {
     }
 
     public getSettings(): PluginSettings {
-        return this.settings;
+        // Ensure customProperties is always returned as an array
+        const settings = { ...this.settings };
+        if (settings.frontMatter?.customProperties) {
+            const props = settings.frontMatter.customProperties;
+            settings.frontMatter.customProperties = Array.isArray(props) ? props :
+                Object.values(props).filter(v => v && typeof v === 'object' && 'name' in v) as PropertyTag[];
+        }
+        return settings;
     }
 
     public getSetting<K extends SettingsKey>(key: K): PluginSettings[K] {
@@ -92,9 +99,41 @@ export class SettingsService extends BaseService {
         nestedKey: NK,
         value: PluginSettings[K][NK]
     ): Promise<void> {
-        this.settings[key][nestedKey] = value;
+        // Special handling for customProperties since it might be an object
+        if (key === 'frontMatter' && nestedKey === 'customProperties') {
+            const currentValue = this.settings[key][nestedKey];
+            const existingProps = Array.isArray(currentValue) ? currentValue :
+                Object.values(currentValue as unknown as Record<string, unknown>)
+                    .filter(
+                        (v): v is PropertyTag => v !== null && typeof v === 'object' && 'name' in v
+                    );
+
+            // If value is an array, merge with existing props
+            const valueAsArray = Array.isArray(value) ? value : [value];
+            this.settings[key] = {
+                ...this.settings[key],
+                [nestedKey]: [...existingProps, ...valueAsArray]
+            };
+        } else if (Array.isArray(this.settings[key][nestedKey])) {
+            // Handle other array types
+            const currentArray = this.settings[key][nestedKey] as unknown;
+            const valueAsArray = Array.isArray(value) ? value : [value];
+            this.settings[key] = {
+                ...this.settings[key],
+                [nestedKey]: [...(currentArray as unknown[]), ...valueAsArray]
+            };
+        } else {
+            // Handle non-array values
+            this.settings[key] = {
+                ...this.settings[key],
+                [nestedKey]: value
+            };
+        }
+
         await this.saveSettings();
-        this.emitter.emit('settingsChanged', { [key]: { [nestedKey]: value } });
+        this.emitter.emit('settingsChanged', {
+            [key]: { [nestedKey]: this.settings[key][nestedKey] }
+        });
     }
 
     public async updateAIProviderSettings(
@@ -176,7 +215,12 @@ export class SettingsService extends BaseService {
     }
 
     public async saveSettings(): Promise<void> {
-        await this.saveData(() => this.plugin.saveData(this.settings));
+        try {
+            await this.plugin.saveData(this.settings);
+        } catch (error) {
+            console.error('Failed to save settings:', error);
+            throw error;
+        }
     }
 
     // Getter for JsonValidationService

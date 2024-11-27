@@ -3,8 +3,9 @@
 import { App, Modal, Notice, TFile, TFolder } from "obsidian";
 import { AIService } from "../../services/AIService";
 import { SettingsService } from "../../services/SettingsService";
+import { BaseModal } from "./BaseModal";
 
-export class BatchProcessorModal extends Modal {
+export class BatchProcessorModal extends BaseModal<void> {
     public aiService: AIService;
     public settingsService: SettingsService;
 
@@ -14,15 +15,11 @@ export class BatchProcessorModal extends Modal {
         this.settingsService = settingsService;
     }
 
-    onOpen() {
-        this.renderContent();
+    protected getTitle(): string {
+        return "Batch Processor";
     }
 
-    onClose() {
-        this.contentEl.empty();
-    }
-
-    public renderContent(): void {
+    protected renderContent(): void {
         const { contentEl } = this;
         contentEl.empty();
 
@@ -37,15 +34,47 @@ export class BatchProcessorModal extends Modal {
         this.createButtons(contentEl);
     }
 
+    protected async handleSubmit(): Promise<void> {
+        const selectedPaths = this.getSelectedPaths();
+        if (selectedPaths.length === 0) {
+            new Notice("No files selected for processing. Please select files or folders to update.");
+            return;
+        }
+
+        this.close(); // Close modal before processing
+
+        await this.processSelectedFiles(selectedPaths);
+    }
+
     public renderVaultStructure(containerEl: HTMLElement): void {
         const rootFolder = this.app.vault.getRoot();
-        rootFolder.children.forEach((child) => {
-            if (child instanceof TFolder) {
-                this.renderFolder(containerEl, child);
-            } else if (child instanceof TFile) {
-                containerEl.appendChild(this.createFileElement(child));
-            }
+        const validChildren = rootFolder.children.filter(
+            (item): item is TFile | TFolder => item instanceof TFile || item instanceof TFolder
+        );
+        const { folders, files } = this.separateItemsByType(validChildren);
+
+        // Render folders first
+        folders.sort((a, b) => a.name.localeCompare(b.name));
+        folders.forEach(folder => {
+            this.renderFolder(containerEl, folder);
         });
+
+        // Render root files after folders
+        files.sort((a, b) => a.name.localeCompare(b.name));
+        files.forEach(file => {
+            containerEl.appendChild(this.createFileElement(file));
+        });
+    }
+
+    private separateItemsByType(items: (TFile | TFolder)[]) {
+        return items.reduce((acc, item) => {
+            if (item instanceof TFolder) {
+                acc.folders.push(item);
+            } else if (item instanceof TFile) {
+                acc.files.push(item);
+            }
+            return acc;
+        }, { folders: [] as TFolder[], files: [] as TFile[] });
     }
 
     public renderFolder(containerEl: HTMLElement, folder: TFolder): void {
@@ -53,12 +82,21 @@ export class BatchProcessorModal extends Modal {
         containerEl.appendChild(folderEl);
 
         const contentEl = folderEl.querySelector('.folder-content') as HTMLElement;
-        folder.children.forEach((child) => {
-            if (child instanceof TFolder) {
-                this.renderFolder(contentEl, child);
-            } else if (child instanceof TFile) {
-                contentEl.appendChild(this.createFileElement(child));
-            }
+        const validChildren = folder.children.filter(
+            (item): item is TFile | TFolder => item instanceof TFile || item instanceof TFolder
+        );
+        const { folders, files } = this.separateItemsByType(validChildren);
+
+        // Render subfolders first
+        folders.sort((a, b) => a.name.localeCompare(b.name));
+        folders.forEach(subfolder => {
+            this.renderFolder(contentEl, subfolder);
+        });
+
+        // Render files after subfolders
+        files.sort((a, b) => a.name.localeCompare(b.name));
+        files.forEach(file => {
+            contentEl.appendChild(this.createFileElement(file));
         });
     }
 
@@ -151,19 +189,7 @@ export class BatchProcessorModal extends Modal {
     }
 
     public updateParentCheckboxes(checkbox: HTMLInputElement): void {
-        let parentFolderEl = checkbox.closest(".folder")?.parentElement?.closest(".folder");
-        while (parentFolderEl) {
-            const parentCheckbox = parentFolderEl.querySelector(".folder-checkbox") as HTMLInputElement;
-            const childCheckboxes = parentFolderEl.querySelectorAll(":scope > .folder-content .folder > .folder-name > .folder-checkbox, :scope > .folder-content .file > .file-checkbox") as NodeListOf<HTMLInputElement>;
-
-            const allChecked = Array.from(childCheckboxes).every(cb => cb.checked);
-            const someChecked = Array.from(childCheckboxes).some(cb => cb.checked);
-
-            parentCheckbox.checked = allChecked;
-            parentCheckbox.indeterminate = !allChecked && someChecked;
-
-            parentFolderEl = parentFolderEl.parentElement?.closest(".folder");
-        }
+        super.updateParentCheckboxes(checkbox);
     }
 
     public createButtons(containerEl: HTMLElement): void {

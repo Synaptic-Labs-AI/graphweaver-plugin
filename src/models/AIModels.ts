@@ -14,11 +14,6 @@ export enum AIProvider {
 }
 
 /**
- * Type for provider keys
- */
-export type AIProviderType = keyof typeof AIProvider;
-
-/**
  * Options for AI response generation
  */
 export interface AIResponseOptions {
@@ -65,18 +60,6 @@ export interface AIModel {
     outputCostPer1M?: number;
     /** Maximum context window size in tokens */
     contextWindow?: number;
-}
-
-/**
- * Model configuration options
- */
-export interface AIModelConfig {
-    /** Maximum tokens to generate */
-    maxTokens?: number;
-    /** Temperature for generation */
-    temperature?: number;
-    /** Model-specific configuration */
-    modelSpecific?: Record<string, unknown>;
 }
 
 /**
@@ -468,7 +451,7 @@ export const AIModelMap: Record<AIProvider, AIModel[]> = {
             },
         }
     ],
-    [AIProvider.Mistral]: [ // Added Mistral models
+    [AIProvider.Mistral]: [ // Ensure Mistral models are correctly mapped
         {
             name: 'Mistral Large',
             apiName: 'mistral-large-latest',
@@ -519,18 +502,4 @@ export const AIModelUtils = {
         }
         return undefined;
     },
-
-    /**
-     * Get all models for a provider
-     */
-    getModelsForProvider(provider: AIProvider): AIModel[] {
-        return AIModelMap[provider] || [];
-    },
-
-    /**
-     * Check if a model supports a capability
-     */
-    modelSupportsCapability(model: AIModel, capability: keyof AIModel['capabilities']): boolean {
-        return !!model.capabilities?.[capability];
-    }
 };

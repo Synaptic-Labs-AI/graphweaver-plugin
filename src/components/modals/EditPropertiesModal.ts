@@ -1,9 +1,10 @@
-import { Modal, Setting, TextComponent, DropdownComponent, ButtonComponent, Notice, App } from "obsidian";
+import { Setting, TextComponent, DropdownComponent, App } from "obsidian";
 import { PropertyTag, PropertyType } from "../../models/PropertyTag";
+import { BaseModal } from "./BaseModal";
 
 type Callback = (properties: PropertyTag[]) => void;
 
-export class EditPropertiesModal extends Modal {
+export class EditPropertiesModal extends BaseModal<PropertyTag[]> {
     public properties: PropertyTag[];
     public onSubmit: Callback;
     public propertyListEl: HTMLElement;
@@ -11,18 +12,22 @@ export class EditPropertiesModal extends Modal {
 
     constructor(app: App, properties: PropertyTag[], onSubmit: Callback) {
         super(app);
-        this.properties = [...properties];
+        // Ensure properties is always an array
+        this.properties = Array.isArray(properties) ? [...properties] : [];
         this.onSubmit = onSubmit;
     }
 
-    onOpen() {
+    protected getTitle(): string {
+        return "Edit Properties";
+    }
+
+    protected renderContent(): void {
         const { contentEl } = this;
-        contentEl.empty();
 
-        contentEl.createEl("h2", { text: "Edit Properties" });
-
-        this.createSelectAllCheckbox(contentEl);
         this.propertyListEl = contentEl.createDiv({ cls: "gw-modal-property-list" });
+
+        this.selectAllCheckbox = this.createSelectAllCheckbox(contentEl, this.propertyListEl);
+
         this.renderPropertyList();
 
         const buttonContainer = contentEl.createDiv({ cls: "gw-modal-button-container" });
@@ -35,29 +40,18 @@ export class EditPropertiesModal extends Modal {
             .addButton(btn => btn
                 .setButtonText("Save")
                 .setCta()
-                .onClick(() => {
-                    this.onSubmit(this.properties);
-                    this.close();
-                }))
+                .onClick(() => this.handleSubmit(this.properties)))
             .addButton(btn => btn
                 .setButtonText("Cancel")
                 .onClick(() => this.close()));
     }
 
-    public createSelectAllCheckbox(containerEl: HTMLElement) {
-        const selectAllContainer = containerEl.createDiv({ cls: "gw-select-all-container" });
-        this.selectAllCheckbox = selectAllContainer.createEl("input", { type: "checkbox" });
-        selectAllContainer.createEl("span", { text: "Select All" });
-
-        this.selectAllCheckbox.addEventListener("change", () => {
-            const checkboxes = this.propertyListEl.querySelectorAll('input[type="checkbox"]');
-            checkboxes.forEach((checkbox: HTMLInputElement) => {
-                checkbox.checked = this.selectAllCheckbox.checked;
-            });
-        });
+    protected async handleSubmit(data: PropertyTag[]): Promise<void> {
+        this.onSubmit(data);
+        this.close();
     }
 
-    public renderPropertyList() {
+    protected renderPropertyList() {
         this.propertyListEl.empty();
 
         const table = this.propertyListEl.createEl("table", { cls: "gw-modal-property-table" });

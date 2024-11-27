@@ -1,5 +1,5 @@
 import { Notice, requestUrl, RequestUrlResponse } from 'obsidian';
-import { AIProvider, AIResponse, AIModel, AIModelMap, AIResponseOptions } from '../models/AIModels';
+import { AIProvider, AIResponse, AIModelMap, AIResponseOptions } from '../models/AIModels';
 import { SettingsService } from '../services/SettingsService';
 import { JsonValidationService } from '../services/JsonValidationService';
 import { AIAdapter } from './AIAdapter';

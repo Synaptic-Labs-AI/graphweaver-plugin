@@ -47,7 +47,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
         modelConfigs: {}
     },
     frontMatter: {
-        customProperties: [],
+        customProperties: [], // Ensure this is explicitly initialized as empty array
         autoGenerate: false
     },
     tags: {

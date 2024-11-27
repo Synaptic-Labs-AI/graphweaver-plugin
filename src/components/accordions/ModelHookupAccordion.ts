@@ -60,6 +60,7 @@ export class ModelHookupAccordion extends BaseAccordion {
         }
 
         this.createTestButton(this.settingsContainer, provider);
+        // Ensure settingsContainer is cleared before rendering new settings
     }
 
     public renderCloudSettings(provider: AIProvider): void {
@@ -146,15 +147,20 @@ export class ModelHookupAccordion extends BaseAccordion {
                         const currentSelectedModels = this.settingsService.getNestedSetting('aiProvider', 'selectedModels');
                         const updatedSelectedModels = { ...currentSelectedModels, [provider]: value };
                         await this.settingsService.updateNestedSetting('aiProvider', 'selectedModels', updatedSelectedModels);
-                        this.renderModelSettings(containerEl, value);
+                        this.renderModelSettings(modelSettingsContainer, value);
                     });
-                
+
+                // Create a separate container for model settings
+                const modelSettingsContainer = containerEl.createDiv({ cls: "model-settings" });
+
                 // Render initial model settings
-                this.renderModelSettings(containerEl, currentModel);
+                this.renderModelSettings(modelSettingsContainer, currentModel);
             });
     }
 
     private renderModelSettings(containerEl: HTMLElement, modelApiName: string): void {
+        containerEl.empty(); // Clear only the model settings container
+
         const settings = this.settingsService.getSettings();
         const model = AIModelUtils.getModelByApiName(modelApiName);
         const modelConfigs = settings.aiProvider.modelConfigs as Record<string, { temperature: number; maxTokens: number; }>;

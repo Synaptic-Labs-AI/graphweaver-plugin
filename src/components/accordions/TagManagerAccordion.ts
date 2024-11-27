@@ -1,4 +1,4 @@
-import { App, Notice, TextComponent, TextAreaComponent } from "obsidian";
+import { App, Notice, TextComponent, TextAreaComponent, Setting } from "obsidian";
 import { Tag } from "../../models/PropertyTag";
 import { EditTagsModal } from "../modals/EditTagsModal";
 import { BaseAccordion } from "./BaseAccordion";
@@ -28,26 +28,23 @@ export class TagManagerAccordion extends BaseAccordion {
     }
 
     private createTagEditor(containerEl: HTMLElement): void {
-        const settings = this.settingsService.getSettings();
+        new Setting(containerEl)
+            .setName("Tag Name")
+            .setDesc("Enter a unique name for this tag")
+            .addText(text => {
+                this.nameInput = text;
+                text.setPlaceholder("Enter tag name");
+                // Do not attach an onChange listener that updates settings
+            });
 
-        this.nameInput = this.createTextSetting(
-            "Tag Name",
-            "Enter a unique name for this tag",
-            "Enter tag name",
-            "",
-            { 
-                section: "tags", 
-                key: "customTags",
-                value: settings.tags.customTags
-            }
-        );
-
-        this.descriptionInput = this.createTextAreaSetting(
-            "Tag Description",
-            "Describe the purpose of this tag",
-            "Enter tag description",
-            ""
-        );
+        new Setting(containerEl)
+            .setName("Tag Description")
+            .setDesc("Describe the purpose of this tag")
+            .addTextArea(textArea => {
+                this.descriptionInput = textArea;
+                textArea.setPlaceholder("Enter tag description");
+                // Do not attach an onChange listener that updates settings
+            });
     }
 
     private createButtonRow(containerEl: HTMLElement): void {

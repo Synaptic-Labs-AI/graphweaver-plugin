@@ -27,7 +27,7 @@ __export(main_exports, {
   default: () => GraphWeaverPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian28 = require("obsidian");
+var import_obsidian29 = require("obsidian");
 
 // src/models/AIModels.ts
 var AIProvider = /* @__PURE__ */ ((AIProvider2) => {
@@ -428,7 +428,7 @@ var AIModelMap = {
     }
   ],
   ["mistral" /* Mistral */]: [
-    // Added Mistral models
+    // Ensure Mistral models are correctly mapped
     {
       name: "Mistral Large",
       apiName: "mistral-large-latest",
@@ -475,19 +475,6 @@ var AIModelUtils = {
         return model;
     }
     return void 0;
-  },
-  /**
-   * Get all models for a provider
-   */
-  getModelsForProvider(provider) {
-    return AIModelMap[provider] || [];
-  },
-  /**
-   * Check if a model supports a capability
-   */
-  modelSupportsCapability(model, capability) {
-    var _a;
-    return !!((_a = model.capabilities) == null ? void 0 : _a[capability]);
   }
 };
 
@@ -503,6 +490,7 @@ var DEFAULT_SETTINGS = {
   },
   frontMatter: {
     customProperties: [],
+    // Ensure this is explicitly initialized as empty array
     autoGenerate: false
   },
   tags: {
@@ -3155,7 +3143,13 @@ var SettingsService = class extends BaseService {
     };
   }
   getSettings() {
-    return this.settings;
+    var _a;
+    const settings = { ...this.settings };
+    if ((_a = settings.frontMatter) == null ? void 0 : _a.customProperties) {
+      const props = settings.frontMatter.customProperties;
+      settings.frontMatter.customProperties = Array.isArray(props) ? props : Object.values(props).filter((v) => v && typeof v === "object" && "name" in v);
+    }
+    return settings;
   }
   getSetting(key) {
     return this.settings[key];
@@ -3182,9 +3176,33 @@ var SettingsService = class extends BaseService {
     this.emitter.emit("settingsChanged", { [key]: value });
   }
   async updateNestedSetting(key, nestedKey, value) {
-    this.settings[key][nestedKey] = value;
+    if (key === "frontMatter" && nestedKey === "customProperties") {
+      const currentValue = this.settings[key][nestedKey];
+      const existingProps = Array.isArray(currentValue) ? currentValue : Object.values(currentValue).filter(
+        (v) => v !== null && typeof v === "object" && "name" in v
+      );
+      const valueAsArray = Array.isArray(value) ? value : [value];
+      this.settings[key] = {
+        ...this.settings[key],
+        [nestedKey]: [...existingProps, ...valueAsArray]
+      };
+    } else if (Array.isArray(this.settings[key][nestedKey])) {
+      const currentArray = this.settings[key][nestedKey];
+      const valueAsArray = Array.isArray(value) ? value : [value];
+      this.settings[key] = {
+        ...this.settings[key],
+        [nestedKey]: [...currentArray, ...valueAsArray]
+      };
+    } else {
+      this.settings[key] = {
+        ...this.settings[key],
+        [nestedKey]: value
+      };
+    }
     await this.saveSettings();
-    this.emitter.emit("settingsChanged", { [key]: { [nestedKey]: value } });
+    this.emitter.emit("settingsChanged", {
+      [key]: { [nestedKey]: this.settings[key][nestedKey] }
+    });
   }
   async updateAIProviderSettings(provider, settings) {
     this.settings.aiProvider = this.deepMerge(this.settings.aiProvider, settings);
@@ -3242,7 +3260,12 @@ var SettingsService = class extends BaseService {
     this.emitter.on("settingsReset", listener);
   }
   async saveSettings() {
-    await this.saveData(() => this.plugin.saveData(this.settings));
+    try {
+      await this.plugin.saveData(this.settings);
+    } catch (error) {
+      console.error("Failed to save settings:", error);
+      throw error;
+    }
   }
   // Getter for JsonValidationService
   getJsonValidationService() {
@@ -3721,7 +3744,7 @@ var AutoGenerateService = class extends BaseService {
 };
 
 // src/settings/GraphWeaverSettingTab.ts
-var import_obsidian26 = require("obsidian");
+var import_obsidian27 = require("obsidian");
 
 // src/components/accordions/ModelHookupAccordion.ts
 var import_obsidian17 = require("obsidian");
@@ -3923,13 +3946,15 @@ var ModelHookupAccordion = class extends BaseAccordion {
         const currentSelectedModels = this.settingsService.getNestedSetting("aiProvider", "selectedModels");
         const updatedSelectedModels = { ...currentSelectedModels, [provider]: value };
         await this.settingsService.updateNestedSetting("aiProvider", "selectedModels", updatedSelectedModels);
-        this.renderModelSettings(containerEl, value);
+        this.renderModelSettings(modelSettingsContainer, value);
       });
-      this.renderModelSettings(containerEl, currentModel);
+      const modelSettingsContainer = containerEl.createDiv({ cls: "model-settings" });
+      this.renderModelSettings(modelSettingsContainer, currentModel);
     });
   }
   renderModelSettings(containerEl, modelApiName) {
     var _a, _b;
+    containerEl.empty();
     const settings = this.settingsService.getSettings();
     const model = AIModelUtils.getModelByApiName(modelApiName);
     const modelConfigs = settings.aiProvider.modelConfigs;
@@ -4031,39 +4056,86 @@ var ModelHookupAccordion = class extends BaseAccordion {
 };
 
 // src/components/accordions/PropertyManagerAccordion.ts
-var import_obsidian19 = require("obsidian");
+var import_obsidian20 = require("obsidian");
 
 // src/components/modals/EditPropertiesModal.ts
+var import_obsidian19 = require("obsidian");
+
+// src/components/modals/BaseModal.ts
 var import_obsidian18 = require("obsidian");
-var EditPropertiesModal = class extends import_obsidian18.Modal {
-  constructor(app, properties, onSubmit) {
+var BaseModal = class extends import_obsidian18.Modal {
+  constructor(app) {
     super(app);
-    this.properties = [...properties];
-    this.onSubmit = onSubmit;
   }
   onOpen() {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.createEl("h2", { text: "Edit Properties" });
-    this.createSelectAllCheckbox(contentEl);
-    this.propertyListEl = contentEl.createDiv({ cls: "gw-modal-property-list" });
-    this.renderPropertyList();
-    const buttonContainer = contentEl.createDiv({ cls: "gw-modal-button-container" });
-    new import_obsidian18.Setting(buttonContainer).addButton((btn) => btn.setButtonText("Delete Selected").setWarning().onClick(() => this.deleteSelectedProperties())).addButton((btn) => btn.setButtonText("Save").setCta().onClick(() => {
-      this.onSubmit(this.properties);
-      this.close();
-    })).addButton((btn) => btn.setButtonText("Cancel").onClick(() => this.close()));
+    this.createHeader();
+    this.renderContent();
+    this.createFooter();
   }
-  createSelectAllCheckbox(containerEl) {
+  createHeader() {
+    const header = this.contentEl.createDiv("modal-header");
+    header.createEl("h2", { text: this.getTitle() });
+  }
+  createFooter() {
+  }
+  // Common method to create select all checkbox
+  createSelectAllCheckbox(containerEl, listEl) {
     const selectAllContainer = containerEl.createDiv({ cls: "gw-select-all-container" });
-    this.selectAllCheckbox = selectAllContainer.createEl("input", { type: "checkbox" });
+    const selectAllCheckbox = selectAllContainer.createEl("input", { type: "checkbox" });
     selectAllContainer.createEl("span", { text: "Select All" });
-    this.selectAllCheckbox.addEventListener("change", () => {
-      const checkboxes = this.propertyListEl.querySelectorAll('input[type="checkbox"]');
+    selectAllCheckbox.addEventListener("change", () => {
+      const checkboxes = listEl.querySelectorAll('input[type="checkbox"]');
       checkboxes.forEach((checkbox) => {
-        checkbox.checked = this.selectAllCheckbox.checked;
+        checkbox.checked = selectAllCheckbox.checked;
       });
     });
+    return selectAllCheckbox;
+  }
+  // Common method to update parent checkboxes
+  updateParentCheckboxes(checkbox) {
+    var _a, _b, _c;
+    let parentFolderEl = (_b = (_a = checkbox.closest(".folder")) == null ? void 0 : _a.parentElement) == null ? void 0 : _b.closest(".folder");
+    while (parentFolderEl) {
+      const parentCheckbox = parentFolderEl.querySelector(".folder-checkbox");
+      const childCheckboxes = parentFolderEl.querySelectorAll(":scope > .folder-content .folder > .folder-name > .folder-checkbox, :scope > .folder-content .file > .file-checkbox");
+      const allChecked = Array.from(childCheckboxes).every((cb) => cb.checked);
+      const someChecked = Array.from(childCheckboxes).some((cb) => cb.checked);
+      parentCheckbox.checked = allChecked;
+      parentCheckbox.indeterminate = !allChecked && someChecked;
+      parentFolderEl = (_c = parentFolderEl.parentElement) == null ? void 0 : _c.closest(".folder");
+    }
+  }
+  showError(message) {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.createEl("p", { text: message, cls: "error-message" });
+  }
+  // ...any other shared methods or properties...
+};
+
+// src/components/modals/EditPropertiesModal.ts
+var EditPropertiesModal = class extends BaseModal {
+  constructor(app, properties, onSubmit) {
+    super(app);
+    this.properties = Array.isArray(properties) ? [...properties] : [];
+    this.onSubmit = onSubmit;
+  }
+  getTitle() {
+    return "Edit Properties";
+  }
+  renderContent() {
+    const { contentEl } = this;
+    this.propertyListEl = contentEl.createDiv({ cls: "gw-modal-property-list" });
+    this.selectAllCheckbox = this.createSelectAllCheckbox(contentEl, this.propertyListEl);
+    this.renderPropertyList();
+    const buttonContainer = contentEl.createDiv({ cls: "gw-modal-button-container" });
+    new import_obsidian19.Setting(buttonContainer).addButton((btn) => btn.setButtonText("Delete Selected").setWarning().onClick(() => this.deleteSelectedProperties())).addButton((btn) => btn.setButtonText("Save").setCta().onClick(() => this.handleSubmit(this.properties))).addButton((btn) => btn.setButtonText("Cancel").onClick(() => this.close()));
+  }
+  async handleSubmit(data) {
+    this.onSubmit(data);
+    this.close();
   }
   renderPropertyList() {
     this.propertyListEl.empty();
@@ -4096,14 +4168,14 @@ var EditPropertiesModal = class extends import_obsidian18.Modal {
   }
   createEditableCell(row, property, field, index) {
     const cell = row.createEl("td");
-    const input = new import_obsidian18.TextComponent(cell);
+    const input = new import_obsidian19.TextComponent(cell);
     input.setValue(property[field]).onChange((value) => {
       this.properties[index][field] = value;
     });
   }
   createTypeDropdown(row, property, index) {
     const cell = row.createEl("td");
-    const dropdown = new import_obsidian18.DropdownComponent(cell);
+    const dropdown = new import_obsidian19.DropdownComponent(cell);
     const types = ["string", "number", "boolean", "array", "date"];
     types.forEach((type) => {
       dropdown.addOption(type, type);
@@ -4165,24 +4237,15 @@ var PropertyManagerAccordion = class extends BaseAccordion {
   }
   createPropertyEditor(containerEl) {
     const settings = this.settingsService.getSettings();
-    this.nameInput = this.createTextSetting(
-      "Property Name",
-      "Enter a unique name for this property",
-      "Enter property name",
-      "",
-      {
-        section: "frontMatter",
-        key: "customProperties",
-        value: settings.frontMatter.customProperties
-      }
-    );
-    this.descriptionInput = this.createTextAreaSetting(
-      "Property Description",
-      "Describe the purpose of this property",
-      "Enter property description",
-      ""
-    );
-    new import_obsidian19.Setting(containerEl).setName("Property Type").setDesc("Select the data type for this property").addDropdown((dropdown) => {
+    new import_obsidian20.Setting(containerEl).setName("Property Name").setDesc("Enter a unique name for this property").addText((text) => {
+      this.nameInput = text;
+      text.setPlaceholder("Enter property name");
+    });
+    new import_obsidian20.Setting(containerEl).setName("Property Description").setDesc("Describe the purpose of this property").addTextArea((textArea) => {
+      this.descriptionInput = textArea;
+      textArea.setPlaceholder("Enter property description");
+    });
+    new import_obsidian20.Setting(containerEl).setName("Property Type").setDesc("Select the data type for this property").addDropdown((dropdown) => {
       this.typeDropdown = dropdown;
       dropdown.addOption("string", "String").addOption("number", "Number").addOption("boolean", "Boolean").addOption("array", "Array").addOption("date", "Date").setValue("string");
     });
@@ -4203,7 +4266,7 @@ var PropertyManagerAccordion = class extends BaseAccordion {
       false
     );
   }
-  addProperty() {
+  async addProperty() {
     var _a;
     const name = this.nameInput.getValue().trim();
     const description = ((_a = this.descriptionInput.getValue()) == null ? void 0 : _a.trim()) || "";
@@ -4213,7 +4276,8 @@ var PropertyManagerAccordion = class extends BaseAccordion {
       return;
     }
     const settings = this.settingsService.getSettings();
-    if (settings.frontMatter.customProperties.some((p) => p.name === name)) {
+    const existingProps = Array.isArray(settings.frontMatter.customProperties) ? settings.frontMatter.customProperties : [];
+    if (existingProps.some((p) => p.name === name)) {
       this.showNotice("A property with this name already exists.");
       return;
     }
@@ -4222,21 +4286,28 @@ var PropertyManagerAccordion = class extends BaseAccordion {
       description,
       type
     };
-    settings.frontMatter.customProperties.push(newProperty);
-    this.settingsService.updateSettings(settings);
-    new import_obsidian19.Notice(`Property "${name}" has been added.`);
+    await this.settingsService.updateNestedSetting(
+      "frontMatter",
+      "customProperties",
+      [newProperty]
+    );
+    new import_obsidian20.Notice(`Property "${name}" has been added.`);
     this.nameInput.setValue("");
     this.descriptionInput.setValue("");
     this.typeDropdown.setValue("string");
   }
   openEditModal() {
+    const settings = this.settingsService.getSettings();
+    const properties = Array.isArray(settings.frontMatter.customProperties) ? settings.frontMatter.customProperties : [];
     const modal = new EditPropertiesModal(
       this.app,
-      this.settingsService.getSettings().frontMatter.customProperties,
-      (updatedProperties) => {
-        const settings = this.settingsService.getSettings();
-        settings.frontMatter.customProperties = updatedProperties;
-        this.settingsService.updateSettings(settings);
+      properties,
+      async (updatedProperties) => {
+        await this.settingsService.updateNestedSetting(
+          "frontMatter",
+          "customProperties",
+          updatedProperties
+        );
       }
     );
     modal.open();
@@ -4244,49 +4315,46 @@ var PropertyManagerAccordion = class extends BaseAccordion {
 };
 
 // src/components/accordions/TagManagerAccordion.ts
-var import_obsidian21 = require("obsidian");
+var import_obsidian22 = require("obsidian");
 
 // src/components/modals/EditTagsModal.ts
-var import_obsidian20 = require("obsidian");
-var EditTagsModal = class extends import_obsidian20.Modal {
+var import_obsidian21 = require("obsidian");
+var EditTagsModal = class extends BaseModal {
   constructor(app, tags, onSubmit) {
     super(app);
     this.tags = [...tags];
     this.onSubmit = onSubmit;
   }
-  onOpen() {
+  getTitle() {
+    return "Edit Tags";
+  }
+  renderContent() {
     const { contentEl } = this;
-    contentEl.empty();
-    contentEl.createEl("h2", { text: "Edit Tags" });
-    this.createSelectAllCheckbox(contentEl);
     this.tagListEl = contentEl.createDiv({ cls: "gw-modal-tag-list" });
+    this.selectAllCheckbox = this.createSelectAllCheckbox(contentEl, this.tagListEl);
     this.renderTagList();
     const buttonContainer = contentEl.createDiv({ cls: "gw-modal-button-container" });
-    new import_obsidian20.Setting(buttonContainer).addButton((btn) => btn.setButtonText("Delete Selected").setWarning().onClick(() => this.deleteSelectedTags())).addButton((btn) => btn.setButtonText("Save").setCta().onClick(() => {
-      this.onSubmit(this.tags);
-      this.close();
-    })).addButton((btn) => btn.setButtonText("Cancel").onClick(() => this.close()));
+    new import_obsidian21.Setting(buttonContainer).addButton((btn) => btn.setButtonText("Delete Selected").setWarning().onClick(() => this.deleteSelectedTags())).addButton((btn) => btn.setButtonText("Save").setCta().onClick(() => this.handleSubmit(this.tags))).addButton((btn) => btn.setButtonText("Cancel").onClick(() => this.close()));
   }
-  createSelectAllCheckbox(containerEl) {
-    const selectAllContainer = containerEl.createDiv({ cls: "gw-select-all-container" });
-    this.selectAllCheckbox = selectAllContainer.createEl("input", { type: "checkbox" });
-    selectAllContainer.createEl("span", { text: "Select All" });
-    this.selectAllCheckbox.addEventListener("change", () => {
-      const checkboxes = this.tagListEl.querySelectorAll('input[type="checkbox"]');
-      checkboxes.forEach((checkbox) => {
-        checkbox.checked = this.selectAllCheckbox.checked;
-      });
-    });
+  async handleSubmit(data) {
+    const validTags = data.filter((tag) => tag.name && tag.description);
+    this.onSubmit(validTags);
+    this.close();
   }
   renderTagList() {
     this.tagListEl.empty();
     const table = this.tagListEl.createEl("table", { cls: "gw-modal-tag-table" });
     const headerRow = table.createEl("tr");
+    headerRow.createEl("th", { text: "Drag" });
     headerRow.createEl("th", { text: "Name" });
     headerRow.createEl("th", { text: "Description" });
     headerRow.createEl("th", { text: "Delete" });
     this.tags.forEach((tag, index) => {
-      const row = table.createEl("tr");
+      const row = table.createEl("tr", { attr: { draggable: "true", "data-index": index.toString() } });
+      row.addEventListener("dragstart", this.onDragStart.bind(this));
+      row.addEventListener("dragover", this.onDragOver.bind(this));
+      row.addEventListener("drop", this.onDrop.bind(this));
+      row.createEl("td", { text: "\u2261", cls: "gw-drag-handle" });
       this.createEditableCell(row, tag, "name", index);
       this.createEditableCell(row, tag, "description", index);
       const deleteCell = row.createEl("td");
@@ -4295,6 +4363,26 @@ var EditTagsModal = class extends import_obsidian20.Modal {
       deleteCheckbox.addEventListener("change", () => this.updateSelectAllCheckbox());
     });
   }
+  // Add drag and drop handlers
+  onDragStart(e) {
+    var _a;
+    const target = e.target;
+    (_a = e.dataTransfer) == null ? void 0 : _a.setData("text/plain", target.dataset.index || "");
+  }
+  onDragOver(e) {
+    e.preventDefault();
+  }
+  onDrop(e) {
+    var _a, _b;
+    e.preventDefault();
+    const fromIndex = parseInt(((_a = e.dataTransfer) == null ? void 0 : _a.getData("text/plain")) || "", 10);
+    const toIndex = parseInt(((_b = e.target.closest("tr")) == null ? void 0 : _b.dataset.index) || "", 10);
+    if (!isNaN(fromIndex) && !isNaN(toIndex)) {
+      const [reorderedItem] = this.tags.splice(fromIndex, 1);
+      this.tags.splice(toIndex, 0, reorderedItem);
+      this.renderTagList();
+    }
+  }
   updateSelectAllCheckbox() {
     const checkboxes = this.tagListEl.querySelectorAll('input[type="checkbox"]');
     const allChecked = Array.from(checkboxes).every((checkbox) => checkbox.checked);
@@ -4302,7 +4390,7 @@ var EditTagsModal = class extends import_obsidian20.Modal {
   }
   createEditableCell(row, tag, field, index) {
     const cell = row.createEl("td");
-    const input = field === "name" ? new import_obsidian20.TextComponent(cell) : new import_obsidian20.TextAreaComponent(cell);
+    const input = field === "name" ? new import_obsidian21.TextComponent(cell) : new import_obsidian21.TextAreaComponent(cell);
     input.setValue(tag[field]).onChange((value) => {
       this.tags[index][field] = value;
     });
@@ -4340,24 +4428,14 @@ var TagManagerAccordion = class extends BaseAccordion {
     this.createButtonRow(contentEl);
   }
   createTagEditor(containerEl) {
-    const settings = this.settingsService.getSettings();
-    this.nameInput = this.createTextSetting(
-      "Tag Name",
-      "Enter a unique name for this tag",
-      "Enter tag name",
-      "",
-      {
-        section: "tags",
-        key: "customTags",
-        value: settings.tags.customTags
-      }
-    );
-    this.descriptionInput = this.createTextAreaSetting(
-      "Tag Description",
-      "Describe the purpose of this tag",
-      "Enter tag description",
-      ""
-    );
+    new import_obsidian22.Setting(containerEl).setName("Tag Name").setDesc("Enter a unique name for this tag").addText((text) => {
+      this.nameInput = text;
+      text.setPlaceholder("Enter tag name");
+    });
+    new import_obsidian22.Setting(containerEl).setName("Tag Description").setDesc("Describe the purpose of this tag").addTextArea((textArea) => {
+      this.descriptionInput = textArea;
+      textArea.setPlaceholder("Enter tag description");
+    });
   }
   createButtonRow(containerEl) {
     this.createButton(
@@ -4395,7 +4473,7 @@ var TagManagerAccordion = class extends BaseAccordion {
     };
     settings.tags.customTags.push(newTag);
     this.settingsService.updateSettings(settings);
-    new import_obsidian21.Notice(`Tag "${name}" has been added.`);
+    new import_obsidian22.Notice(`Tag "${name}" has been added.`);
     this.nameInput.setValue("");
     this.descriptionInput.setValue("");
   }
@@ -4414,17 +4492,34 @@ var TagManagerAccordion = class extends BaseAccordion {
 };
 
 // src/components/accordions/OntologyGenerationAccordion.ts
-var import_obsidian23 = require("obsidian");
+var import_obsidian24 = require("obsidian");
 
 // src/components/modals/OntologyGeneratorModal.ts
-var import_obsidian22 = require("obsidian");
-var OntologyGeneratorModal = class extends import_obsidian22.Modal {
+var import_obsidian23 = require("obsidian");
+var OntologyGeneratorModal = class extends BaseModal {
   constructor(app, aiService, onGenerate) {
     super(app);
     this.aiService = aiService;
     this.onGenerate = onGenerate;
     this.vaultStats = { files: [], folders: [], tags: [] };
     this.availableModels = [];
+  }
+  getTitle() {
+    return "Generate Ontology";
+  }
+  renderContent() {
+    this.loadingEl.hide();
+    this.contentEl.empty();
+    this.contentEl.createEl("h2", { text: "Generate Ontology" });
+    this.renderVaultStats();
+    this.renderModelSelection();
+    this.renderUserContextInput();
+    this.renderGuidedQuestions();
+    this.renderButtons();
+  }
+  async handleSubmit(data) {
+    this.onGenerate(data);
+    this.close();
   }
   async onOpen() {
     this.contentEl.empty();
@@ -4442,7 +4537,7 @@ var OntologyGeneratorModal = class extends import_obsidian22.Modal {
   }
   async loadVaultStats() {
     this.vaultStats.files = this.app.vault.getMarkdownFiles();
-    this.vaultStats.folders = this.app.vault.getAllLoadedFiles().filter((file) => file instanceof import_obsidian22.TFolder);
+    this.vaultStats.folders = this.app.vault.getAllLoadedFiles().filter((file) => file instanceof import_obsidian23.TFolder);
     this.vaultStats.tags = await this.getAllTags(this.vaultStats.files);
   }
   async getAllTags(files) {
@@ -4456,16 +4551,6 @@ var OntologyGeneratorModal = class extends import_obsidian22.Modal {
     }
     return Array.from(tagSet);
   }
-  renderContent() {
-    this.loadingEl.hide();
-    this.contentEl.empty();
-    this.contentEl.createEl("h2", { text: "Generate Ontology" });
-    this.renderVaultStats();
-    this.renderModelSelection();
-    this.renderUserContextInput();
-    this.renderGuidedQuestions();
-    this.renderButtons();
-  }
   renderVaultStats() {
     const statsEl = this.contentEl.createDiv("vault-stats");
     statsEl.createEl("h3", { text: "Vault Statistics" });
@@ -4475,7 +4560,7 @@ var OntologyGeneratorModal = class extends import_obsidian22.Modal {
     listEl.createEl("li", { text: `Tags: ${this.vaultStats.tags.length}` });
   }
   renderModelSelection() {
-    const modelSetting = new import_obsidian22.Setting(this.contentEl).setName("AI Model").setDesc("Select the AI model to use for ontology generation");
+    const modelSetting = new import_obsidian23.Setting(this.contentEl).setName("AI Model").setDesc("Select the AI model to use for ontology generation");
     if (this.availableModels.length === 0) {
       modelSetting.setDesc("No AI models available. Please add API keys in the API Integration settings.");
       return;
@@ -4493,7 +4578,7 @@ var OntologyGeneratorModal = class extends import_obsidian22.Modal {
     });
   }
   renderUserContextInput() {
-    const contextSetting = new import_obsidian22.Setting(this.contentEl).setName("Additional Context").setDesc("Provide any additional context or information about your knowledge base that might help in generating a more accurate ontology.").addTextArea((text) => {
+    const contextSetting = new import_obsidian23.Setting(this.contentEl).setName("Additional Context").setDesc("Provide any additional context or information about your knowledge base that might help in generating a more accurate ontology.").addTextArea((text) => {
       this.userContextInput = text;
       text.inputEl.rows = 4;
       text.inputEl.cols = 50;
@@ -4515,18 +4600,18 @@ var OntologyGeneratorModal = class extends import_obsidian22.Modal {
   }
   renderButtons() {
     const buttonContainer = this.contentEl.createDiv("button-container");
-    this.generateButton = new import_obsidian22.ButtonComponent(buttonContainer).setButtonText("Generate Ontology").setCta().setDisabled(this.availableModels.length === 0).onClick(() => this.handleOntologyGeneration());
-    new import_obsidian22.ButtonComponent(buttonContainer).setButtonText("Cancel").onClick(() => this.close());
+    this.generateButton = new import_obsidian23.ButtonComponent(buttonContainer).setButtonText("Generate Ontology").setCta().setDisabled(this.availableModels.length === 0).onClick(() => this.handleOntologyGeneration());
+    new import_obsidian23.ButtonComponent(buttonContainer).setButtonText("Cancel").onClick(() => this.close());
   }
   async handleOntologyGeneration() {
     const modelValue = this.modelSelect.getValue();
     if (!modelValue) {
-      new import_obsidian22.Notice("Please select an AI model first.");
+      new import_obsidian23.Notice("Please select an AI model first.");
       return;
     }
     const [provider, modelApiName] = modelValue.split(":");
     this.generateButton.setDisabled(true);
-    const loadingNotice = new import_obsidian22.Notice("Generating ontology...", 0);
+    const loadingNotice = new import_obsidian23.Notice("Generating ontology...", 0);
     try {
       const input = {
         ...this.vaultStats,
@@ -4537,21 +4622,19 @@ var OntologyGeneratorModal = class extends import_obsidian22.Modal {
       const ontology = await this.aiService.generateOntology(input);
       await this.aiService.updateTags(ontology.suggestedTags);
       loadingNotice.hide();
-      new import_obsidian22.Notice("Ontology generated and tags updated successfully!", 3e3);
+      new import_obsidian23.Notice("Ontology generated and tags updated successfully!", 3e3);
       this.onGenerate(ontology);
       this.close();
     } catch (error) {
       console.error("Error generating ontology:", error);
       loadingNotice.hide();
-      new import_obsidian22.Notice(`Failed to generate ontology: ${error.message}`, 5e3);
+      new import_obsidian23.Notice(`Failed to generate ontology: ${error.message}`, 5e3);
     } finally {
       this.generateButton.setDisabled(false);
     }
   }
   showError(message) {
-    this.loadingEl.hide();
-    this.contentEl.empty();
-    this.contentEl.createEl("p", { text: message, cls: "error-message" });
+    super.showError(message);
   }
   onClose() {
     this.contentEl.empty();
@@ -4611,23 +4694,20 @@ var OntologyGenerationAccordion = class extends BaseAccordion {
       }
     };
     await this.settingsService.updateSettings(updatedSettings);
-    new import_obsidian23.Notice("Ontology has been successfully generated and saved to your settings.");
+    new import_obsidian24.Notice("Ontology has been successfully generated and saved to your settings.");
   }
 };
 
 // src/components/modals/BatchProcessorModal.ts
-var import_obsidian24 = require("obsidian");
-var BatchProcessorModal = class extends import_obsidian24.Modal {
+var import_obsidian25 = require("obsidian");
+var BatchProcessorModal = class extends BaseModal {
   constructor(app, aiService, settingsService) {
     super(app);
     this.aiService = aiService;
     this.settingsService = settingsService;
   }
-  onOpen() {
-    this.renderContent();
-  }
-  onClose() {
-    this.contentEl.empty();
+  getTitle() {
+    return "Batch Processor";
   }
   renderContent() {
     const { contentEl } = this;
@@ -4637,26 +4717,55 @@ var BatchProcessorModal = class extends import_obsidian24.Modal {
     this.renderVaultStructure(fileExplorer);
     this.createButtons(contentEl);
   }
+  async handleSubmit() {
+    const selectedPaths = this.getSelectedPaths();
+    if (selectedPaths.length === 0) {
+      new import_obsidian25.Notice("No files selected for processing. Please select files or folders to update.");
+      return;
+    }
+    this.close();
+    await this.processSelectedFiles(selectedPaths);
+  }
   renderVaultStructure(containerEl) {
     const rootFolder = this.app.vault.getRoot();
-    rootFolder.children.forEach((child) => {
-      if (child instanceof import_obsidian24.TFolder) {
-        this.renderFolder(containerEl, child);
-      } else if (child instanceof import_obsidian24.TFile) {
-        containerEl.appendChild(this.createFileElement(child));
-      }
+    const validChildren = rootFolder.children.filter(
+      (item) => item instanceof import_obsidian25.TFile || item instanceof import_obsidian25.TFolder
+    );
+    const { folders, files } = this.separateItemsByType(validChildren);
+    folders.sort((a, b) => a.name.localeCompare(b.name));
+    folders.forEach((folder) => {
+      this.renderFolder(containerEl, folder);
     });
+    files.sort((a, b) => a.name.localeCompare(b.name));
+    files.forEach((file) => {
+      containerEl.appendChild(this.createFileElement(file));
+    });
+  }
+  separateItemsByType(items) {
+    return items.reduce((acc, item) => {
+      if (item instanceof import_obsidian25.TFolder) {
+        acc.folders.push(item);
+      } else if (item instanceof import_obsidian25.TFile) {
+        acc.files.push(item);
+      }
+      return acc;
+    }, { folders: [], files: [] });
   }
   renderFolder(containerEl, folder) {
     const folderEl = this.createFolderElement(folder);
     containerEl.appendChild(folderEl);
     const contentEl = folderEl.querySelector(".folder-content");
-    folder.children.forEach((child) => {
-      if (child instanceof import_obsidian24.TFolder) {
-        this.renderFolder(contentEl, child);
-      } else if (child instanceof import_obsidian24.TFile) {
-        contentEl.appendChild(this.createFileElement(child));
-      }
+    const validChildren = folder.children.filter(
+      (item) => item instanceof import_obsidian25.TFile || item instanceof import_obsidian25.TFolder
+    );
+    const { folders, files } = this.separateItemsByType(validChildren);
+    folders.sort((a, b) => a.name.localeCompare(b.name));
+    folders.forEach((subfolder) => {
+      this.renderFolder(contentEl, subfolder);
+    });
+    files.sort((a, b) => a.name.localeCompare(b.name));
+    files.forEach((file) => {
+      contentEl.appendChild(this.createFileElement(file));
     });
   }
   createFolderElement(folder) {
@@ -4714,17 +4823,7 @@ var BatchProcessorModal = class extends import_obsidian24.Modal {
     this.updateParentCheckboxes(checkbox);
   }
   updateParentCheckboxes(checkbox) {
-    var _a, _b, _c;
-    let parentFolderEl = (_b = (_a = checkbox.closest(".folder")) == null ? void 0 : _a.parentElement) == null ? void 0 : _b.closest(".folder");
-    while (parentFolderEl) {
-      const parentCheckbox = parentFolderEl.querySelector(".folder-checkbox");
-      const childCheckboxes = parentFolderEl.querySelectorAll(":scope > .folder-content .folder > .folder-name > .folder-checkbox, :scope > .folder-content .file > .file-checkbox");
-      const allChecked = Array.from(childCheckboxes).every((cb) => cb.checked);
-      const someChecked = Array.from(childCheckboxes).some((cb) => cb.checked);
-      parentCheckbox.checked = allChecked;
-      parentCheckbox.indeterminate = !allChecked && someChecked;
-      parentFolderEl = (_c = parentFolderEl.parentElement) == null ? void 0 : _c.closest(".folder");
-    }
+    super.updateParentCheckboxes(checkbox);
   }
   createButtons(containerEl) {
     const buttonContainer = containerEl.createDiv({ cls: "button-container" });
@@ -4734,7 +4833,7 @@ var BatchProcessorModal = class extends import_obsidian24.Modal {
   async confirmUpdate() {
     const selectedPaths = this.getSelectedPaths();
     if (selectedPaths.length === 0) {
-      new import_obsidian24.Notice("No files selected for processing. Please select files or folders to update.");
+      new import_obsidian25.Notice("No files selected for processing. Please select files or folders to update.");
       return;
     }
     this.close();
@@ -4758,11 +4857,11 @@ var BatchProcessorModal = class extends import_obsidian24.Modal {
     const totalFiles = selectedPaths.length;
     let updatedCount = 0;
     let errorCount = 0;
-    const progressNotice = new import_obsidian24.Notice(`Processing 0/${totalFiles} files...`, 0);
+    const progressNotice = new import_obsidian25.Notice(`Processing 0/${totalFiles} files...`, 0);
     for (const path of selectedPaths) {
       try {
         const file = this.app.vault.getAbstractFileByPath(path);
-        if (file instanceof import_obsidian24.TFile) {
+        if (file instanceof import_obsidian25.TFile) {
           await this.updateFile(file);
           updatedCount++;
           progressNotice.setMessage(`Processing ${updatedCount}/${totalFiles} files...`);
@@ -4777,7 +4876,7 @@ var BatchProcessorModal = class extends import_obsidian24.Modal {
     if (errorCount > 0) {
       message += ` Encountered errors in ${errorCount} file${errorCount !== 1 ? "s" : ""}.`;
     }
-    new import_obsidian24.Notice(message, 5e3);
+    new import_obsidian25.Notice(message, 5e3);
   }
   async updateFile(file) {
     const content = await this.app.vault.read(file);
@@ -4850,7 +4949,7 @@ var BatchProcessorAccordion = class extends BaseAccordion {
 };
 
 // src/components/accordions/KnowledgeBloomAccordion.ts
-var import_obsidian25 = require("obsidian");
+var import_obsidian26 = require("obsidian");
 var KnowledgeBloomAccordion = class extends BaseAccordion {
   constructor(app, containerEl, settingsService, aiService) {
     super(app, containerEl, settingsService, aiService);
@@ -4873,7 +4972,7 @@ var KnowledgeBloomAccordion = class extends BaseAccordion {
   }
   createModelSelector(containerEl) {
     const selectorEl = containerEl.createDiv({ cls: "knowledge-bloom-model-selector" });
-    new import_obsidian25.Setting(selectorEl).setName("AI Model").setDesc("Select the AI model to use for Knowledge Bloom").addDropdown((dropdown) => {
+    new import_obsidian26.Setting(selectorEl).setName("AI Model").setDesc("Select the AI model to use for Knowledge Bloom").addDropdown((dropdown) => {
       this.modelSelector = dropdown;
       this.updateModelOptions();
       dropdown.onChange(async (value) => {
@@ -4899,7 +4998,7 @@ var KnowledgeBloomAccordion = class extends BaseAccordion {
   }
   createTemplateFolderSetting(containerEl) {
     const knowledgeBloomSettings = this.settingsService.getKnowledgeBloomSettings();
-    new import_obsidian25.Setting(containerEl).setName("Templates Folder").setDesc("Path to your templates folder (e.g., 'Templates' or 'Templates/Knowledge Bloom')").addText((text) => {
+    new import_obsidian26.Setting(containerEl).setName("Templates Folder").setDesc("Path to your templates folder (e.g., 'Templates' or 'Templates/Knowledge Bloom')").addText((text) => {
       this.templateFolderInput = text;
       text.setValue(knowledgeBloomSettings.templateFolder).onChange(async (value) => {
         await this.settingsService.updateKnowledgeBloomSetting("templateFolder", value);
@@ -4911,7 +5010,7 @@ var KnowledgeBloomAccordion = class extends BaseAccordion {
 };
 
 // src/settings/GraphWeaverSettingTab.ts
-var GraphWeaverSettingTab = class extends import_obsidian26.PluginSettingTab {
+var GraphWeaverSettingTab = class extends import_obsidian27.PluginSettingTab {
   // Replace with your actual plugin type
   constructor(app, plugin) {
     super(app, plugin);
@@ -4967,14 +5066,17 @@ var GraphWeaverSettingTab = class extends import_obsidian26.PluginSettingTab {
 };
 
 // src/components/modals/KnowledgeBloomModal.ts
-var import_obsidian27 = require("obsidian");
-var KnowledgeBloomModal = class extends import_obsidian27.Modal {
+var import_obsidian28 = require("obsidian");
+var KnowledgeBloomModal = class extends BaseModal {
   constructor(app, sourceFile, settingsService, aiService) {
     super(app);
     this.sourceFile = sourceFile;
     this.settingsService = settingsService;
     this.aiService = aiService;
     this.templates = [];
+  }
+  getTitle() {
+    return "Knowledge Bloom Generator";
   }
   async onOpen() {
     this.titleEl.setText("Knowledge Bloom Generator");
@@ -4985,7 +5087,7 @@ var KnowledgeBloomModal = class extends import_obsidian27.Modal {
     var _a;
     const templateFolder = ((_a = this.settingsService.getSettings().knowledgeBloom) == null ? void 0 : _a.templateFolder) || "";
     if (!templateFolder) {
-      new import_obsidian27.Notice("Please set a templates folder in Knowledge Bloom settings.");
+      new import_obsidian28.Notice("Please set a templates folder in Knowledge Bloom settings.");
       return;
     }
     try {
@@ -4993,39 +5095,42 @@ var KnowledgeBloomModal = class extends import_obsidian27.Modal {
       if (!folder)
         throw new Error("Templates folder not found");
       this.templates = await this.app.vault.getAllLoadedFiles().filter(
-        (file) => file instanceof import_obsidian27.TFile && file.extension === "md" && file.path.startsWith(templateFolder)
+        (file) => file instanceof import_obsidian28.TFile && file.extension === "md" && file.path.startsWith(templateFolder)
       );
     } catch (error) {
       console.error("Error loading templates:", error);
-      new import_obsidian27.Notice("Failed to load templates. Check your template folder path.");
+      new import_obsidian28.Notice("Failed to load templates. Check your template folder path.");
     }
   }
   renderContent() {
     const { contentEl } = this;
-    new import_obsidian27.Setting(contentEl).setName("Note Template").setDesc("Select a template for the generated notes").addDropdown((dropdown) => {
+    new import_obsidian28.Setting(contentEl).setName("Note Template").setDesc("Select a template for the generated notes").addDropdown((dropdown) => {
       this.templateSelect = dropdown;
       this.templates.forEach((template) => {
         dropdown.addOption(template.path, template.basename);
       });
     });
-    new import_obsidian27.Setting(contentEl).setName("Additional Context").setDesc("Provide any additional context for note generation").addTextArea((text) => {
+    new import_obsidian28.Setting(contentEl).setName("Additional Context").setDesc("Provide any additional context for note generation").addTextArea((text) => {
       this.contextInput = text;
       text.inputEl.rows = 4;
       text.inputEl.cols = 50;
       return text;
     });
     const buttonContainer = contentEl.createDiv("button-container");
-    new import_obsidian27.Setting(buttonContainer).addButton((button) => {
+    new import_obsidian28.Setting(buttonContainer).addButton((button) => {
       this.generateButton = button;
       button.setButtonText("Generate Notes").setCta().onClick(() => this.handleGenerate());
     }).addButton(
       (button) => button.setButtonText("Cancel").onClick(() => this.close())
     );
   }
+  async handleSubmit() {
+    this.close();
+  }
   async handleGenerate() {
     const templatePath = this.templateSelect.getValue();
     if (!templatePath) {
-      new import_obsidian27.Notice("Please select a template first.");
+      new import_obsidian28.Notice("Please select a template first.");
       return;
     }
     this.generateButton.setDisabled(true);
@@ -5039,14 +5144,14 @@ var KnowledgeBloomModal = class extends import_obsidian27.Modal {
         template
       );
       if (result.generatedNotes.length > 0) {
-        new import_obsidian27.Notice(`Generated ${result.generatedNotes.length} new notes!`);
+        new import_obsidian28.Notice(`Generated ${result.generatedNotes.length} new notes!`);
         this.close();
       } else {
-        new import_obsidian27.Notice("No new notes were generated.");
+        new import_obsidian28.Notice("No new notes were generated.");
       }
     } catch (error) {
       console.error("Error generating notes:", error);
-      new import_obsidian27.Notice(`Failed to generate notes: ${error.message}`);
+      new import_obsidian28.Notice(`Failed to generate notes: ${error.message}`);
     } finally {
       this.generateButton.setDisabled(false);
       this.generateButton.setButtonText("Generate Notes");
@@ -5055,7 +5160,7 @@ var KnowledgeBloomModal = class extends import_obsidian27.Modal {
 };
 
 // main.ts
-var GraphWeaverPlugin = class extends import_obsidian28.Plugin {
+var GraphWeaverPlugin = class extends import_obsidian29.Plugin {
   constructor() {
     super(...arguments);
     this.hasProcessedVaultStartup = false;
@@ -5068,7 +5173,7 @@ var GraphWeaverPlugin = class extends import_obsidian28.Plugin {
       await this.initializeServices();
       this.addPluginFunctionality();
     } catch (error) {
-      new import_obsidian28.Notice("Error loading GraphWeaver plugin. Check console for details.");
+      new import_obsidian29.Notice("Error loading GraphWeaver plugin. Check console for details.");
     }
   }
   /**
@@ -5165,7 +5270,7 @@ var GraphWeaverPlugin = class extends import_obsidian28.Plugin {
    * Show plugin menu
    */
   showPluginMenu(evt) {
-    const menu = new import_obsidian28.Menu();
+    const menu = new import_obsidian29.Menu();
     menu.addItem((item) => item.setTitle("Generate Frontmatter").setIcon("file-plus").onClick(this.generateFrontmatter.bind(this)));
     menu.addItem((item) => item.setTitle("Generate Wikilinks").setIcon("link").onClick(this.generateWikilinks.bind(this)));
     menu.addItem((item) => item.setTitle("Generate Knowledge Bloom").setIcon("flower").onClick(this.generateKnowledgeBloom.bind(this)));
@@ -5189,24 +5294,24 @@ var GraphWeaverPlugin = class extends import_obsidian28.Plugin {
   async generateFrontmatter() {
     const activeFile = this.app.workspace.getActiveFile();
     if (!activeFile) {
-      new import_obsidian28.Notice("No active file. Please open a file to generate frontmatter.");
+      new import_obsidian29.Notice("No active file. Please open a file to generate frontmatter.");
       return;
     }
     try {
-      new import_obsidian28.Notice("Generating frontmatter...");
+      new import_obsidian29.Notice("Generating frontmatter...");
       const result = await this.batchProcessor.generate({
         files: [activeFile],
         generateFrontMatter: true,
         generateWikilinks: false
       });
       if (result.fileResults[0].success) {
-        new import_obsidian28.Notice("Frontmatter generated successfully!");
+        new import_obsidian29.Notice("Frontmatter generated successfully!");
       } else if (result.fileResults[0].error) {
-        new import_obsidian28.Notice(`Error: ${result.fileResults[0].error}`);
+        new import_obsidian29.Notice(`Error: ${result.fileResults[0].error}`);
       }
     } catch (error) {
       console.error("Error generating frontmatter:", error);
-      new import_obsidian28.Notice("Error generating frontmatter. Check console for details.");
+      new import_obsidian29.Notice("Error generating frontmatter. Check console for details.");
     }
   }
   /**
@@ -5216,24 +5321,24 @@ var GraphWeaverPlugin = class extends import_obsidian28.Plugin {
   async generateWikilinks() {
     const activeFile = this.app.workspace.getActiveFile();
     if (!activeFile) {
-      new import_obsidian28.Notice("No active file. Please open a file to generate wikilinks.");
+      new import_obsidian29.Notice("No active file. Please open a file to generate wikilinks.");
       return;
     }
     try {
-      new import_obsidian28.Notice("Generating wikilinks...");
+      new import_obsidian29.Notice("Generating wikilinks...");
       const result = await this.batchProcessor.generate({
         files: [activeFile],
         generateFrontMatter: false,
         generateWikilinks: true
       });
       if (result.fileResults[0].success) {
-        new import_obsidian28.Notice("Wikilinks generated successfully!");
+        new import_obsidian29.Notice("Wikilinks generated successfully!");
       } else if (result.fileResults[0].error) {
-        new import_obsidian28.Notice(`Error: ${result.fileResults[0].error}`);
+        new import_obsidian29.Notice(`Error: ${result.fileResults[0].error}`);
       }
     } catch (error) {
       console.error("Error generating wikilinks:", error);
-      new import_obsidian28.Notice("Error generating wikilinks. Check console for details.");
+      new import_obsidian29.Notice("Error generating wikilinks. Check console for details.");
     }
   }
   /**
@@ -5243,7 +5348,7 @@ var GraphWeaverPlugin = class extends import_obsidian28.Plugin {
   async generateKnowledgeBloom() {
     const activeFile = this.app.workspace.getActiveFile();
     if (!activeFile) {
-      new import_obsidian28.Notice("No active file. Please open a file to generate Knowledge Bloom.");
+      new import_obsidian29.Notice("No active file. Please open a file to generate Knowledge Bloom.");
       return;
     }
     const modal = new KnowledgeBloomModal(
@@ -5260,7 +5365,7 @@ var GraphWeaverPlugin = class extends import_obsidian28.Plugin {
   async createOrUpdateNote(title, content) {
     const filePath = `${title}.md`;
     const file = this.app.vault.getAbstractFileByPath(filePath);
-    if (file instanceof import_obsidian28.TFile) {
+    if (file instanceof import_obsidian29.TFile) {
       await this.app.vault.modify(file, content);
     } else {
       await this.app.vault.create(filePath, content);

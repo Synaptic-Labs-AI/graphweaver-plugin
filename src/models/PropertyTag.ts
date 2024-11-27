@@ -15,17 +15,3 @@ export interface PropertyTag {
  * Interface representing a custom tag, extended to match PropertyTag.
  */
 export interface Tag extends PropertyTag {}
-
-/**
- * Interface representing the state of the Property Manager.
- */
-export interface PropertyManagerState {
-    customProperties: PropertyTag[];
-}
-
-/**
- * Interface representing the state of the Tag Manager.
- */
-export interface TagManagerState {
-    customTags: Tag[];
-}

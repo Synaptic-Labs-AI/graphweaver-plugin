@@ -3,7 +3,6 @@ import { BaseAccordion } from "./BaseAccordion";
 import { AIService } from "../../services/AIService";
 import { SettingsService } from "../../services/SettingsService";
 import { BatchProcessorModal } from "../modals/BatchProcessorModal";
-import { PluginSettings } from "../../settings/Settings";
 
 export class BatchProcessorAccordion extends BaseAccordion {
     constructor(app: App, containerEl: HTMLElement, settingsService: SettingsService, aiService: AIService) {

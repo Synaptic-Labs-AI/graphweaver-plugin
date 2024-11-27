@@ -2,7 +2,6 @@ import { App, Setting, TextComponent, Notice, DropdownComponent } from "obsidian
 import { BaseAccordion } from "./BaseAccordion";
 import { SettingsService } from "../../services/SettingsService";
 import { AIService } from "../../services/AIService";
-import { KnowledgeBloomModal } from "../modals/KnowledgeBloomModal";
 
 export class KnowledgeBloomAccordion extends BaseAccordion {
     private modelSelector: DropdownComponent;

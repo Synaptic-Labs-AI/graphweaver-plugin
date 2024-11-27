@@ -1,10 +1,11 @@
-import { Modal, App, Setting, DropdownComponent, TextAreaComponent, Notice, ButtonComponent, TFile, TFolder } from "obsidian";
+import { App, Setting, DropdownComponent, TextAreaComponent, Notice, ButtonComponent, TFile, TFolder } from "obsidian";
 import { AIService } from "../../services/AIService";
 import { OntologyResult } from "../../generators/OntologyGenerator";
 import { AIProvider, AIModel } from "../../models/AIModels";
 import { OntologyInput } from "../../generators/OntologyGenerator";
+import { BaseModal } from "./BaseModal";
 
-export class OntologyGeneratorModal extends Modal {
+export class OntologyGeneratorModal extends BaseModal<OntologyResult> {
     public modelSelect: DropdownComponent;
     public generateButton: ButtonComponent;
     public loadingEl: HTMLElement;
@@ -20,6 +21,27 @@ export class OntologyGeneratorModal extends Modal {
         super(app);
         this.vaultStats = { files: [], folders: [], tags: [] };
         this.availableModels = [];
+    }
+
+    protected getTitle(): string {
+        return "Generate Ontology";
+    }
+
+    protected renderContent(): void {
+        this.loadingEl.hide();
+        this.contentEl.empty();
+
+        this.contentEl.createEl("h2", { text: "Generate Ontology" });
+        this.renderVaultStats();
+        this.renderModelSelection();
+        this.renderUserContextInput();
+        this.renderGuidedQuestions();
+        this.renderButtons();
+    }
+
+    protected async handleSubmit(data: OntologyResult): Promise<void> {
+        this.onGenerate(data);
+        this.close();
     }
 
     public async onOpen() {
@@ -55,18 +77,6 @@ export class OntologyGeneratorModal extends Modal {
             }
         }
         return Array.from(tagSet);
-    }
-
-    public renderContent() {
-        this.loadingEl.hide();
-        this.contentEl.empty();
-
-        this.contentEl.createEl("h2", { text: "Generate Ontology" });
-        this.renderVaultStats();
-        this.renderModelSelection();
-        this.renderUserContextInput();
-        this.renderGuidedQuestions();
-        this.renderButtons();
     }
 
     public renderVaultStats() {
@@ -175,9 +185,7 @@ export class OntologyGeneratorModal extends Modal {
     }
 
     public showError(message: string) {
-        this.loadingEl.hide();
-        this.contentEl.empty();
-        this.contentEl.createEl("p", { text: message, cls: "error-message" });
+        super.showError(message);
     }
 
     public onClose() {
