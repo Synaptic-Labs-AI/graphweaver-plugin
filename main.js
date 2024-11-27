@@ -3158,14 +3158,9 @@ var SettingsService = class extends BaseService {
   }
   async updateNestedSetting(key, nestedKey, value) {
     if (key === "frontMatter" && nestedKey === "customProperties") {
-      const currentValue = this.settings[key][nestedKey];
-      const existingProps = Array.isArray(currentValue) ? currentValue : Object.values(currentValue).filter(
-        (v) => v !== null && typeof v === "object" && "name" in v
-      );
-      const valueAsArray = Array.isArray(value) ? value : [value];
       this.settings[key] = {
         ...this.settings[key],
-        [nestedKey]: [...existingProps, ...valueAsArray]
+        [nestedKey]: Array.isArray(value) ? value : [value]
       };
     } else if (Array.isArray(this.settings[key][nestedKey])) {
       const currentArray = this.settings[key][nestedKey];

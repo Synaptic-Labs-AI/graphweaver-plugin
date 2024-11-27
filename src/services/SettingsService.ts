@@ -99,20 +99,11 @@ export class SettingsService extends BaseService {
         nestedKey: NK,
         value: PluginSettings[K][NK]
     ): Promise<void> {
-        // Special handling for customProperties since it might be an object
         if (key === 'frontMatter' && nestedKey === 'customProperties') {
-            const currentValue = this.settings[key][nestedKey];
-            const existingProps = Array.isArray(currentValue) ? currentValue :
-                Object.values(currentValue as unknown as Record<string, unknown>)
-                    .filter(
-                        (v): v is PropertyTag => v !== null && typeof v === 'object' && 'name' in v
-                    );
-
-            // If value is an array, merge with existing props
-            const valueAsArray = Array.isArray(value) ? value : [value];
+            // Replace the customProperties array instead of merging
             this.settings[key] = {
                 ...this.settings[key],
-                [nestedKey]: [...existingProps, ...valueAsArray]
+                [nestedKey]: Array.isArray(value) ? value : [value]
             };
         } else if (Array.isArray(this.settings[key][nestedKey])) {
             // Handle other array types
