@@ -147,12 +147,27 @@ export class BatchProcessor extends BaseGenerator<BatchProcessorInput, BatchProc
      */
     private async processFile(file: TFile, input: BatchProcessorInput): Promise<FileProcessingResult> {
         const startTime = Date.now();
+        console.log(`Processing file: ${file.path}`);
         this.emitEvent('fileStart', { file: file.path });
 
         try {
             let content = await this.app.vault.read(file);
+            console.log(`Generated content for ${file.path}`);
             const processed = await this.generateContent(content, input);
+            
+            if (processed.content === content) {
+                console.log(`No changes needed for ${file.path}`);
+                return {
+                    path: file.path,
+                    success: true,
+                    processingTime: Date.now() - startTime,
+                    frontMatterGenerated: false,
+                    wikilinksGenerated: false
+                };
+            }
+
             await this.app.vault.modify(file, processed.content);
+            console.log(`Successfully updated ${file.path}`);
 
             const result: FileProcessingResult = {
                 path: file.path,
@@ -164,6 +179,7 @@ export class BatchProcessor extends BaseGenerator<BatchProcessorInput, BatchProc
             this.emitEvent('fileComplete', { result });
             return result;
         } catch (error) {
+            console.error(`Error processing file ${file.path}:`, error);
             const errorResult = this.createErrorResult(file, error as Error);
             this.handleProcessingError(errorResult.error);
             return errorResult.result;

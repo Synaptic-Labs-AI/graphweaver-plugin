@@ -234,61 +234,46 @@ export class BatchProcessorModal extends BaseModal<void> {
     }
 
     public async processSelectedFiles(selectedPaths: string[]): Promise<void> {
-        const totalFiles = selectedPaths.length;
-        let updatedCount = 0;
-        let errorCount = 0;
+        const files = selectedPaths
+            .map(path => this.app.vault.getAbstractFileByPath(path))
+            .filter((file): file is TFile => file instanceof TFile);
 
-        const progressNotice = new Notice(`Processing 0/${totalFiles} files...`, 0);
+        if (!files.length) {
+            new Notice('No valid files found to process');
+            return;
+        }
 
-        for (const path of selectedPaths) {
-            try {
-                const file = this.app.vault.getAbstractFileByPath(path);
-                if (file instanceof TFile) {
-                    await this.updateFile(file);
-                    updatedCount++;
-                    progressNotice.setMessage(`Processing ${updatedCount}/${totalFiles} files...`);
-                }
-            } catch (error) {
-                console.error(`Error updating file ${path}:`, error);
-                errorCount++;
+        const progressNotice = new Notice(`Processing 0/${files.length} files...`, 0);
+        console.log('Starting batch processing with files:', files.map(f => f.path));
+
+        try {
+            if (!this.aiService.batchProcessor) {
+                throw new Error('Batch processor not initialized');
             }
-        }
 
-        progressNotice.hide();
+            const result = await this.aiService.batchProcessor.generate({
+                files,
+                generateFrontMatter: true,
+                generateWikilinks: false // Set to false by default
+            });
 
-        let message = `Updated ${updatedCount} file${updatedCount !== 1 ? 's' : ''} successfully.`;
-        if (errorCount > 0) {
-            message += ` Encountered errors in ${errorCount} file${errorCount !== 1 ? 's' : ''}.`;
-        }
-        new Notice(message, 5000);
-    }
+            console.log('Batch processing result:', result);
+            progressNotice.hide();
 
-    public async updateFile(file: TFile): Promise<void> {
-        const content = await this.app.vault.read(file);
-        const updatedContent = await this.processContent(content);
-        await this.app.vault.modify(file, updatedContent);
-    }
+            if (!result || !result.stats) {
+                throw new Error('Invalid processing result');
+            }
 
-    public async processContent(content: string): Promise<string> {
-        let processedContent = content;
-
-        // Always generate front matter in manual process
-        const frontMatterOutput = await this.aiService.generateFrontMatter(processedContent);
-        if (frontMatterOutput.success && frontMatterOutput.frontMatter) {
-            processedContent = this.addOrUpdateFrontMatter(processedContent, frontMatterOutput.frontMatter);
-        }
-
-        const settings = this.settingsService.getSettings();
-
-        return processedContent;
-    }
-
-    public addOrUpdateFrontMatter(content: string, newFrontMatter: string): string {
-        const frontMatterRegex = /^---\n[\s\S]*?\n---\n*/;
-        if (frontMatterRegex.test(content)) {
-            return content.replace(frontMatterRegex, `${newFrontMatter}\n\n`);
-        } else {
-            return `${newFrontMatter}\n\n${content}`;
+            const { processedFiles, errorFiles } = result.stats;
+            let message = `Updated ${processedFiles} file${processedFiles !== 1 ? 's' : ''} successfully.`;
+            if (errorFiles > 0) {
+                message += ` Encountered errors in ${errorFiles} file${errorFiles !== 1 ? 's' : ''}.`;
+            }
+            new Notice(message, 5000);
+        } catch (error) {
+            progressNotice.hide();
+            console.error('Batch processing error:', error);
+            new Notice(`Error during batch processing: ${error.message}`);
         }
     }
 }

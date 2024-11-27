@@ -2195,11 +2195,24 @@ var BatchProcessor = class extends BaseGenerator {
    */
   async processFile(file, input) {
     const startTime = Date.now();
+    console.log(`Processing file: ${file.path}`);
     this.emitEvent("fileStart", { file: file.path });
     try {
       let content = await this.app.vault.read(file);
+      console.log(`Generated content for ${file.path}`);
       const processed = await this.generateContent(content, input);
+      if (processed.content === content) {
+        console.log(`No changes needed for ${file.path}`);
+        return {
+          path: file.path,
+          success: true,
+          processingTime: Date.now() - startTime,
+          frontMatterGenerated: false,
+          wikilinksGenerated: false
+        };
+      }
       await this.app.vault.modify(file, processed.content);
+      console.log(`Successfully updated ${file.path}`);
       const result = {
         path: file.path,
         success: true,
@@ -2209,6 +2222,7 @@ var BatchProcessor = class extends BaseGenerator {
       this.emitEvent("fileComplete", { result });
       return result;
     } catch (error) {
+      console.error(`Error processing file ${file.path}:`, error);
       const errorResult = this.createErrorResult(file, error);
       this.handleProcessingError(errorResult.error);
       return errorResult.result;
@@ -4827,54 +4841,38 @@ var BatchProcessorModal = class extends BaseModal {
     return selectedPaths;
   }
   async processSelectedFiles(selectedPaths) {
-    const totalFiles = selectedPaths.length;
-    let updatedCount = 0;
-    let errorCount = 0;
-    const progressNotice = new import_obsidian25.Notice(`Processing 0/${totalFiles} files...`, 0);
-    for (const path of selectedPaths) {
-      try {
-        const file = this.app.vault.getAbstractFileByPath(path);
-        if (file instanceof import_obsidian25.TFile) {
-          await this.updateFile(file);
-          updatedCount++;
-          progressNotice.setMessage(`Processing ${updatedCount}/${totalFiles} files...`);
-        }
-      } catch (error) {
-        console.error(`Error updating file ${path}:`, error);
-        errorCount++;
+    const files = selectedPaths.map((path) => this.app.vault.getAbstractFileByPath(path)).filter((file) => file instanceof import_obsidian25.TFile);
+    if (!files.length) {
+      new import_obsidian25.Notice("No valid files found to process");
+      return;
+    }
+    const progressNotice = new import_obsidian25.Notice(`Processing 0/${files.length} files...`, 0);
+    console.log("Starting batch processing with files:", files.map((f) => f.path));
+    try {
+      if (!this.aiService.batchProcessor) {
+        throw new Error("Batch processor not initialized");
       }
-    }
-    progressNotice.hide();
-    let message = `Updated ${updatedCount} file${updatedCount !== 1 ? "s" : ""} successfully.`;
-    if (errorCount > 0) {
-      message += ` Encountered errors in ${errorCount} file${errorCount !== 1 ? "s" : ""}.`;
-    }
-    new import_obsidian25.Notice(message, 5e3);
-  }
-  async updateFile(file) {
-    const content = await this.app.vault.read(file);
-    const updatedContent = await this.processContent(content);
-    await this.app.vault.modify(file, updatedContent);
-  }
-  async processContent(content) {
-    let processedContent = content;
-    const frontMatterOutput = await this.aiService.generateFrontMatter(processedContent);
-    if (frontMatterOutput.success && frontMatterOutput.frontMatter) {
-      processedContent = this.addOrUpdateFrontMatter(processedContent, frontMatterOutput.frontMatter);
-    }
-    const settings = this.settingsService.getSettings();
-    return processedContent;
-  }
-  addOrUpdateFrontMatter(content, newFrontMatter) {
-    const frontMatterRegex = /^---\n[\s\S]*?\n---\n*/;
-    if (frontMatterRegex.test(content)) {
-      return content.replace(frontMatterRegex, `${newFrontMatter}
-
-`);
-    } else {
-      return `${newFrontMatter}
-
-${content}`;
+      const result = await this.aiService.batchProcessor.generate({
+        files,
+        generateFrontMatter: true,
+        generateWikilinks: false
+        // Set to false by default
+      });
+      console.log("Batch processing result:", result);
+      progressNotice.hide();
+      if (!result || !result.stats) {
+        throw new Error("Invalid processing result");
+      }
+      const { processedFiles, errorFiles } = result.stats;
+      let message = `Updated ${processedFiles} file${processedFiles !== 1 ? "s" : ""} successfully.`;
+      if (errorFiles > 0) {
+        message += ` Encountered errors in ${errorFiles} file${errorFiles !== 1 ? "s" : ""}.`;
+      }
+      new import_obsidian25.Notice(message, 5e3);
+    } catch (error) {
+      progressNotice.hide();
+      console.error("Batch processing error:", error);
+      new import_obsidian25.Notice(`Error during batch processing: ${error.message}`);
     }
   }
 };
