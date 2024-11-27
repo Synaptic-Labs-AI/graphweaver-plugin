@@ -386,7 +386,7 @@ var AIModelMap = {
   ["perplexity" /* Perplexity */]: [
     {
       name: "Perplexity Small",
-      apiName: "perplexity-small",
+      apiName: "llama-3.1-sonar-small-128k-online",
       capabilities: {
         maxTokens: 4096,
         supportsStreaming: true
@@ -396,25 +396,25 @@ var AIModelMap = {
       contextWindow: 128e3
     },
     {
-      name: "Perplexity Medium",
-      apiName: "perplexity-medium",
+      name: "Perplexity Large",
+      apiName: "llama-3.1-sonar-large-128k-online",
       capabilities: {
         maxTokens: 8192,
         supportsStreaming: true
       },
-      inputCostPer1M: 0.5,
-      outputCostPer1M: 0.5,
+      inputCostPer1M: 1,
+      outputCostPer1M: 1,
       contextWindow: 128e3
     },
     {
-      name: "Perplexity Large",
-      apiName: "perplexity-large",
+      name: "Perplexity Huge",
+      apiName: "llama-3.1-sonar-huge-128k-online",
       capabilities: {
-        maxTokens: 16384,
+        maxTokens: 8192,
         supportsStreaming: true
       },
-      inputCostPer1M: 1,
-      outputCostPer1M: 1,
+      inputCostPer1M: 5,
+      outputCostPer1M: 5,
       contextWindow: 128e3
     }
   ],
@@ -428,7 +428,6 @@ var AIModelMap = {
     }
   ],
   ["mistral" /* Mistral */]: [
-    // Ensure Mistral models are correctly mapped
     {
       name: "Mistral Large",
       apiName: "mistral-large-latest",
@@ -1295,30 +1294,40 @@ var PerplexityAdapter = class extends AIAdapter {
     this.models = AIModelMap["perplexity" /* Perplexity */];
   }
   async makeApiRequest(params) {
-    return await (0, import_obsidian8.requestUrl)({
-      url: "https://api.perplexity.ai/chat/completions",
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-      },
-      body: JSON.stringify({
-        model: params.model,
-        messages: [
-          {
-            role: "system",
-            content: "Be precise and concise."
-          },
-          {
-            role: "user",
-            content: params.prompt
-          }
-        ],
-        temperature: params.temperature,
-        max_tokens: params.maxTokens
-      })
-    });
+    try {
+      const response = await (0, import_obsidian8.requestUrl)({
+        url: "https://api.perplexity.ai/chat/completions",
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${this.apiKey}`,
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify({
+          model: params.model,
+          messages: [
+            {
+              role: "system",
+              content: "Be precise and concise."
+            },
+            {
+              role: "user",
+              content: params.prompt
+            }
+          ],
+          temperature: params.temperature,
+          max_tokens: params.maxTokens
+        })
+      });
+      if (response.status !== 200) {
+        console.error(`Perplexity API Error: Status ${response.status}`);
+        console.error("Response Body:", response.text);
+      }
+      return response;
+    } catch (error) {
+      console.error("PerplexityAdapter makeApiRequest encountered an error:", error);
+      throw error;
+    }
   }
   extractContentFromResponse(response) {
     var _a, _b, _c, _d;
@@ -1337,7 +1346,6 @@ var import_obsidian9 = require("obsidian");
 var MistralAdapter = class extends AIAdapter {
   constructor() {
     super(...arguments);
-    // Changed to extend AIAdapter
     this.apiEndpoint = "https://api.mistral.ai/v1/chat/completions";
   }
   getProviderType() {
@@ -1347,27 +1355,17 @@ var MistralAdapter = class extends AIAdapter {
     try {
       const payload = {
         model: params.model,
-        temperature: params.temperature,
-        top_p: 1,
-        // Default or retrieve from options if available
-        max_tokens: params.maxTokens,
         messages: [
-          // Aligning payload structure with OpenAI's messages array
           {
             role: "user",
             content: params.prompt
           }
         ],
+        temperature: params.temperature,
+        max_tokens: params.maxTokens,
+        top_p: 1,
         stream: false,
-        stop: null,
-        random_seed: 0,
-        response_format: params.rawResponse ? void 0 : { type: "json_object" },
-        tools: [],
-        tool_choice: "auto",
-        presence_penalty: 0,
-        frequency_penalty: 0,
-        n: 1,
-        safe_prompt: false
+        response_format: params.rawResponse ? void 0 : { type: "json_object" }
       };
       const response = await (0, import_obsidian9.requestUrl)({
         url: this.apiEndpoint,
@@ -1387,7 +1385,7 @@ var MistralAdapter = class extends AIAdapter {
   extractContentFromResponse(response) {
     try {
       const data = response.json;
-      return data.choices[0].text.trim();
+      return data.choices[0].message.content;
     } catch (error) {
       console.error(`MistralAdapter extractContentFromResponse error:`, error);
       throw new Error("Failed to parse response from Mistral API.");
@@ -2757,9 +2755,19 @@ var AIService = class extends BaseService {
    */
   getCurrentModel(provider) {
     const aiProviderSettings = this.settingsService.getAIProviderSettings();
-    const modelApiName = aiProviderSettings.selectedModels[provider];
+    let modelApiName = aiProviderSettings.selectedModels[provider];
     if (!modelApiName) {
-      throw new Error(`No model selected for provider: ${provider}`);
+      if (provider === "mistral" /* Mistral */) {
+        modelApiName = "mistral-large-latest";
+        aiProviderSettings.selectedModels[provider] = modelApiName;
+        this.settingsService.updateAIProviderSettings(provider, { selectedModels: aiProviderSettings.selectedModels });
+      } else if (provider === "perplexity" /* Perplexity */) {
+        modelApiName = "perplexity-large";
+        aiProviderSettings.selectedModels[provider] = modelApiName;
+        this.settingsService.updateAIProviderSettings(provider, { selectedModels: aiProviderSettings.selectedModels });
+      } else {
+        throw new Error(`No model selected for provider: ${provider}`);
+      }
     }
     return modelApiName;
   }

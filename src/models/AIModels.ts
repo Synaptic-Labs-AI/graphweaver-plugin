@@ -410,7 +410,7 @@ export const AIModelMap: Record<AIProvider, AIModel[]> = {
     [AIProvider.Perplexity]: [
         {
             name: 'Perplexity Small',
-            apiName: 'perplexity-small',
+            apiName: 'llama-3.1-sonar-small-128k-online',
             capabilities: {
                 maxTokens: 4096,
                 supportsStreaming: true
@@ -420,25 +420,25 @@ export const AIModelMap: Record<AIProvider, AIModel[]> = {
             contextWindow: 128000
         },
         {
-            name: 'Perplexity Medium',
-            apiName: 'perplexity-medium',
+            name: 'Perplexity Large',
+            apiName: 'llama-3.1-sonar-large-128k-online',
             capabilities: {
                 maxTokens: 8192,
                 supportsStreaming: true
             },
-            inputCostPer1M: 0.50,
-            outputCostPer1M: 0.50,
+            inputCostPer1M: 1.00,
+            outputCostPer1M: 1.00,
             contextWindow: 128000
         },
         {
-            name: 'Perplexity Large',
-            apiName: 'perplexity-large',
+            name: 'Perplexity Huge',
+            apiName: 'llama-3.1-sonar-huge-128k-online',
             capabilities: {
-                maxTokens: 16384,
+                maxTokens: 8192,
                 supportsStreaming: true
             },
-            inputCostPer1M: 1.00,
-            outputCostPer1M: 1.00,
+            inputCostPer1M: 5.00,
+            outputCostPer1M: 5.00,
             contextWindow: 128000
         }
     ],
@@ -451,7 +451,7 @@ export const AIModelMap: Record<AIProvider, AIModel[]> = {
             },
         }
     ],
-    [AIProvider.Mistral]: [ // Ensure Mistral models are correctly mapped
+    [AIProvider.Mistral]: [
         {
             name: 'Mistral Large',
             apiName: 'mistral-large-latest',

@@ -1,8 +1,8 @@
-import { RequestUrlResponse, requestUrl } from 'obsidian'; // Updated import
+import { RequestUrlResponse, requestUrl } from 'obsidian';
 import { AIProvider } from '../models/AIModels';
 import { AIAdapter } from './AIAdapter';
 
-export class MistralAdapter extends AIAdapter { // Changed to extend AIAdapter
+export class MistralAdapter extends AIAdapter {
     private apiEndpoint = 'https://api.mistral.ai/v1/chat/completions';
 
     getProviderType(): AIProvider {
@@ -17,27 +17,19 @@ export class MistralAdapter extends AIAdapter { // Changed to extend AIAdapter
         rawResponse?: boolean;
     }): Promise<RequestUrlResponse> {
         try {
-            const payload: any = {
+            const payload = {
                 model: params.model,
-                temperature: params.temperature,
-                top_p: 1.0, // Default or retrieve from options if available
-                max_tokens: params.maxTokens,
-                messages: [ // Aligning payload structure with OpenAI's messages array
+                messages: [
                     {
                         role: 'user',
                         content: params.prompt
                     }
                 ],
+                temperature: params.temperature,
+                max_tokens: params.maxTokens,
+                top_p: 1.0,
                 stream: false,
-                stop: null,
-                random_seed: 0,
-                response_format: params.rawResponse ? undefined : { type: 'json_object' },
-                tools: [],
-                tool_choice: 'auto',
-                presence_penalty: 0,
-                frequency_penalty: 0,
-                n: 1,
-                safe_prompt: false
+                response_format: params.rawResponse ? undefined : { type: "json_object" }
             };
 
             const response = await requestUrl({
@@ -60,7 +52,7 @@ export class MistralAdapter extends AIAdapter { // Changed to extend AIAdapter
     protected extractContentFromResponse(response: RequestUrlResponse): string {
         try {
             const data = response.json;
-            return data.choices[0].text.trim(); // Ensure this aligns with Mistral's response structure
+            return data.choices[0].message.content;
         } catch (error) {
             console.error(`MistralAdapter extractContentFromResponse error:`, error);
             throw new Error('Failed to parse response from Mistral API.');

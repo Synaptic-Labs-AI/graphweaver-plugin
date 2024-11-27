@@ -139,9 +139,19 @@ export class AIService extends BaseService {
      */
     public getCurrentModel(provider: AIProvider): string {
         const aiProviderSettings = this.settingsService.getAIProviderSettings();
-        const modelApiName = aiProviderSettings.selectedModels[provider];
+        let modelApiName = aiProviderSettings.selectedModels[provider];
         if (!modelApiName) {
-            throw new Error(`No model selected for provider: ${provider}`);
+            if (provider === AIProvider.Mistral) {
+                modelApiName = 'mistral-large-latest'; // Set a default Mistral model
+                aiProviderSettings.selectedModels[provider] = modelApiName;
+                this.settingsService.updateAIProviderSettings(provider, { selectedModels: aiProviderSettings.selectedModels });
+            } else if (provider === AIProvider.Perplexity) { // Add condition for Perplexity
+                modelApiName = 'perplexity-large'; // Set a default Perplexity model
+                aiProviderSettings.selectedModels[provider] = modelApiName;
+                this.settingsService.updateAIProviderSettings(provider, { selectedModels: aiProviderSettings.selectedModels });
+            } else {
+                throw new Error(`No model selected for provider: ${provider}`);
+            }
         }
         return modelApiName;
     }
@@ -203,7 +213,7 @@ export class AIService extends BaseService {
             case AIProvider.Perplexity:
                 return new PerplexityAdapter(this.settingsService, this.jsonValidationService);
             case AIProvider.Mistral:
-                return new MistralAdapter(this.settingsService, this.jsonValidationService);
+                return new MistralAdapter(this.settingsService, this.jsonValidationService); // Initialize MistralAdapter
             default:
                 throw new Error(`No adapter found for provider: ${provider}`);
         }
