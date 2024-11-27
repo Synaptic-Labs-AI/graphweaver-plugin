@@ -105,8 +105,8 @@ export class KnowledgeBloomModal extends BaseModal<void> {
             return;
         }
 
-        this.generateButton.setDisabled(true);
-        this.generateButton.setButtonText("Generating...");
+        this.close();
+        new Notice("Generating knowledge bloom...");
 
         try {
             const templateFile = this.app.vault.getAbstractFileByPath(templatePath) as TFile;
@@ -119,15 +119,11 @@ export class KnowledgeBloomModal extends BaseModal<void> {
 
             if (result.generatedNotes.length > 0) {
                 new Notice(`Generated ${result.generatedNotes.length} new notes!`);
-                this.close();
             } else {
                 new Notice("No new notes were generated.");
             }
         } catch (error) {
             new Notice(`Failed to generate notes: ${(error as Error).message}`);
-        } finally {
-            this.generateButton.setDisabled(false);
-            this.generateButton.setButtonText("Generate Notes");
         }
     }
 }

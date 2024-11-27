@@ -5102,8 +5102,8 @@ var KnowledgeBloomModal = class extends BaseModal {
       new import_obsidian28.Notice("Please select a template first.");
       return;
     }
-    this.generateButton.setDisabled(true);
-    this.generateButton.setButtonText("Generating...");
+    this.close();
+    new import_obsidian28.Notice("Generating knowledge bloom...");
     try {
       const templateFile = this.app.vault.getAbstractFileByPath(templatePath);
       const template = await this.app.vault.read(templateFile);
@@ -5114,15 +5114,11 @@ var KnowledgeBloomModal = class extends BaseModal {
       );
       if (result.generatedNotes.length > 0) {
         new import_obsidian28.Notice(`Generated ${result.generatedNotes.length} new notes!`);
-        this.close();
       } else {
         new import_obsidian28.Notice("No new notes were generated.");
       }
     } catch (error) {
       new import_obsidian28.Notice(`Failed to generate notes: ${error.message}`);
-    } finally {
-      this.generateButton.setDisabled(false);
-      this.generateButton.setButtonText("Generate Notes");
     }
   }
 };
