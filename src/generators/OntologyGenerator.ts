@@ -44,9 +44,230 @@ export class OntologyGenerator extends BaseGenerator<OntologyInput, OntologyResu
             throw new Error('Invalid input for ontology generation');
         }
 
-        const prompt = this.preparePrompt(input);
-        const aiResponse = await this.aiAdapter.generateResponse(prompt, input.modelApiName);
-        return this.formatOutput(aiResponse.data);
+        // Process each category independently and in parallel
+        const [fileTags, folderTags, existingTags] = await Promise.all([
+            this.processFilesInChunks(input.files, input.modelApiName),
+            this.processFoldersInChunks(input.folders, input.modelApiName),
+            this.processExistingTagsInChunks(input.tags, input.modelApiName)
+        ]);
+
+        // Combine and deduplicate all tags
+        const combinedTags = this.combineTags([fileTags, folderTags, existingTags]);
+        
+        return { suggestedTags: combinedTags };
+    }
+
+    /**
+     * Generates ontology in chunks to handle large vaults
+     */
+    public async generateChunked(input: OntologyInput): Promise<OntologyResult> {
+        if (!this.validateInput(input)) {
+            throw new Error('Invalid input for ontology generation');
+        }
+
+        const model = this.aiAdapter.getModels().find(m => m.apiName === input.modelApiName);
+        if (!model?.capabilities?.contextWindow) {
+            return this.generate(input); // Fallback to regular generation if no context window info
+        }
+
+        try {
+            // Process each data type separately
+            const [fileTags, folderTags, existingTags] = await Promise.all([
+                this.processFiles(input.files, input.modelApiName, model.capabilities.contextWindow),
+                this.processFolders(input.folders, input.modelApiName),
+                this.processExistingTags(input.tags, input.modelApiName)
+            ]);
+
+            // Combine and deduplicate results
+            const combinedTags = this.combineTags([fileTags, folderTags, existingTags]);
+
+            return { suggestedTags: combinedTags };
+        } catch (error) {
+            console.error('Error in chunked generation:', error);
+            throw new Error(`Chunked generation failed: ${error.message}`);
+        }
+    }
+
+    protected async processFilesInChunks(files: TFile[], modelApiName: string): Promise<Tag[]> {
+        const model = this.aiAdapter.getModels().find(m => m.apiName === modelApiName);
+        const chunkSize = this.calculateChunkSize(model?.capabilities?.contextWindow || 4000);
+        const chunks = this.chunkArray(files, chunkSize);
+        const results = await Promise.all(chunks.map(chunk => {
+            const prompt = this.prepareChunkPrompt('files', chunk.map(f => f.basename));
+            return this.processChunk(prompt, modelApiName);
+        }));
+        return this.mergeTags(results.flat());
+    }
+
+    protected async processFoldersInChunks(folders: TFolder[], modelApiName: string): Promise<Tag[]> {
+        const model = this.aiAdapter.getModels().find(m => m.apiName === modelApiName);
+        const chunkSize = this.calculateChunkSize(model?.capabilities?.contextWindow || 4000);
+        const chunks = this.chunkArray(folders, chunkSize);
+        const results = await Promise.all(chunks.map(chunk => {
+            const prompt = this.prepareChunkPrompt('folders', chunk.map(f => f.name));
+            return this.processChunk(prompt, modelApiName);
+        }));
+        return this.mergeTags(results.flat());
+    }
+
+    protected async processExistingTagsInChunks(tags: string[], modelApiName: string): Promise<Tag[]> {
+        const model = this.aiAdapter.getModels().find(m => m.apiName === modelApiName);
+        const chunkSize = this.calculateChunkSize(model?.capabilities?.contextWindow || 4000);
+        const chunks = this.chunkArray(tags, chunkSize);
+        const results = await Promise.all(chunks.map(chunk => {
+            const prompt = this.prepareChunkPrompt('tags', chunk);
+            return this.processChunk(prompt, modelApiName);
+        }));
+        return this.mergeTags(results.flat());
+    }
+
+    protected async processChunk(prompt: string, modelApiName: string): Promise<Tag[]> {
+        const response = await this.aiAdapter.generateResponse(prompt, modelApiName);
+        if (!response.success || !response.data) {
+            console.warn('Failed to process chunk:', response.error);
+            return [];
+        }
+        return this.formatOutput(response.data).suggestedTags;
+    }
+
+    protected async processFiles(files: TFile[], modelApiName: string, contextWindow: number): Promise<Tag[]> {
+        console.debug(`Processing ${files.length} files with context window ${contextWindow}`);
+        const chunkSize = this.calculateChunkSize(contextWindow);
+        const chunks = this.chunkArray(files, chunkSize);
+        console.debug(`Split into ${chunks.length} chunks of size ${chunkSize}`);
+
+        const results: Tag[][] = [];
+        
+        for (let i = 0; i < chunks.length; i++) {
+            console.debug(`Processing chunk ${i + 1}/${chunks.length} with ${chunks[i].length} files`);
+            const prompt = this.prepareChunkPrompt('files', chunks[i].map(f => f.basename));
+            const response = await this.aiAdapter.generateResponse(prompt, modelApiName);
+            
+            if (response.success && response.data) {
+                const chunkTags = this.formatOutput(response.data).suggestedTags;
+                console.debug(`Chunk ${i + 1} generated ${chunkTags.length} tags`);
+                results.push(chunkTags);
+            }
+        }
+
+        return this.mergeTags(results.flat());
+    }
+
+    protected async processFolders(folders: TFolder[], modelApiName: string): Promise<Tag[]> {
+        const model = this.aiAdapter.getModels().find(m => m.apiName === modelApiName);
+        if (!model?.capabilities?.contextWindow) {
+            return this.processSingle(folders, 'folders', modelApiName);
+        }
+
+        const chunkSize = this.calculateChunkSize(model.capabilities.contextWindow);
+        const chunks = this.chunkArray(folders, chunkSize);
+        const results = await Promise.all(
+            chunks.map(chunk => this.processSingle(chunk, 'folders', modelApiName))
+        );
+
+        return this.mergeTags(results.flat());
+    }
+
+    protected async processExistingTags(tags: string[], modelApiName: string): Promise<Tag[]> {
+        const model = this.aiAdapter.getModels().find(m => m.apiName === modelApiName);
+        if (!model?.capabilities?.contextWindow) {
+            return this.processSingle(tags, 'tags', modelApiName);
+        }
+
+        const chunkSize = this.calculateChunkSize(model.capabilities.contextWindow);
+        const chunks = this.chunkArray(tags, chunkSize);
+        const results = await Promise.all(
+            chunks.map(chunk => this.processSingle(chunk, 'tags', modelApiName))
+        );
+
+        return this.mergeTags(results.flat());
+    }
+
+    protected async processSingle(items: any[], type: 'files' | 'folders' | 'tags', modelApiName: string): Promise<Tag[]> {
+        const prompt = this.prepareChunkPrompt(type, items.map(item => 
+            type === 'files' ? item.basename : 
+            type === 'folders' ? item.name : 
+            item
+        ));
+        
+        const response = await this.aiAdapter.generateResponse(prompt, modelApiName);
+        return response.success ? this.formatOutput(response.data).suggestedTags : [];
+    }
+
+    protected prepareChunkPrompt(type: 'files' | 'folders' | 'tags', items: string[]): string {
+        return `
+# MISSION
+Analyze these ${type} and suggest tags for an Obsidian vault ontology.
+Create tags that connect and categorize the information effectively.
+
+**${type.charAt(0).toUpperCase() + type.slice(1)}:**
+${items.join(', ')}
+
+Provide a JSON response with suggested tags:
+{
+    "TagName": {
+        "description": "what this tag represents and when to use it"
+    }
+}
+
+Guidelines:
+1. Identify key themes and concepts
+2. Remove spaces from tag names (use CamelCase)
+3. Be specific but not too granular
+4. Consider hierarchical relationships
+5. Build upon patterns in the ${type}
+`;
+    }
+
+    protected combineTags(tagSets: Tag[][]): Tag[] {
+        const tagMap = new Map<string, Tag>();
+
+        // Merge all tags, keeping the most detailed description
+        for (const tags of tagSets) {
+            for (const tag of tags) {
+                const existing = tagMap.get(tag.name);
+                if (!existing || tag.description.length > existing.description.length) {
+                    tagMap.set(tag.name, tag);
+                }
+            }
+        }
+
+        return Array.from(tagMap.values());
+    }
+
+    protected calculateChunkSize(contextWindow: number): number {
+        const WORDS_PER_TOKEN = 0.75; // Conservative estimate: 1 token = 3/4 of a word
+        const AVG_WORDS_PER_ITEM = 3;  // Conservative estimate for file/folder/tag names
+        const PROMPT_OVERHEAD = 500;    // Tokens reserved for prompt template and system message
+        const RESPONSE_RESERVE = 2000;  // Tokens reserved for model response
+        
+        // Calculate available tokens for content
+        const availableTokens = contextWindow - PROMPT_OVERHEAD - RESPONSE_RESERVE;
+        
+        // Convert tokens to number of items
+        const maxWordsPerChunk = availableTokens * WORDS_PER_TOKEN;
+        const itemsPerChunk = Math.floor(maxWordsPerChunk / AVG_WORDS_PER_ITEM);
+        
+        // Set a reasonable minimum and maximum
+        return Math.max(10, Math.min(itemsPerChunk, 1000));
+    }
+
+    protected chunkArray<T>(array: T[], chunkSize: number): T[][] {
+        const chunks: T[][] = [];
+        for (let i = 0; i < array.length; i += chunkSize) {
+            chunks.push(array.slice(i, i + chunkSize));
+        }
+        return chunks;
+    }
+
+    protected mergeTags(tags: Tag[]): Tag[] {
+        const merged = new Map<string, Tag>();
+        for (const tag of tags) {
+            if (!merged.has(tag.name)) {
+                merged.set(tag.name, tag);
+            }
+        }
+        return Array.from(merged.values());
     }
 
     /**
@@ -102,17 +323,27 @@ Suggest enough tags to form a comprehensive ontology for this knowledge base.
      * @returns OntologyResult containing suggested tags.
      */
     protected formatOutput(aiResponse: any): OntologyResult {
+        console.debug('Raw AI response:', aiResponse); // Debug log
+
         let parsedResponse: any;
 
         // If aiResponse is a string, try to parse it as JSON
         if (typeof aiResponse === 'string') {
             try {
-                // Attempt to fix incomplete JSON
-                const fixedJson = this.fixIncompleteJson(aiResponse);
+                // Try to extract JSON from the string if it's wrapped in text
+                const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+                const jsonStr = jsonMatch ? jsonMatch[0] : aiResponse;
+                const fixedJson = this.fixIncompleteJson(jsonStr);
                 parsedResponse = JSON.parse(fixedJson);
             } catch (error) {
                 console.error('Failed to parse AI response as JSON:', error);
-                throw new Error('Invalid AI response: unable to parse as JSON');
+                // Attempt to create a simple tag structure if JSON parsing fails
+                parsedResponse = {
+                    "DefaultTag": {
+                        "description": "Automatically created tag from unstructured response",
+                        "type": "string"
+                    }
+                };
             }
         } else if (typeof aiResponse === 'object' && aiResponse !== null) {
             parsedResponse = aiResponse;
@@ -156,17 +387,27 @@ Suggest enough tags to form a comprehensive ontology for this knowledge base.
      * @param json - Raw JSON string.
      * @returns Fixed JSON string.
      */
-    public fixIncompleteJson(json: string): string {
-        // Attempt to fix common JSON issues
+    protected fixIncompleteJson(json: string): string {
         let fixedJson = json.trim();
         
-        // If the JSON is cut off, try to close it properly
-        if (!fixedJson.endsWith('}')) {
-            fixedJson += '}}';
+        // Remove any leading or trailing non-JSON text
+        const startBrace = fixedJson.indexOf('{');
+        const endBrace = fixedJson.lastIndexOf('}');
+        
+        if (startBrace !== -1 && endBrace !== -1) {
+            fixedJson = fixedJson.substring(startBrace, endBrace + 1);
         }
 
-        // Remove any trailing commas
-        fixedJson = fixedJson.replace(/,\s*}$/, '}');
+        // Fix trailing commas
+        fixedJson = fixedJson.replace(/,(\s*[}\]])/g, '$1');
+        
+        // Add missing closing braces if needed
+        const openBraces = (fixedJson.match(/\{/g) || []).length;
+        const closeBraces = (fixedJson.match(/\}/g) || []).length;
+        
+        if (openBraces > closeBraces) {
+            fixedJson += '}'.repeat(openBraces - closeBraces);
+        }
 
         return fixedJson;
     }

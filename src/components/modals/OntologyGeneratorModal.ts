@@ -34,8 +34,8 @@ export class OntologyGeneratorModal extends BaseModal<OntologyResult> {
         this.contentEl.createEl("h2", { text: "Generate Ontology" });
         this.renderVaultStats();
         this.renderModelSelection();
-        this.renderUserContextInput();
-        this.renderGuidedQuestions();
+        this.renderGuidedQuestions();  // Moved before user context input
+        this.renderUserContextInput(); // Now after guided questions
         this.renderButtons();
     }
 
@@ -59,6 +59,7 @@ export class OntologyGeneratorModal extends BaseModal<OntologyResult> {
             console.error("Error loading data:", error);
             this.showError("An error occurred while retrieving data.");
         }
+        this.addStyles();
     }
 
     public async loadVaultStats() {
@@ -112,26 +113,49 @@ export class OntologyGeneratorModal extends BaseModal<OntologyResult> {
     }
 
     public renderUserContextInput() {
-        const contextSetting = new Setting(this.contentEl)
-            .setName("Additional Context")
-            .setDesc("Provide any additional context or information about your knowledge base that might help in generating a more accurate ontology.")
-            .addTextArea(text => {
-                this.userContextInput = text; // Store the TextAreaComponent
-                text.inputEl.rows = 4;
-                text.inputEl.cols = 50;
-                return text;
+        const container = this.contentEl.createDiv("user-context-container");
+        
+        container.createEl("h4", { 
+            text: "Additional Context",
+            cls: "user-context-header"
+        });
+        
+        container.createEl("p", { 
+            text: "Based on the questions above, provide any additional context that might help in generating a more accurate ontology.",
+            cls: "user-context-description"
+        });
+
+        const textAreaContainer = container.createDiv("text-area-container");
+        const textArea = new TextAreaComponent(textAreaContainer)
+            .setPlaceholder("Enter your context here...")
+            .onChange(value => {
+                this.userContextInput = textArea;
             });
+
+        textArea.inputEl.rows = 6;  // Increased rows
+        textArea.inputEl.style.width = "100%";
+        this.userContextInput = textArea;
     }
 
     public renderGuidedQuestions() {
-        const questionsEl = this.contentEl.createDiv("guided-questions");
-        questionsEl.createEl("h4", { text: "Guided Questions" });
-        questionsEl.createEl("p", { text: "Consider the following questions when providing additional context:" });
-        const questionsList = questionsEl.createEl("ul");
+        const questionsEl = this.contentEl.createDiv({
+            cls: "guided-questions-container"
+        });
+
+        questionsEl.createEl("h4", { 
+            text: "Consider These Questions",
+            cls: "guided-questions-header" 
+        });
+
+        const questionsList = questionsEl.createEl("ul", {
+            cls: "guided-questions-list"
+        });
+
         [
             "What are the main themes or topics in your knowledge base?",
-            "Are there any specific hierarchies or relationships between concepts that you want to emphasize?",
-            "What are your goals for organizing your knowledge base?"
+            "Are there any specific hierarchies or relationships between concepts you want to emphasize?",
+            "What are your goals for organizing your knowledge base?",
+            "Are there any particular aspects of your notes you want the tags to focus on?"
         ].forEach(question => {
             questionsList.createEl("li", { text: question });
         });
@@ -160,7 +184,7 @@ export class OntologyGeneratorModal extends BaseModal<OntologyResult> {
 
         const [provider, modelApiName] = modelValue.split(':');
         this.generateButton.setDisabled(true);
-        const loadingNotice = new Notice("Generating ontology...", 0);
+        const loadingNotice = new Notice("Generating Ontology (this may take a while for large vaults)...", 0);
 
         try {
             const input: OntologyInput = {
@@ -169,15 +193,18 @@ export class OntologyGeneratorModal extends BaseModal<OntologyResult> {
                 modelApiName,
                 userContext: this.userContextInput.getValue()
             };
-            const ontology = await this.aiService.generateOntology(input);
+            // Use chunked generation instead of regular generation
+            const ontology = await this.aiService.generateChunkedOntology(input);
             await this.aiService.updateTags(ontology.suggestedTags);
             loadingNotice.hide();
-            new Notice("Ontology generated and tags updated successfully!", 3000);
+            new Notice(`Ontology generated successfully! Created ${ontology.suggestedTags.length} tags.`, 5000);
             this.onGenerate(ontology);
             this.close();
         } catch (error) {
             loadingNotice.hide();
-            new Notice(`Failed to generate ontology: ${(error as Error).message}`, 5000);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            new Notice(`Generation failed: ${errorMessage}`, 10000);
+            console.error('Ontology generation error:', error);
         } finally {
             this.generateButton.setDisabled(false);
         }
@@ -189,5 +216,58 @@ export class OntologyGeneratorModal extends BaseModal<OntologyResult> {
 
     public onClose() {
         this.contentEl.empty();
+    }
+
+    // Add some CSS styles
+    private addStyles() {
+        document.head.appendChild(createElement('style', {
+            attr: { type: 'text/css' },
+            text: `
+                .ontology-generator-modal .guided-questions-container {
+                    margin: 1rem 0;
+                    padding: 1rem;
+                    background-color: var(--background-secondary);
+                    border-radius: 5px;
+                }
+                
+                .ontology-generator-modal .guided-questions-header {
+                    margin: 0 0 0.5rem 0;
+                    color: var(--text-accent);
+                }
+                
+                .ontology-generator-modal .guided-questions-list {
+                    margin: 0.5rem 0;
+                    padding-left: 1.5rem;
+                }
+                
+                .ontology-generator-modal .user-context-container {
+                    margin: 1rem 0;
+                }
+                
+                .ontology-generator-modal .user-context-header {
+                    margin: 0 0 0.5rem 0;
+                    color: var(--text-accent);
+                }
+                
+                .ontology-generator-modal .user-context-description {
+                    margin: 0 0 1rem 0;
+                    color: var(--text-muted);
+                }
+                
+                .ontology-generator-modal .text-area-container {
+                    width: 100%;
+                    margin-bottom: 1rem;
+                }
+                
+                .ontology-generator-modal .text-area-container textarea {
+                    width: 100%;
+                    min-height: 120px;
+                    padding: 8px;
+                    border-radius: 4px;
+                    background-color: var(--background-primary);
+                    border: 1px solid var(--background-modifier-border);
+                }
+            `
+        }));
     }
 }

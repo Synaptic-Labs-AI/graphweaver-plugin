@@ -166,4 +166,8 @@ export abstract class AIAdapter {
         }
         return model.apiName;
     }
+
+    public getModels(): AIModel[] {
+        return this.models;
+    }
 }

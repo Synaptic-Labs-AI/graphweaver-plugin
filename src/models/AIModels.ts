@@ -53,6 +53,7 @@ export interface AIModel {
         supportsFunctions?: boolean;
         supportsStreaming?: boolean;
         supportsVision?: boolean;
+        contextWindow?: number;  // Add this line
     };
     /** Cost per million input tokens in USD */
     inputCostPer1M?: number;

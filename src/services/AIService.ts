@@ -349,6 +349,20 @@ export class AIService extends BaseService {
     }
 
     /**
+     * Generates ontology in chunks for large vaults
+     * @param input - The input parameters for ontology generation.
+     * @returns The generated ontology result.
+     */
+    public async generateChunkedOntology(input: OntologyInput): Promise<OntologyResult> {
+        try {
+            return await this.ontologyGenerator.generateChunked(input);
+        } catch (error) {
+            console.error("Error generating chunked ontology:", error);
+            throw new Error(`Failed to generate chunked ontology: ${(error as Error).message}`);
+        }
+    }
+
+    /**
      * Updates tags based on the suggested tags.
      * @param suggestedTags - Array of suggested tags to update.
      */

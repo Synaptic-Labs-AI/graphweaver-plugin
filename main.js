@@ -638,6 +638,9 @@ var AIAdapter = class {
     }
     return model.apiName;
   }
+  getModels() {
+    return this.models;
+  }
 };
 
 // src/adapters/OpenAIAdapter.ts
@@ -1122,36 +1125,64 @@ var OpenRouterAdapter = class extends AIAdapter {
     this.models = AIModelMap["openrouter" /* OpenRouter */];
   }
   async makeApiRequest(params) {
-    return await (0, import_obsidian6.requestUrl)({
-      url: "https://openrouter.ai/api/v1/chat/completions",
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": window.location.href,
-        "X-Title": "Obsidian GraphWeaver Plugin"
-      },
-      body: JSON.stringify({
+    try {
+      const body = {
         model: params.model,
         messages: [
           {
             role: "system",
-            content: params.rawResponse ? "You are a helpful assistant." : "You are a helpful assistant that responds in JSON format."
+            content: "You are a helpful assistant that responds in valid JSON format."
           },
-          { role: "user", content: params.prompt }
+          {
+            role: "user",
+            content: params.prompt
+          }
         ],
         temperature: params.temperature,
         max_tokens: params.maxTokens,
-        response_format: params.rawResponse ? void 0 : { type: "json_object" }
-      })
-    });
+        stream: false
+      };
+      console.debug("OpenRouter API Request:", body);
+      const response = await (0, import_obsidian6.requestUrl)({
+        url: "https://openrouter.ai/api/v1/chat/completions",
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${this.apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": window.location.href,
+          "X-Title": "Obsidian GraphWeaver Plugin"
+        },
+        body: JSON.stringify(body)
+      });
+      return response;
+    } catch (error) {
+      console.error("OpenRouter API error:", error);
+      const errorMessage = error.message || "Unknown error";
+      if (errorMessage.includes("context length")) {
+        throw new Error("Input is too long for the selected model. Please reduce the amount of files or context provided.");
+      }
+      throw new Error(`API request failed: ${errorMessage}`);
+    }
   }
   extractContentFromResponse(response) {
-    var _a, _b, _c, _d;
-    if (!((_d = (_c = (_b = (_a = response.json) == null ? void 0 : _a.choices) == null ? void 0 : _b[0]) == null ? void 0 : _c.message) == null ? void 0 : _d.content)) {
-      throw new Error("Invalid response format from OpenRouter API");
+    var _a, _b, _c;
+    try {
+      if (!(response == null ? void 0 : response.json)) {
+        console.error("No JSON in response:", response);
+        throw new Error("No JSON content in response");
+      }
+      if (!((_c = (_b = (_a = response.json.choices) == null ? void 0 : _a[0]) == null ? void 0 : _b.message) == null ? void 0 : _c.content)) {
+        console.error("Unexpected response structure:", response.json);
+        throw new Error("Invalid response structure");
+      }
+      const content = response.json.choices[0].message.content;
+      console.debug("Extracted content:", content);
+      return content;
+    } catch (error) {
+      console.error("Error extracting content from response:", error);
+      console.error("Raw response:", response);
+      throw new Error(`Invalid response format from OpenRouter API: ${error.message}`);
     }
-    return response.json.choices[0].message.content;
   }
   getProviderType() {
     return "openrouter" /* OpenRouter */;
@@ -1984,9 +2015,192 @@ var OntologyGenerator = class extends BaseGenerator {
     if (!this.validateInput(input)) {
       throw new Error("Invalid input for ontology generation");
     }
-    const prompt = this.preparePrompt(input);
-    const aiResponse = await this.aiAdapter.generateResponse(prompt, input.modelApiName);
-    return this.formatOutput(aiResponse.data);
+    const [fileTags, folderTags, existingTags] = await Promise.all([
+      this.processFilesInChunks(input.files, input.modelApiName),
+      this.processFoldersInChunks(input.folders, input.modelApiName),
+      this.processExistingTagsInChunks(input.tags, input.modelApiName)
+    ]);
+    const combinedTags = this.combineTags([fileTags, folderTags, existingTags]);
+    return { suggestedTags: combinedTags };
+  }
+  /**
+   * Generates ontology in chunks to handle large vaults
+   */
+  async generateChunked(input) {
+    var _a;
+    if (!this.validateInput(input)) {
+      throw new Error("Invalid input for ontology generation");
+    }
+    const model = this.aiAdapter.getModels().find((m) => m.apiName === input.modelApiName);
+    if (!((_a = model == null ? void 0 : model.capabilities) == null ? void 0 : _a.contextWindow)) {
+      return this.generate(input);
+    }
+    try {
+      const [fileTags, folderTags, existingTags] = await Promise.all([
+        this.processFiles(input.files, input.modelApiName, model.capabilities.contextWindow),
+        this.processFolders(input.folders, input.modelApiName),
+        this.processExistingTags(input.tags, input.modelApiName)
+      ]);
+      const combinedTags = this.combineTags([fileTags, folderTags, existingTags]);
+      return { suggestedTags: combinedTags };
+    } catch (error) {
+      console.error("Error in chunked generation:", error);
+      throw new Error(`Chunked generation failed: ${error.message}`);
+    }
+  }
+  async processFilesInChunks(files, modelApiName) {
+    var _a;
+    const model = this.aiAdapter.getModels().find((m) => m.apiName === modelApiName);
+    const chunkSize = this.calculateChunkSize(((_a = model == null ? void 0 : model.capabilities) == null ? void 0 : _a.contextWindow) || 4e3);
+    const chunks = this.chunkArray(files, chunkSize);
+    const results = await Promise.all(chunks.map((chunk) => {
+      const prompt = this.prepareChunkPrompt("files", chunk.map((f) => f.basename));
+      return this.processChunk(prompt, modelApiName);
+    }));
+    return this.mergeTags(results.flat());
+  }
+  async processFoldersInChunks(folders, modelApiName) {
+    var _a;
+    const model = this.aiAdapter.getModels().find((m) => m.apiName === modelApiName);
+    const chunkSize = this.calculateChunkSize(((_a = model == null ? void 0 : model.capabilities) == null ? void 0 : _a.contextWindow) || 4e3);
+    const chunks = this.chunkArray(folders, chunkSize);
+    const results = await Promise.all(chunks.map((chunk) => {
+      const prompt = this.prepareChunkPrompt("folders", chunk.map((f) => f.name));
+      return this.processChunk(prompt, modelApiName);
+    }));
+    return this.mergeTags(results.flat());
+  }
+  async processExistingTagsInChunks(tags, modelApiName) {
+    var _a;
+    const model = this.aiAdapter.getModels().find((m) => m.apiName === modelApiName);
+    const chunkSize = this.calculateChunkSize(((_a = model == null ? void 0 : model.capabilities) == null ? void 0 : _a.contextWindow) || 4e3);
+    const chunks = this.chunkArray(tags, chunkSize);
+    const results = await Promise.all(chunks.map((chunk) => {
+      const prompt = this.prepareChunkPrompt("tags", chunk);
+      return this.processChunk(prompt, modelApiName);
+    }));
+    return this.mergeTags(results.flat());
+  }
+  async processChunk(prompt, modelApiName) {
+    const response = await this.aiAdapter.generateResponse(prompt, modelApiName);
+    if (!response.success || !response.data) {
+      console.warn("Failed to process chunk:", response.error);
+      return [];
+    }
+    return this.formatOutput(response.data).suggestedTags;
+  }
+  async processFiles(files, modelApiName, contextWindow) {
+    console.debug(`Processing ${files.length} files with context window ${contextWindow}`);
+    const chunkSize = this.calculateChunkSize(contextWindow);
+    const chunks = this.chunkArray(files, chunkSize);
+    console.debug(`Split into ${chunks.length} chunks of size ${chunkSize}`);
+    const results = [];
+    for (let i = 0; i < chunks.length; i++) {
+      console.debug(`Processing chunk ${i + 1}/${chunks.length} with ${chunks[i].length} files`);
+      const prompt = this.prepareChunkPrompt("files", chunks[i].map((f) => f.basename));
+      const response = await this.aiAdapter.generateResponse(prompt, modelApiName);
+      if (response.success && response.data) {
+        const chunkTags = this.formatOutput(response.data).suggestedTags;
+        console.debug(`Chunk ${i + 1} generated ${chunkTags.length} tags`);
+        results.push(chunkTags);
+      }
+    }
+    return this.mergeTags(results.flat());
+  }
+  async processFolders(folders, modelApiName) {
+    var _a;
+    const model = this.aiAdapter.getModels().find((m) => m.apiName === modelApiName);
+    if (!((_a = model == null ? void 0 : model.capabilities) == null ? void 0 : _a.contextWindow)) {
+      return this.processSingle(folders, "folders", modelApiName);
+    }
+    const chunkSize = this.calculateChunkSize(model.capabilities.contextWindow);
+    const chunks = this.chunkArray(folders, chunkSize);
+    const results = await Promise.all(
+      chunks.map((chunk) => this.processSingle(chunk, "folders", modelApiName))
+    );
+    return this.mergeTags(results.flat());
+  }
+  async processExistingTags(tags, modelApiName) {
+    var _a;
+    const model = this.aiAdapter.getModels().find((m) => m.apiName === modelApiName);
+    if (!((_a = model == null ? void 0 : model.capabilities) == null ? void 0 : _a.contextWindow)) {
+      return this.processSingle(tags, "tags", modelApiName);
+    }
+    const chunkSize = this.calculateChunkSize(model.capabilities.contextWindow);
+    const chunks = this.chunkArray(tags, chunkSize);
+    const results = await Promise.all(
+      chunks.map((chunk) => this.processSingle(chunk, "tags", modelApiName))
+    );
+    return this.mergeTags(results.flat());
+  }
+  async processSingle(items, type, modelApiName) {
+    const prompt = this.prepareChunkPrompt(type, items.map(
+      (item) => type === "files" ? item.basename : type === "folders" ? item.name : item
+    ));
+    const response = await this.aiAdapter.generateResponse(prompt, modelApiName);
+    return response.success ? this.formatOutput(response.data).suggestedTags : [];
+  }
+  prepareChunkPrompt(type, items) {
+    return `
+# MISSION
+Analyze these ${type} and suggest tags for an Obsidian vault ontology.
+Create tags that connect and categorize the information effectively.
+
+**${type.charAt(0).toUpperCase() + type.slice(1)}:**
+${items.join(", ")}
+
+Provide a JSON response with suggested tags:
+{
+    "TagName": {
+        "description": "what this tag represents and when to use it"
+    }
+}
+
+Guidelines:
+1. Identify key themes and concepts
+2. Remove spaces from tag names (use CamelCase)
+3. Be specific but not too granular
+4. Consider hierarchical relationships
+5. Build upon patterns in the ${type}
+`;
+  }
+  combineTags(tagSets) {
+    const tagMap = /* @__PURE__ */ new Map();
+    for (const tags of tagSets) {
+      for (const tag of tags) {
+        const existing = tagMap.get(tag.name);
+        if (!existing || tag.description.length > existing.description.length) {
+          tagMap.set(tag.name, tag);
+        }
+      }
+    }
+    return Array.from(tagMap.values());
+  }
+  calculateChunkSize(contextWindow) {
+    const WORDS_PER_TOKEN = 0.75;
+    const AVG_WORDS_PER_ITEM = 3;
+    const PROMPT_OVERHEAD = 500;
+    const RESPONSE_RESERVE = 2e3;
+    const availableTokens = contextWindow - PROMPT_OVERHEAD - RESPONSE_RESERVE;
+    const maxWordsPerChunk = availableTokens * WORDS_PER_TOKEN;
+    const itemsPerChunk = Math.floor(maxWordsPerChunk / AVG_WORDS_PER_ITEM);
+    return Math.max(10, Math.min(itemsPerChunk, 1e3));
+  }
+  chunkArray(array, chunkSize) {
+    const chunks = [];
+    for (let i = 0; i < array.length; i += chunkSize) {
+      chunks.push(array.slice(i, i + chunkSize));
+    }
+    return chunks;
+  }
+  mergeTags(tags) {
+    const merged = /* @__PURE__ */ new Map();
+    for (const tag of tags) {
+      if (!merged.has(tag.name)) {
+        merged.set(tag.name, tag);
+      }
+    }
+    return Array.from(merged.values());
   }
   /**
    * Prepares the AI prompt based on the input.
@@ -2039,14 +2253,22 @@ Suggest enough tags to form a comprehensive ontology for this knowledge base.
    * @returns OntologyResult containing suggested tags.
    */
   formatOutput(aiResponse) {
+    console.debug("Raw AI response:", aiResponse);
     let parsedResponse;
     if (typeof aiResponse === "string") {
       try {
-        const fixedJson = this.fixIncompleteJson(aiResponse);
+        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+        const jsonStr = jsonMatch ? jsonMatch[0] : aiResponse;
+        const fixedJson = this.fixIncompleteJson(jsonStr);
         parsedResponse = JSON.parse(fixedJson);
       } catch (error) {
         console.error("Failed to parse AI response as JSON:", error);
-        throw new Error("Invalid AI response: unable to parse as JSON");
+        parsedResponse = {
+          "DefaultTag": {
+            "description": "Automatically created tag from unstructured response",
+            "type": "string"
+          }
+        };
       }
     } else if (typeof aiResponse === "object" && aiResponse !== null) {
       parsedResponse = aiResponse;
@@ -2084,10 +2306,17 @@ Suggest enough tags to form a comprehensive ontology for this knowledge base.
    */
   fixIncompleteJson(json) {
     let fixedJson = json.trim();
-    if (!fixedJson.endsWith("}")) {
-      fixedJson += "}}";
+    const startBrace = fixedJson.indexOf("{");
+    const endBrace = fixedJson.lastIndexOf("}");
+    if (startBrace !== -1 && endBrace !== -1) {
+      fixedJson = fixedJson.substring(startBrace, endBrace + 1);
     }
-    fixedJson = fixedJson.replace(/,\s*}$/, "}");
+    fixedJson = fixedJson.replace(/,(\s*[}\]])/g, "$1");
+    const openBraces = (fixedJson.match(/\{/g) || []).length;
+    const closeBraces = (fixedJson.match(/\}/g) || []).length;
+    if (openBraces > closeBraces) {
+      fixedJson += "}".repeat(openBraces - closeBraces);
+    }
     return fixedJson;
   }
 };
@@ -2957,6 +3186,19 @@ var AIService = class extends BaseService {
     } catch (error) {
       console.error("Error generating ontology:", error);
       throw new Error(`Failed to generate ontology: ${error.message}`);
+    }
+  }
+  /**
+   * Generates ontology in chunks for large vaults
+   * @param input - The input parameters for ontology generation.
+   * @returns The generated ontology result.
+   */
+  async generateChunkedOntology(input) {
+    try {
+      return await this.ontologyGenerator.generateChunked(input);
+    } catch (error) {
+      console.error("Error generating chunked ontology:", error);
+      throw new Error(`Failed to generate chunked ontology: ${error.message}`);
     }
   }
   /**
@@ -4600,7 +4842,7 @@ var OntologyGeneratorModal = class extends BaseModal {
     }
     const [provider, modelApiName] = modelValue.split(":");
     this.generateButton.setDisabled(true);
-    const loadingNotice = new import_obsidian23.Notice("Generating ontology...", 0);
+    const loadingNotice = new import_obsidian23.Notice("Generating Ontology (this may take a while for large vaults)...", 0);
     try {
       const input = {
         ...this.vaultStats,
@@ -4608,15 +4850,17 @@ var OntologyGeneratorModal = class extends BaseModal {
         modelApiName,
         userContext: this.userContextInput.getValue()
       };
-      const ontology = await this.aiService.generateOntology(input);
+      const ontology = await this.aiService.generateChunkedOntology(input);
       await this.aiService.updateTags(ontology.suggestedTags);
       loadingNotice.hide();
-      new import_obsidian23.Notice("Ontology generated and tags updated successfully!", 3e3);
+      new import_obsidian23.Notice(`Ontology generated successfully! Created ${ontology.suggestedTags.length} tags.`, 5e3);
       this.onGenerate(ontology);
       this.close();
     } catch (error) {
       loadingNotice.hide();
-      new import_obsidian23.Notice(`Failed to generate ontology: ${error.message}`, 5e3);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      new import_obsidian23.Notice(`Generation failed: ${errorMessage}`, 1e4);
+      console.error("Ontology generation error:", error);
     } finally {
       this.generateButton.setDisabled(false);
     }
